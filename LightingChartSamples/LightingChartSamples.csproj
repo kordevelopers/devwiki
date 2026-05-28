@@ -97,6 +97,12 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="TextDocument.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TextDocument.Designer.cs">
+      <DependentUpon>TextDocument.cs</DependentUpon>
+    </Compile>
     <Compile Include="LightningBar.cs" />
     <Compile Include="LightningBarSample.cs">
       <SubType>Form</SubType>
