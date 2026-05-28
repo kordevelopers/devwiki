@@ -99,7 +99,7 @@ namespace LightingChartSamples
             AppendStyledText("15%", new Font("맑은 고딕", 11F, FontStyle.Bold), Color.FromArgb(35, 84, 148), ivoryBackColor);
             AppendStyledText(" 증가 및 기존 고객 이탈율 감소 기대\n\n", bodyFont, Color.Black, ivoryBackColor);
 
-            AppendStyledText("📌 Next Action: ", new Font("맑은 고딕", 10.5F, FontStyle.Bold), Color.FromArgb(60, 85, 128));
+            AppendStyledText("📌  🚗Next Action: ", new Font("맑은 고딕", 10.5F, FontStyle.Bold), Color.FromArgb(60, 85, 128));
             AppendStyledText("다음 주까지 A/B 테스트 2종과 채널별 CAC 리포트 업데이트\n", bodyFont, Color.FromArgb(72, 84, 104));
 
             AppendTipBox(tipFont);

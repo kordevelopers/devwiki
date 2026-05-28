@@ -100,18 +100,18 @@
             this.lblProgressValue.AutoSize = true;
             this.lblProgressValue.Font = new System.Drawing.Font("맑은 고딕", 10F, System.Drawing.FontStyle.Bold);
             this.lblProgressValue.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(39)))), ((int)(((byte)(87)))), ((int)(((byte)(184)))));
-            this.lblProgressValue.Location = new System.Drawing.Point(768, 26);
+            this.lblProgressValue.Location = new System.Drawing.Point(560, 26);
             this.lblProgressValue.Name = "lblProgressValue";
-            this.lblProgressValue.Size = new System.Drawing.Size(36, 19);
+            this.lblProgressValue.Size = new System.Drawing.Size(37, 19);
             this.lblProgressValue.TabIndex = 2;
             this.lblProgressValue.Text = "78%";
             // 
             // progressImpact
             // 
             this.progressImpact.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(58)))), ((int)(((byte)(123)))), ((int)(((byte)(213)))));
-            this.progressImpact.Location = new System.Drawing.Point(170, 22);
+            this.progressImpact.Location = new System.Drawing.Point(92, 35);
             this.progressImpact.Name = "progressImpact";
-            this.progressImpact.Size = new System.Drawing.Size(580, 26);
+            this.progressImpact.Size = new System.Drawing.Size(462, 10);
             this.progressImpact.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
             this.progressImpact.TabIndex = 1;
             this.progressImpact.Value = 78;
@@ -123,9 +123,9 @@
             this.lblProgressTitle.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(57)))), ((int)(((byte)(80)))));
             this.lblProgressTitle.Location = new System.Drawing.Point(21, 26);
             this.lblProgressTitle.Name = "lblProgressTitle";
-            this.lblProgressTitle.Size = new System.Drawing.Size(125, 19);
+            this.lblProgressTitle.Size = new System.Drawing.Size(65, 19);
             this.lblProgressTitle.TabIndex = 0;
-            this.lblProgressTitle.Text = "마케팅 달성 전망";
+            this.lblProgressTitle.Text = "추론결과";
             // 
             // panelHeader
             // 
@@ -149,9 +149,9 @@
             this.lblTag.Location = new System.Drawing.Point(27, 87);
             this.lblTag.Name = "lblTag";
             this.lblTag.Padding = new System.Windows.Forms.Padding(10, 4, 10, 4);
-            this.lblTag.Size = new System.Drawing.Size(134, 23);
+            this.lblTag.Size = new System.Drawing.Size(158, 23);
             this.lblTag.TabIndex = 2;
-            this.lblTag.Text = "Q3 Executive Brief";
+            this.lblTag.Text = "Executive AI Infernece \r\n";
             // 
             // lblHeroSub
             // 
@@ -160,9 +160,9 @@
             this.lblHeroSub.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(230)))), ((int)(((byte)(239)))), ((int)(((byte)(255)))));
             this.lblHeroSub.Location = new System.Drawing.Point(27, 51);
             this.lblHeroSub.Name = "lblHeroSub";
-            this.lblHeroSub.Size = new System.Drawing.Size(376, 19);
+            this.lblHeroSub.Size = new System.Drawing.Size(365, 19);
             this.lblHeroSub.TabIndex = 1;
-            this.lblHeroSub.Text = "실행 중심 요약 · KPI 기반 인사이트 · 고객 반응 개선 시나리오";
+            this.lblHeroSub.Text = "실행 중심 요약 · AI Inferenee 기반 요약 데이터 시나리오";
             // 
             // lblHeroTitle
             // 
@@ -171,12 +171,13 @@
             this.lblHeroTitle.ForeColor = System.Drawing.Color.White;
             this.lblHeroTitle.Location = new System.Drawing.Point(25, 16);
             this.lblHeroTitle.Name = "lblHeroTitle";
-            this.lblHeroTitle.Size = new System.Drawing.Size(415, 31);
+            this.lblHeroTitle.Size = new System.Drawing.Size(296, 31);
             this.lblHeroTitle.TabIndex = 0;
-            this.lblHeroTitle.Text = "📊 비즈니스 보고서 요약 대시보드 템플릿";
+            this.lblHeroTitle.Text = "📊 AI Summary 대시보드 ";
             // 
             // TextDocument
             // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(900, 620);
             this.Controls.Add(this.panelRoot);
@@ -191,6 +192,7 @@
             this.panelHeader.ResumeLayout(false);
             this.panelHeader.PerformLayout();
             this.ResumeLayout(false);
+
         }
 
         #endregion
