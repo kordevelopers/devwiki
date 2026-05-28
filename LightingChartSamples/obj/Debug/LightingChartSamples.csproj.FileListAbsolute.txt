@@ -30,3 +30,4 @@ F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\obj\
 F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\obj\Debug\LightingChartSamples.exe
 F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\obj\Debug\LightingChartSamples.pdb
 F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\obj\Debug\LightingChartSamples.LightningRadarSample.resources
+F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\obj\Debug\LightingChartSamples.LightningBarSample.resources
