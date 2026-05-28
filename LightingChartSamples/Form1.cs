@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -7,6 +8,7 @@ namespace LightingChartSamples
     public partial class Form1 : Form
     {
         private readonly LightningRadar radar;
+        private readonly LightningRadarImagePathInfo imagePathInfo;
 
         public Form1()
         {
@@ -15,8 +17,9 @@ namespace LightingChartSamples
             BackColor = Color.White;
             Text = "Radar Chart Sample";
 
-            radar = LightningRadar.AttachTo<SampleLightningRadar>(this, DockStyle.Fill, null, CreateDefaultOptions());
+            radar = LightningRadar.AttachTo<SampleLightningRadar>(pnlChartHost, DockStyle.Fill, null, CreateDefaultOptions());
             radar.SetData(CreateCategories(), CreateSeries());
+            imagePathInfo = CreateImagePathInfo();
         }
 
         private static LightningRadarOptions CreateDefaultOptions()
@@ -27,6 +30,30 @@ namespace LightingChartSamples
                 CategoryLabelOffset = 32f,
                 GridRingCount = 10
             };
+        }
+
+        private static LightningRadarImagePathInfo CreateImagePathInfo()
+        {
+            return new LightningRadarImagePathInfo
+            {
+                FabId = "FAB1",
+                LotCd = "LOT1001",
+                DraftNo = "DRAFT01",
+                FileNamePrefix = "radar"
+            };
+        }
+
+        private void btnSaveImage_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string savedFilePath = radar.SaveImage(imagePathInfo);
+                MessageBox.Show(this, string.Format("이미지가 저장되었습니다.\n{0}", savedFilePath), "저장 완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, string.Format("이미지 저장 중 오류가 발생했습니다.\n{0}", ex.Message), "저장 실패", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private static IEnumerable<string> CreateCategories()

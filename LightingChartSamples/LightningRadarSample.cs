@@ -18,7 +18,7 @@ namespace LightingChartSamples
 
             // 코드만으로 차트를 생성하여 현재 폼에 바로 붙입니다.
             // DockStyle.Fill 이므로 폼 크기에 맞게 자동으로 차트가 늘어납니다.
-            radar = LightningRadar.Create(this, CreateCategories(), CreateSeries(), CreateOptions());
+            radar = LightningRadar.Create(pnlChartHost, CreateCategories(), CreateSeries(), CreateOptions());
             imagePathInfo = CreateImagePathInfo();
 
             // 차트 이미지를 지정 경로에 저장하는 방법:
@@ -191,6 +191,19 @@ namespace LightingChartSamples
                     LineColor = Color.FromArgb(230, 74, 166, 224)
                 }
             };
+        }
+
+        private void btnSaveImage_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string savedFilePath = radar.SaveImage(imagePathInfo);
+                MessageBox.Show(this, string.Format("이미지가 저장되었습니다.\n{0}", savedFilePath), "저장 완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, string.Format("이미지 저장 중 오류가 발생했습니다.\n{0}", ex.Message), "저장 실패", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }
