@@ -97,6 +97,12 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="LightningRadarCanvasControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="LightningRadarCanvasControl.Designer.cs">
+      <DependentUpon>LightningRadarCanvasControl.cs</DependentUpon>
+    </Compile>
     <Compile Include="MainWindowForm.cs">
       <SubType>Form</SubType>
     </Compile>

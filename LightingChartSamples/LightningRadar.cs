@@ -59,7 +59,8 @@ namespace LightingChartSamples
             TopOffset = 90;
             RadiusPadding = 15f;
             GridRingCount = 10;
-            CategoryLabelOffset = 32f;
+            CategoryLabelOffset = 14f;
+            TopCategoryLabelVerticalOffset = 0f;
             CategoryFontSize = 8.5f;
             CategoryLabelColor = Color.FromArgb(95, 95, 95);
             ScaleFontSize = 9f;
@@ -68,6 +69,9 @@ namespace LightingChartSamples
             MinorGridColor = Color.FromArgb(230, 230, 230);
             SpokeColor = Color.FromArgb(225, 225, 225);
             LegendTextColor = Color.FromArgb(90, 90, 90);
+            LegendItemSpacing = 28f;
+            ShowTitle = true;
+            ShowLegend = true;
             SeriesLineWidth = 2f;
             SeriesPointSize = 8f;
             ImageStorage = new LightningRadarImageStorageOptions();
@@ -134,6 +138,20 @@ namespace LightingChartSamples
         public float CategoryLabelOffset { get; set; }
 
         /// <summary>
+        /// 최상단(인덱스 0) 카테고리 라벨의 가로(X) 이동량입니다.
+        /// 음수면 왼쪽, 양수면 오른쪽으로 이동합니다.
+        /// 기본값: 0
+        /// </summary>
+        public float TopCategoryLabelHorizontalOffset { get; set; }
+
+        /// <summary>
+        /// 최상단(인덱스 0) 카테고리 라벨의 세로(Y) 이동량입니다.
+        /// 양수면 위(12시 방향), 음수면 아래로 이동합니다.
+        /// 기본값: 0
+        /// </summary>
+        public float TopCategoryLabelVerticalOffset { get; set; }
+
+        /// <summary>
         /// 카테고리 라벨 글자 크기입니다.
         /// 기본값: 8.5
         /// </summary>
@@ -180,6 +198,24 @@ namespace LightingChartSamples
         /// 기본값: 진한 회색
         /// </summary>
         public Color LegendTextColor { get; set; }
+
+        /// <summary>
+        /// 시리즈 범례 항목 사이 가로 간격입니다.
+        /// 기본값: 28
+        /// </summary>
+        public float LegendItemSpacing { get; set; }
+
+        /// <summary>
+        /// 차트 제목 표시 여부입니다.
+        /// 기본값: true
+        /// </summary>
+        public bool ShowTitle { get; set; }
+
+        /// <summary>
+        /// 범례 표시 여부입니다.
+        /// 기본값: true
+        /// </summary>
+        public bool ShowLegend { get; set; }
 
         /// <summary>
         /// 시리즈 외곽선 두께입니다.
@@ -347,6 +383,8 @@ namespace LightingChartSamples
         private string[] categories = new string[0];
         private List<LightningRadarSeries> series = new List<LightningRadarSeries>();
         private LightningRadarOptions options = new LightningRadarOptions();
+        // 마지막 레전드가 그려진 영역을 보관하여 스케일/라벨이 그 영역과 겹치지 않도록 처리합니다.
+        private RectangleF lastLegendBounds = RectangleF.Empty;
 
         public LightningRadar()
         {
@@ -625,9 +663,57 @@ namespace LightingChartSamples
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             e.Graphics.Clear(snapshotOptions.BackgroundColor);
 
-            DrawTitle(e.Graphics, snapshotOptions);
+            // 먼저 레전드가 차지할 영역을 계산하여 다른 요소(스케일 라벨 등)가 겹치지 않도록 합니다.
+            lastLegendBounds = snapshotOptions.ShowLegend
+                ? CalculateLegendBounds(e.Graphics, snapshotSeries, snapshotOptions, ClientSize)
+                : RectangleF.Empty;
+
+            if (snapshotOptions.ShowTitle)
+            {
+                DrawTitle(e.Graphics, snapshotOptions);
+            }
+
             DrawRadarChart(e.Graphics, snapshotCategories, snapshotSeries, snapshotOptions);
-            DrawLegend(e.Graphics, snapshotSeries, snapshotOptions);
+
+            // 레전드를 실제로 그립니다.
+            if (snapshotOptions.ShowLegend)
+            {
+                DrawLegend(e.Graphics, snapshotSeries, snapshotOptions);
+            }
+        }
+
+        /// <summary>
+        /// 레전드가 실제로 차지할 영역을 계산하여 반환합니다.
+        /// DrawLegend와 동일한 좌표 계산을 사용합니다.
+        /// </summary>
+        protected virtual RectangleF CalculateLegendBounds(Graphics graphics, LightningRadarSeries[] currentSeries, LightningRadarOptions currentOptions, Size renderSize)
+        {
+            if (currentSeries == null || currentSeries.Length == 0)
+            {
+                return RectangleF.Empty;
+            }
+
+            const float markerWidth = 20f;
+            const float labelSpacing = 8f;
+            float sectionSpacing = Math.Max(0f, currentOptions.LegendItemSpacing);
+
+            using (var legendFont = new Font(Font.FontFamily, 9f, FontStyle.Regular))
+            {
+                float totalLegendWidth = 0f;
+                float maxHeight = 0f;
+                foreach (LightningRadarSeries radarSeries in currentSeries)
+                {
+                    SizeF textSize = graphics.MeasureString(radarSeries.Name ?? string.Empty, legendFont);
+                    totalLegendWidth += markerWidth + labelSpacing + textSize.Width + sectionSpacing;
+                    maxHeight = Math.Max(maxHeight, Math.Max(textSize.Height, 14f));
+                }
+
+                totalLegendWidth = Math.Max(0f, totalLegendWidth - sectionSpacing);
+                float legendX = (renderSize.Width - totalLegendWidth) / 2f;
+                float legendY = 48f;
+
+                return new RectangleF(legendX, legendY - 2f, totalLegendWidth, maxHeight + 4f);
+            }
         }
 
         protected virtual void DrawTitle(Graphics graphics, LightningRadarOptions currentOptions)
@@ -651,14 +737,16 @@ namespace LightingChartSamples
                 return;
             }
 
-            int diameter = Math.Min(renderSize.Width - currentOptions.LegendWidth - (currentOptions.ChartPadding * 2), renderSize.Height - currentOptions.TopOffset - currentOptions.ChartPadding);
+            int availableWidth = renderSize.Width - (currentOptions.ChartPadding * 2);
+            int availableHeight = renderSize.Height - currentOptions.TopOffset - currentOptions.ChartPadding;
+            int diameter = Math.Min(availableWidth, availableHeight);
             if (diameter <= 100)
             {
                 return;
             }
 
             float radius = (diameter / 2f) - currentOptions.RadiusPadding;
-            PointF center = new PointF(currentOptions.ChartPadding + (diameter / 2f), currentOptions.TopOffset + (diameter / 2f));
+            PointF center = new PointF(renderSize.Width / 2f, currentOptions.TopOffset + (diameter / 2f));
 
             DrawGrid(graphics, center, radius, currentCategories, currentOptions);
             DrawScaleLabels(graphics, center, radius, currentOptions);
@@ -696,24 +784,53 @@ namespace LightingChartSamples
         protected virtual void DrawScaleLabels(Graphics graphics, PointF center, float radius, LightningRadarOptions currentOptions)
         {
             int ringCount = Math.Max(1, currentOptions.GridRingCount);
-            int step = Math.Max(1, 100 / ringCount);
+            float ringValueStep = 100f / ringCount;
 
             using (var labelFont = new Font(Font.FontFamily, currentOptions.ScaleFontSize, FontStyle.Bold))
             using (var labelBrush = new SolidBrush(currentOptions.ScaleLabelColor))
             {
-                for (int value = 0; value <= 100; value += step)
-                {
-                    if (value == 0)
-                    {
-                        SizeF zeroLabelSize = graphics.MeasureString("0", labelFont);
-                        graphics.DrawString("0", labelFont, labelBrush, center.X - (zeroLabelSize.Width / 2f), center.Y - (zeroLabelSize.Height / 2f));
-                        continue;
-                    }
+                // 동적 간격 계산: 라벨 높이와 반지름 기반 픽셀 간격을 비교해 표시할 라벨 간격(skip)을 결정합니다.
+                SizeF sampleSize = graphics.MeasureString("100", labelFont);
+                float labelHeight = sampleSize.Height;
+                float ringPixelStep = radius / ringCount;
+                int skip = (int)Math.Ceiling((labelHeight + 4f) / Math.Max(0.5f, ringPixelStep));
+                if (skip < 1) skip = 1;
 
-                    float currentRadius = radius * value / 100f;
+                // 0은 항상 표시 (단, 레전드와 겹치면 표시 생략)
+                SizeF zeroLabelSize = graphics.MeasureString("0", labelFont);
+                var zeroRect = new RectangleF(center.X - (zeroLabelSize.Width / 2f), center.Y - (zeroLabelSize.Height / 2f), zeroLabelSize.Width, zeroLabelSize.Height);
+                if (!lastLegendBounds.IntersectsWith(zeroRect))
+                {
+                    graphics.DrawString("0", labelFont, labelBrush, zeroRect.X, zeroRect.Y);
+                }
+
+                // 간격(skip)에 따라 라벨을 출력
+                for (int ring = skip; ring <= ringCount; ring += skip)
+                {
+                    int value = (int)Math.Round(ring * ringValueStep);
+                    float currentRadius = radius * ring / ringCount;
                     PointF point = new PointF(center.X, center.Y - currentRadius);
                     SizeF labelSize = graphics.MeasureString(value.ToString(), labelFont);
-                    graphics.DrawString(value.ToString(), labelFont, labelBrush, point.X - (labelSize.Width / 2f), point.Y - labelSize.Height - 4f);
+                    var labelRect = new RectangleF(point.X - (labelSize.Width / 2f), point.Y - labelSize.Height - 4f, labelSize.Width, labelSize.Height);
+                    // 레전드와 겹치면 표시하지 않음
+                    if (!lastLegendBounds.IntersectsWith(labelRect))
+                    {
+                        graphics.DrawString(value.ToString(), labelFont, labelBrush, labelRect.X, labelRect.Y);
+                    }
+                }
+
+                // 최상단(100)이 출력되지 않았을 경우 보장 출력
+                if ((ringCount % skip) != 0)
+                {
+                    int value = 100;
+                    float currentRadius = radius;
+                    PointF point = new PointF(center.X, center.Y - currentRadius);
+                    SizeF labelSize = graphics.MeasureString(value.ToString(), labelFont);
+                    var labelRect = new RectangleF(point.X - (labelSize.Width / 2f), point.Y - labelSize.Height - 4f, labelSize.Width, labelSize.Height);
+                    if (!lastLegendBounds.IntersectsWith(labelRect))
+                    {
+                        graphics.DrawString(value.ToString(), labelFont, labelBrush, labelRect.X, labelRect.Y);
+                    }
                 }
             }
         }
@@ -727,6 +844,16 @@ namespace LightingChartSamples
                 {
                     float angle = GetRadarAngle(i, currentCategories.Length);
                     PointF point = GetRadarPoint(center, radius + currentOptions.CategoryLabelOffset, i, currentCategories.Length);
+
+                    if (i == 0 && Math.Abs(currentOptions.TopCategoryLabelHorizontalOffset) > float.Epsilon)
+                    {
+                        point = new PointF(point.X + currentOptions.TopCategoryLabelHorizontalOffset, point.Y);
+                    }
+
+                    if (i == 0 && Math.Abs(currentOptions.TopCategoryLabelVerticalOffset) > float.Epsilon)
+                    {
+                        point = new PointF(point.X, point.Y - currentOptions.TopCategoryLabelVerticalOffset);
+                    }
 
                     using (var format = CreateCategoryLabelFormat(angle))
                     {
@@ -782,7 +909,7 @@ namespace LightingChartSamples
 
             const float markerWidth = 20f;
             const float labelSpacing = 8f;
-            const float sectionSpacing = 28f;
+            float sectionSpacing = Math.Max(0f, currentOptions.LegendItemSpacing);
 
             using (var legendFont = new Font(Font.FontFamily, 9f, FontStyle.Regular))
             using (var textBrush = new SolidBrush(currentOptions.LegendTextColor))
@@ -924,9 +1051,21 @@ namespace LightingChartSamples
                 graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 graphics.Clear(snapshotOptions.BackgroundColor);
 
-                DrawTitle(graphics, snapshotOptions);
+                lastLegendBounds = snapshotOptions.ShowLegend
+                    ? CalculateLegendBounds(graphics, snapshotSeries, snapshotOptions, new Size(width, height))
+                    : RectangleF.Empty;
+
+                if (snapshotOptions.ShowTitle)
+                {
+                    DrawTitle(graphics, snapshotOptions);
+                }
+
                 DrawRadarChart(graphics, snapshotCategories, snapshotSeries, snapshotOptions, new Size(width, height));
-                DrawLegend(graphics, snapshotSeries, snapshotOptions, new Size(width, height));
+
+                if (snapshotOptions.ShowLegend)
+                {
+                    DrawLegend(graphics, snapshotSeries, snapshotOptions, new Size(width, height));
+                }
             }
 
             return bitmap;

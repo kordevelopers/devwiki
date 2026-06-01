@@ -7,7 +7,7 @@ namespace LightingChartSamples
 {
     public partial class LightningRadarSample : Form
     {
-        private readonly LightningRadar radar;
+        private readonly LightningRadarCanvasControl radarCanvas;
         private readonly LightningRadarImagePathInfo imagePathInfo;
 
         public LightningRadarSample()
@@ -16,9 +16,20 @@ namespace LightingChartSamples
 
             BackColor = Color.White;
 
-            // 코드만으로 차트를 생성하여 현재 폼에 바로 붙입니다.
-            // DockStyle.Fill 이므로 폼 크기에 맞게 자동으로 차트가 늘어납니다.
-            radar = LightningRadar.Create(pnlChartHost, CreateCategories(), CreateSeries(), CreateOptions());
+            radarCanvas = new LightningRadarCanvasControl
+            {
+                Dock = DockStyle.Fill,
+                ChartTitle = "LightningRadar Common Sample",
+                ChartAlignment = HorizontalAlignment.Center
+            };
+
+            pnlChartHost.Controls.Add(radarCanvas);
+
+            LightningRadarOptions options = CreateOptions();
+            options.ShowTitle = false;
+            options.ShowLegend = false;
+            radarCanvas.Radar.SetOptions(options);
+            radarCanvas.SetData(CreateCategories(), CreateSeries());
             imagePathInfo = CreateImagePathInfo();
 
             // 차트 이미지를 지정 경로에 저장하는 방법:
@@ -54,14 +65,23 @@ namespace LightingChartSamples
                 Title = "LightningRadar Common Sample",
 
                 // 차트 바깥 기본 여백입니다. 값이 커질수록 내부 차트 영역은 작아집니다.
-                ChartPadding = 40,
+                ChartPadding = 24,
 
                 // 제목/범례를 위한 상단 여백입니다.
                 TopOffset = 90,
 
                 // 카테고리 라벨과 차트 외곽의 간격입니다.
                 // 라벨이 겹치면 이 값을 늘리면 됩니다.
-                CategoryLabelOffset = 34f,
+                CategoryLabelOffset = 10f,
+
+                // 최상단 카테고리 라벨은 가로 이동 없이,
+                // 12시 방향으로만 추가 간격을 둡니다.
+                TopCategoryLabelHorizontalOffset = 0f,
+                TopCategoryLabelVerticalOffset = 14f,
+
+                // 레이더 실제 반지름에서 추가로 줄이는 내부 여백입니다.
+                // 값이 크면 라벨과 데이터 영역 사이가 더 벌어집니다.
+                RadiusPadding = 2f,
 
                 // 내부 원형 가이드 개수입니다.
                 // 예: 10 이면 0~100을 10단계로 표현합니다.
@@ -197,7 +217,7 @@ namespace LightingChartSamples
         {
             try
             {
-                string savedFilePath = radar.SaveImage(imagePathInfo);
+                string savedFilePath = radarCanvas.Radar.SaveImage(imagePathInfo);
                 MessageBox.Show(this, string.Format("이미지가 저장되었습니다.\n{0}", savedFilePath), "저장 완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
