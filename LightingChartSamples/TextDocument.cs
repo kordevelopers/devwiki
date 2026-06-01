@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Text;
 using System.Windows.Forms;
 
 namespace LightingChartSamples
@@ -138,22 +139,54 @@ namespace LightingChartSamples
             var tipBackColor = Color.FromArgb(237, 239, 242);
             var tipForeColor = Color.FromArgb(35, 44, 62);
 
-            AppendStyledText("   💡 Tip: ", new Font("맑은 고딕", 10.5F, FontStyle.Bold), tipForeColor, tipBackColor);
-            AppendStyledText("한글 문장의 다양한 더미 텍스트가 필요하다면 ", tipFont, tipForeColor, tipBackColor);
-            AppendStyledText("한글 Lorem Ipsum 생성기", new Font("맑은 고딕", 10.5F, FontStyle.Underline), Color.FromArgb(26, 64, 140), tipBackColor);
-            AppendStyledText("를 통해 맞춤형 테스트 문자열을 생성하실 수 있습니다.", tipFont, tipForeColor, tipBackColor);
-            AppendStyledText("   \n", tipFont, tipForeColor, tipBackColor);
+            AppendStyledText("   💡 Tip: ", new Font("맑은 고딕", 10.5F, FontStyle.Bold), tipForeColor, tipBackColor, false);
+            AppendStyledText("한글 문장의 다양한 더미 텍스트가 필요하다면 ", tipFont, tipForeColor, tipBackColor, false);
+            AppendStyledText("한글 Lorem Ipsum 생성기", new Font("맑은 고딕", 10.5F, FontStyle.Underline), Color.FromArgb(26, 64, 140), tipBackColor, false);
+            AppendStyledText("를 통해 맞춤형 테스트 문자열을 생성하실 수 있습니다.", tipFont, tipForeColor, tipBackColor, false);
+            AppendStyledText("   \n", tipFont, tipForeColor, tipBackColor, false);
         }
 
-        private void AppendStyledText(string text, Font font, Color foreColor, Color? backColor = null)
+        private void AppendStyledText(string text, Font font, Color foreColor, Color? backColor = null, bool normalizeParagraph = true)
         {
+            string resolvedText = normalizeParagraph ? NormalizeParagraphText(text) : text;
+
             richTextBoxDocument.SelectionStart = richTextBoxDocument.TextLength;
             richTextBoxDocument.SelectionLength = 0;
             richTextBoxDocument.SelectionFont = font;
             richTextBoxDocument.SelectionColor = foreColor;
             richTextBoxDocument.SelectionBackColor = backColor ?? richTextBoxDocument.BackColor;
-            richTextBoxDocument.AppendText(text);
+            richTextBoxDocument.AppendText(resolvedText);
             richTextBoxDocument.SelectionBackColor = richTextBoxDocument.BackColor;
+        }
+
+        private static string NormalizeParagraphText(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            string normalized = text.Replace("\r\n", "\n").Replace('\r', '\n').Replace("\t", " ");
+            string[] lines = normalized.Split(new[] { '\n' }, StringSplitOptions.None);
+            var builder = new StringBuilder();
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string line = lines[i].TrimEnd();
+                if (i > 0)
+                {
+                    line = line.TrimStart();
+                }
+
+                if (i > 0)
+                {
+                    builder.Append("\n");
+                }
+
+                builder.Append(line);
+            }
+
+            return builder.ToString();
         }
     }
 }
