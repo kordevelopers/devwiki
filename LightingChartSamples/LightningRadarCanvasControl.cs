@@ -28,8 +28,10 @@ namespace LightingChartSamples
             DoubleBuffered = true;
             MinimumSize = new Size(300, 300);
             lblTitle.AutoSize = true;
+            lblTitle.Visible = false;
             flpLegend.AutoSize = true;
             flpLegend.Dock = DockStyle.None;
+            pnlHeader.Height = 34;
 
             radar = LightningRadar.AttachTo<LightningRadar>(pnlCanvas, DockStyle.None, null, new LightningRadarOptions
             {
@@ -55,7 +57,7 @@ namespace LightingChartSamples
 
             ApplySampleData();
             ApplyAppearance();
-            UpdateSquareBounds();
+            UpdateRadarBounds();
         }
 
         public Color UserControlBorderColor
@@ -157,7 +159,7 @@ namespace LightingChartSamples
         public void SetChartAlignment(HorizontalAlignment alignment)
         {
             ChartAlignment = alignment;
-            UpdateSquareBounds();
+            UpdateRadarBounds();
         }
 
         public HorizontalAlignment ChartAlignment { get; set; } = HorizontalAlignment.Left;
@@ -175,7 +177,7 @@ namespace LightingChartSamples
 
         private void LightningRadarCanvasControl_Resize(object sender, EventArgs e)
         {
-            UpdateSquareBounds();
+            UpdateRadarBounds();
         }
 
         private void PnlHeader_Resize(object sender, EventArgs e)
@@ -185,34 +187,17 @@ namespace LightingChartSamples
 
         private void PnlCanvas_Resize(object sender, EventArgs e)
         {
-            UpdateSquareBounds();
+            UpdateRadarBounds();
         }
 
-        private void UpdateSquareBounds()
+        private void UpdateRadarBounds()
         {
-            int size = Math.Min(pnlCanvas.ClientSize.Width, pnlCanvas.ClientSize.Height);
-            if (size <= 1)
+            if (pnlCanvas.ClientSize.Width <= 1 || pnlCanvas.ClientSize.Height <= 1)
             {
                 return;
             }
 
-            int x;
-            switch (ChartAlignment)
-            {
-                case HorizontalAlignment.Center:
-                    x = (pnlCanvas.ClientSize.Width - size) / 2;
-                    break;
-                case HorizontalAlignment.Right:
-                    x = pnlCanvas.ClientSize.Width - size;
-                    break;
-                case HorizontalAlignment.Left:
-                default:
-                    x = 0;
-                    break;
-            }
-
-            int y = (pnlCanvas.ClientSize.Height - size) / 2;
-            radar.Bounds = new Rectangle(x, y, size, size);
+            radar.Bounds = pnlCanvas.ClientRectangle;
             pnlCanvas.Invalidate();
             UpdateHeaderLayout();
         }
@@ -224,28 +209,8 @@ namespace LightingChartSamples
                 return;
             }
 
-            Rectangle chartRect = radar.Bounds;
-            if (chartRect.Width <= 0 || chartRect.Height <= 0)
-            {
-                return;
-            }
-
-            int titleY = Math.Max(0, (pnlHeader.Height - lblTitle.Height) / 2);
-            lblTitle.Location = new Point(Math.Max(4, chartRect.Left + 4), titleY);
-
             int legendY = Math.Max(0, (pnlHeader.Height - flpLegend.Height) / 2);
-            int legendX = chartRect.Right - flpLegend.Width - 4;
-            int minLegendX = lblTitle.Right + 16;
-
-            if (legendX < minLegendX)
-            {
-                legendX = minLegendX;
-            }
-
-            if (legendX + flpLegend.Width > pnlHeader.Width)
-            {
-                legendX = Math.Max(4, pnlHeader.Width - flpLegend.Width - 4);
-            }
+            int legendX = Math.Max(4, (pnlHeader.ClientSize.Width - flpLegend.Width) / 2);
 
             flpLegend.Location = new Point(legendX, legendY);
         }

@@ -19,7 +19,6 @@ namespace LightingChartSamples
             radarCanvas = new LightningRadarCanvasControl
             {
                 Dock = DockStyle.Fill,
-                ChartTitle = "LightningRadar Common Sample",
                 ChartAlignment = HorizontalAlignment.Center
             };
 
@@ -65,10 +64,10 @@ namespace LightingChartSamples
                 Title = "LightningRadar Common Sample",
 
                 // 차트 바깥 기본 여백입니다. 값이 커질수록 내부 차트 영역은 작아집니다.
-                ChartPadding = 24,
+                ChartPadding = 8,
 
                 // 제목/범례를 위한 상단 여백입니다.
-                TopOffset = 90,
+                TopOffset = 8,
 
                 // 카테고리 라벨과 차트 외곽의 간격입니다.
                 // 라벨이 겹치면 이 값을 늘리면 됩니다.

@@ -170,7 +170,6 @@ namespace LightingChartSamples
             var chart = new LightningRadarCanvasControl
             {
                 Dock = DockStyle.Fill,
-                ChartTitle = chartData.Title,
                 ChartAlignment = HorizontalAlignment.Center,
                 UserControlBorderColor = Color.FromArgb(170, 180, 196),
                 UserControlBackgroundColor = Color.White,

@@ -54,10 +54,10 @@ namespace LightingChartSamples
             TitleColor = Color.FromArgb(90, 90, 90);
             TitleFontSize = 12f;
             BackgroundColor = Color.White;
-            ChartPadding = 40;
+            ChartPadding = 16;
             LegendWidth = 180;
-            TopOffset = 90;
-            RadiusPadding = 15f;
+            TopOffset = 52;
+            RadiusPadding = 6f;
             GridRingCount = 10;
             CategoryLabelOffset = 14f;
             TopCategoryLabelVerticalOffset = 0f;
@@ -70,7 +70,7 @@ namespace LightingChartSamples
             SpokeColor = Color.FromArgb(225, 225, 225);
             LegendTextColor = Color.FromArgb(90, 90, 90);
             LegendItemSpacing = 28f;
-            ShowTitle = true;
+            ShowTitle = false;
             ShowLegend = true;
             SeriesLineWidth = 2f;
             SeriesPointSize = 8f;
@@ -710,7 +710,7 @@ namespace LightingChartSamples
 
                 totalLegendWidth = Math.Max(0f, totalLegendWidth - sectionSpacing);
                 float legendX = (renderSize.Width - totalLegendWidth) / 2f;
-                float legendY = 48f;
+                float legendY = 12f;
 
                 return new RectangleF(legendX, legendY - 2f, totalLegendWidth, maxHeight + 4f);
             }
@@ -923,7 +923,7 @@ namespace LightingChartSamples
 
                 totalLegendWidth = Math.Max(0f, totalLegendWidth - sectionSpacing);
                 float legendX = (renderSize.Width - totalLegendWidth) / 2f;
-                float legendY = 48f;
+                float legendY = 12f;
 
                 foreach (LightningRadarSeries radarSeries in currentSeries)
                 {
