@@ -109,6 +109,9 @@
     <Compile Include="MainWindowForm.Designer.cs">
       <DependentUpon>MainWindowForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="TabbedLayoutSampleForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="TextDocument.cs">
       <SubType>Form</SubType>
     </Compile>
