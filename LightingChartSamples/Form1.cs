@@ -35,6 +35,9 @@ namespace LightingChartSamples
                 RadiusPadding = 2f,
                 CategoryLabelOffset = 4f,
                 GridRingCount = 10,
+                ScaleFontSize = 7f,
+                ScaleLabelDisplayMode = LightningRadarScaleLabelDisplayMode.All,
+                ScaleLabelValueMode = LightningRadarScaleLabelValueMode.RingIndex0ToGridRingCount,
                 MarkerTooltipEnabled = true
             };
         }

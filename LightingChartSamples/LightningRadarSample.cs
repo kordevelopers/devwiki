@@ -96,7 +96,9 @@ namespace LightingChartSamples
                 CategoryFontSize = 9f,
 
                 // 눈금 라벨 글자 크기입니다.
-                ScaleFontSize = 9f,
+                ScaleFontSize = 7f,
+                ScaleLabelDisplayMode = LightningRadarScaleLabelDisplayMode.All,
+                ScaleLabelValueMode = LightningRadarScaleLabelValueMode.RingIndex0ToGridRingCount,
 
                 // 배경색과 라벨 색도 필요에 따라 쉽게 변경할 수 있습니다.
                 BackgroundColor = Color.White,

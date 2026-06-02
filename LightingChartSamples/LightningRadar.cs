@@ -17,6 +17,18 @@ namespace LightingChartSamples
         TopRight
     }
 
+    public enum LightningRadarScaleLabelDisplayMode
+    {
+        Auto,
+        All
+    }
+
+    public enum LightningRadarScaleLabelValueMode
+    {
+        Percent0To100,
+        RingIndex0ToGridRingCount
+    }
+
     /// <summary>
     /// 레이더 차트에 필요한 단일 시리즈 데이터를 정의합니다.
     /// </summary>
@@ -70,8 +82,10 @@ namespace LightingChartSamples
             TopCategoryLabelVerticalOffset = 0f;
             CategoryFontSize = 8.5f;
             CategoryLabelColor = Color.FromArgb(95, 95, 95);
-            ScaleFontSize = 9f;
+            ScaleFontSize = 7f;
             ScaleLabelColor = Color.FromArgb(95, 95, 95);
+            ScaleLabelDisplayMode = LightningRadarScaleLabelDisplayMode.Auto;
+            ScaleLabelValueMode = LightningRadarScaleLabelValueMode.Percent0To100;
             MajorGridColor = Color.FromArgb(205, 205, 205);
             MinorGridColor = Color.FromArgb(230, 230, 230);
             SpokeColor = Color.FromArgb(225, 225, 225);
@@ -185,6 +199,10 @@ namespace LightingChartSamples
         /// 기본값: 회색
         /// </summary>
         public Color ScaleLabelColor { get; set; }
+
+        public LightningRadarScaleLabelDisplayMode ScaleLabelDisplayMode { get; set; }
+
+        public LightningRadarScaleLabelValueMode ScaleLabelValueMode { get; set; }
 
         /// <summary>
         /// 주요 가이드 선 색상입니다.
@@ -838,8 +856,6 @@ namespace LightingChartSamples
         protected virtual void DrawScaleLabels(Graphics graphics, PointF center, float radius, LightningRadarOptions currentOptions)
         {
             int ringCount = Math.Max(1, currentOptions.GridRingCount);
-            float ringValueStep = 100f / ringCount;
-
             using (var labelFont = new Font(Font.FontFamily, currentOptions.ScaleFontSize, FontStyle.Bold))
             using (var labelBrush = new SolidBrush(currentOptions.ScaleLabelColor))
             {
@@ -849,44 +865,60 @@ namespace LightingChartSamples
                 float ringPixelStep = radius / ringCount;
                 int skip = (int)Math.Ceiling((labelHeight + 4f) / Math.Max(0.5f, ringPixelStep));
                 if (skip < 1) skip = 1;
+                if (currentOptions.ScaleLabelDisplayMode == LightningRadarScaleLabelDisplayMode.All)
+                {
+                    skip = 1;
+                }
 
                 // 0은 항상 표시 (단, 레전드와 겹치면 표시 생략)
-                SizeF zeroLabelSize = graphics.MeasureString("0", labelFont);
+                string zeroText = FormatScaleLabel(0, ringCount, currentOptions);
+                SizeF zeroLabelSize = graphics.MeasureString(zeroText, labelFont);
                 var zeroRect = new RectangleF(center.X - (zeroLabelSize.Width / 2f), center.Y - (zeroLabelSize.Height / 2f), zeroLabelSize.Width, zeroLabelSize.Height);
                 if (!lastLegendBounds.IntersectsWith(zeroRect))
                 {
-                    graphics.DrawString("0", labelFont, labelBrush, zeroRect.X, zeroRect.Y);
+                    graphics.DrawString(zeroText, labelFont, labelBrush, zeroRect.X, zeroRect.Y);
                 }
 
                 // 간격(skip)에 따라 라벨을 출력
                 for (int ring = skip; ring <= ringCount; ring += skip)
                 {
-                    int value = (int)Math.Round(ring * ringValueStep);
+                    string labelText = FormatScaleLabel(ring, ringCount, currentOptions);
                     float currentRadius = radius * ring / ringCount;
                     PointF point = new PointF(center.X, center.Y - currentRadius);
-                    SizeF labelSize = graphics.MeasureString(value.ToString(), labelFont);
+                    SizeF labelSize = graphics.MeasureString(labelText, labelFont);
                     var labelRect = new RectangleF(point.X - (labelSize.Width / 2f), point.Y - labelSize.Height - 4f, labelSize.Width, labelSize.Height);
                     // 레전드와 겹치면 표시하지 않음
                     if (!lastLegendBounds.IntersectsWith(labelRect))
                     {
-                        graphics.DrawString(value.ToString(), labelFont, labelBrush, labelRect.X, labelRect.Y);
+                        graphics.DrawString(labelText, labelFont, labelBrush, labelRect.X, labelRect.Y);
                     }
                 }
 
                 // 최상단(100)이 출력되지 않았을 경우 보장 출력
                 if ((ringCount % skip) != 0)
                 {
-                    int value = 100;
+                    string labelText = FormatScaleLabel(ringCount, ringCount, currentOptions);
                     float currentRadius = radius;
                     PointF point = new PointF(center.X, center.Y - currentRadius);
-                    SizeF labelSize = graphics.MeasureString(value.ToString(), labelFont);
+                    SizeF labelSize = graphics.MeasureString(labelText, labelFont);
                     var labelRect = new RectangleF(point.X - (labelSize.Width / 2f), point.Y - labelSize.Height - 4f, labelSize.Width, labelSize.Height);
                     if (!lastLegendBounds.IntersectsWith(labelRect))
                     {
-                        graphics.DrawString(value.ToString(), labelFont, labelBrush, labelRect.X, labelRect.Y);
+                        graphics.DrawString(labelText, labelFont, labelBrush, labelRect.X, labelRect.Y);
                     }
                 }
             }
+        }
+
+        protected virtual string FormatScaleLabel(int ring, int ringCount, LightningRadarOptions currentOptions)
+        {
+            if (currentOptions.ScaleLabelValueMode == LightningRadarScaleLabelValueMode.RingIndex0ToGridRingCount)
+            {
+                return ring.ToString();
+            }
+
+            int value = (int)Math.Round(ring * (100f / Math.Max(1, ringCount)));
+            return value.ToString();
         }
 
         protected virtual void DrawCategories(Graphics graphics, PointF center, float radius, string[] currentCategories, LightningRadarOptions currentOptions)

@@ -46,7 +46,9 @@ namespace LightingChartSamples
                 RadiusPadding = 2f,
                 CategoryLabelOffset = 4f,
                 CategoryFontSize = 9f,
-                ScaleFontSize = 9f
+                ScaleFontSize = 7f,
+                ScaleLabelDisplayMode = LightningRadarScaleLabelDisplayMode.All,
+                ScaleLabelValueMode = LightningRadarScaleLabelValueMode.RingIndex0ToGridRingCount
             });
 
             Resize += LightningRadarCanvasControl_Resize;

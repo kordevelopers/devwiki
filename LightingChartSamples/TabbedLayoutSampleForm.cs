@@ -244,7 +244,9 @@ namespace LightingChartSamples
                 SeriesLineWidth = 2f,
                 SeriesPointSize = 6f,
                 CategoryFontSize = 8f,
-                ScaleFontSize = 8f,
+                ScaleFontSize = 7f,
+                ScaleLabelDisplayMode = LightningRadarScaleLabelDisplayMode.All,
+                ScaleLabelValueMode = LightningRadarScaleLabelValueMode.RingIndex0ToGridRingCount,
                 LegendLabelLocation = LightningRadarLegendLabelLocation.TopCenter,
                 CategoryLabelColor = Color.FromArgb(92, 99, 112),
                 ScaleLabelColor = Color.FromArgb(110, 116, 128)
