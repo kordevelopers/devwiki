@@ -27,8 +27,15 @@ namespace LightingChartSamples
             return new LightningRadarOptions
             {
                 Title = "Radar Chart Sample",
-                CategoryLabelOffset = 32f,
-                GridRingCount = 10
+                ShowTitle = false,
+                ShowLegend = true,
+                LegendLabelLocation = LightningRadarLegendLabelLocation.TopCenter,
+                ChartPadding = 8,
+                TopOffset = 34,
+                RadiusPadding = 2f,
+                CategoryLabelOffset = 4f,
+                GridRingCount = 10,
+                MarkerTooltipEnabled = true
             };
         }
 

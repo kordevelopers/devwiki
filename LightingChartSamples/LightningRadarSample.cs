@@ -64,19 +64,19 @@ namespace LightingChartSamples
                 Title = "LightningRadar Common Sample",
 
                 // 차트 바깥 기본 여백입니다. 값이 커질수록 내부 차트 영역은 작아집니다.
-                ChartPadding = 8,
+                ChartPadding = 6,
 
                 // 제목/범례를 위한 상단 여백입니다.
-                TopOffset = 8,
+                TopOffset = 6,
 
                 // 카테고리 라벨과 차트 외곽의 간격입니다.
                 // 라벨이 겹치면 이 값을 늘리면 됩니다.
-                CategoryLabelOffset = 10f,
+                CategoryLabelOffset = 4f,
 
                 // 최상단 카테고리 라벨은 가로 이동 없이,
                 // 12시 방향으로만 추가 간격을 둡니다.
                 TopCategoryLabelHorizontalOffset = 0f,
-                TopCategoryLabelVerticalOffset = 14f,
+                TopCategoryLabelVerticalOffset = 0f,
 
                 // 레이더 실제 반지름에서 추가로 줄이는 내부 여백입니다.
                 // 값이 크면 라벨과 데이터 영역 사이가 더 벌어집니다.
@@ -102,6 +102,7 @@ namespace LightingChartSamples
                 BackgroundColor = Color.White,
                 CategoryLabelColor = Color.FromArgb(95, 95, 95),
                 ScaleLabelColor = Color.FromArgb(95, 95, 95),
+                LegendLabelLocation = LightningRadarLegendLabelLocation.TopCenter,
 
                 // 이미지 저장 옵션입니다.
                 // AppData, Documents, Desktop, 사용자 지정 경로를 모두 지원합니다.

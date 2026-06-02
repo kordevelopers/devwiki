@@ -10,6 +10,13 @@ using System.Windows.Forms;
 
 namespace LightingChartSamples
 {
+    public enum LightningRadarLegendLabelLocation
+    {
+        TopLeft,
+        TopCenter,
+        TopRight
+    }
+
     /// <summary>
     /// 레이더 차트에 필요한 단일 시리즈 데이터를 정의합니다.
     /// </summary>
@@ -54,12 +61,12 @@ namespace LightingChartSamples
             TitleColor = Color.FromArgb(90, 90, 90);
             TitleFontSize = 12f;
             BackgroundColor = Color.White;
-            ChartPadding = 16;
+            ChartPadding = 8;
             LegendWidth = 180;
-            TopOffset = 52;
-            RadiusPadding = 6f;
+            TopOffset = 34;
+            RadiusPadding = 2f;
             GridRingCount = 10;
-            CategoryLabelOffset = 14f;
+            CategoryLabelOffset = 4f;
             TopCategoryLabelVerticalOffset = 0f;
             CategoryFontSize = 8.5f;
             CategoryLabelColor = Color.FromArgb(95, 95, 95);
@@ -69,7 +76,11 @@ namespace LightingChartSamples
             MinorGridColor = Color.FromArgb(230, 230, 230);
             SpokeColor = Color.FromArgb(225, 225, 225);
             LegendTextColor = Color.FromArgb(90, 90, 90);
-            LegendItemSpacing = 28f;
+            LegendItemSpacing = 18f;
+            LegendLabelLocation = LightningRadarLegendLabelLocation.TopCenter;
+            MarkerTooltipEnabled = true;
+            MarkerTooltipHitRadius = 10f;
+            MarkerTooltipFormat = "{0} / {1}: {2:0.#}";
             ShowTitle = false;
             ShowLegend = true;
             SeriesLineWidth = 2f;
@@ -204,6 +215,14 @@ namespace LightingChartSamples
         /// 기본값: 28
         /// </summary>
         public float LegendItemSpacing { get; set; }
+
+        public LightningRadarLegendLabelLocation LegendLabelLocation { get; set; }
+
+        public bool MarkerTooltipEnabled { get; set; }
+
+        public float MarkerTooltipHitRadius { get; set; }
+
+        public string MarkerTooltipFormat { get; set; }
 
         /// <summary>
         /// 차트 제목 표시 여부입니다.
@@ -385,6 +404,10 @@ namespace LightingChartSamples
         private LightningRadarOptions options = new LightningRadarOptions();
         // 마지막 레전드가 그려진 영역을 보관하여 스케일/라벨이 그 영역과 겹치지 않도록 처리합니다.
         private RectangleF lastLegendBounds = RectangleF.Empty;
+        private readonly ToolTip markerToolTip = new ToolTip();
+        private readonly List<RadarMarkerHitInfo> markerHitInfos = new List<RadarMarkerHitInfo>();
+        private string currentToolTipText = string.Empty;
+        private bool collectMarkerHits;
 
         public LightningRadar()
         {
@@ -392,6 +415,19 @@ namespace LightingChartSamples
             DoubleBuffered = true;
             BackColor = Color.White;
             Size = new Size(820, 540);
+            markerToolTip.InitialDelay = 150;
+            markerToolTip.ReshowDelay = 100;
+            markerToolTip.AutoPopDelay = 5000;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                markerToolTip.Dispose();
+            }
+
+            base.Dispose(disposing);
         }
 
         [Browsable(false)]
@@ -673,7 +709,10 @@ namespace LightingChartSamples
                 DrawTitle(e.Graphics, snapshotOptions);
             }
 
+            markerHitInfos.Clear();
+            collectMarkerHits = true;
             DrawRadarChart(e.Graphics, snapshotCategories, snapshotSeries, snapshotOptions);
+            collectMarkerHits = false;
 
             // 레전드를 실제로 그립니다.
             if (snapshotOptions.ShowLegend)
@@ -709,10 +748,9 @@ namespace LightingChartSamples
                 }
 
                 totalLegendWidth = Math.Max(0f, totalLegendWidth - sectionSpacing);
-                float legendX = (renderSize.Width - totalLegendWidth) / 2f;
-                float legendY = 12f;
+                PointF legendLocation = CalculateLegendLocation(currentOptions, renderSize, totalLegendWidth);
 
-                return new RectangleF(legendX, legendY - 2f, totalLegendWidth, maxHeight + 4f);
+                return new RectangleF(legendLocation.X, legendLocation.Y - 2f, totalLegendWidth, maxHeight + 4f);
             }
         }
 
@@ -723,6 +761,18 @@ namespace LightingChartSamples
             {
                 graphics.DrawString(currentOptions.Title ?? string.Empty, titleFont, titleBrush, 20f, 15f);
             }
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            UpdateMarkerToolTip(e.Location);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            HideMarkerToolTip();
         }
 
         protected virtual void DrawRadarChart(Graphics graphics, string[] currentCategories, LightningRadarSeries[] currentSeries, LightningRadarOptions currentOptions)
@@ -737,8 +787,9 @@ namespace LightingChartSamples
                 return;
             }
 
+            int topOffset = GetEffectiveTopOffset(currentOptions);
             int availableWidth = renderSize.Width - (currentOptions.ChartPadding * 2);
-            int availableHeight = renderSize.Height - currentOptions.TopOffset - currentOptions.ChartPadding;
+            int availableHeight = renderSize.Height - topOffset - currentOptions.ChartPadding;
             int diameter = Math.Min(availableWidth, availableHeight);
             if (diameter <= 100)
             {
@@ -746,7 +797,7 @@ namespace LightingChartSamples
             }
 
             float radius = (diameter / 2f) - currentOptions.RadiusPadding;
-            PointF center = new PointF(renderSize.Width / 2f, currentOptions.TopOffset + (diameter / 2f));
+            PointF center = new PointF(renderSize.Width / 2f, topOffset + (diameter / 2f));
 
             DrawGrid(graphics, center, radius, currentCategories, currentOptions);
             DrawScaleLabels(graphics, center, radius, currentOptions);
@@ -888,11 +939,32 @@ namespace LightingChartSamples
                 graphics.DrawPolygon(linePen, points);
 
                 float markerRadius = currentOptions.SeriesPointSize / 2f;
-                foreach (PointF point in points)
+                for (int i = 0; i < points.Length; i++)
                 {
+                    PointF point = points[i];
                     graphics.FillEllipse(pointBrush, point.X - markerRadius, point.Y - markerRadius, currentOptions.SeriesPointSize, currentOptions.SeriesPointSize);
+                    if (collectMarkerHits)
+                    {
+                        markerHitInfos.Add(new RadarMarkerHitInfo
+                        {
+                            Location = point,
+                            SeriesName = radarSeries.Name ?? string.Empty,
+                            CategoryName = currentCategories[i],
+                            Value = radarSeries.Values[i]
+                        });
+                    }
                 }
             }
+        }
+
+        protected virtual int GetEffectiveTopOffset(LightningRadarOptions currentOptions)
+        {
+            if (currentOptions.ShowTitle || currentOptions.ShowLegend)
+            {
+                return Math.Max(0, currentOptions.TopOffset);
+            }
+
+            return Math.Max(0, currentOptions.ChartPadding);
         }
 
         protected virtual void DrawLegend(Graphics graphics, LightningRadarSeries[] currentSeries, LightningRadarOptions currentOptions)
@@ -922,8 +994,9 @@ namespace LightingChartSamples
                 }
 
                 totalLegendWidth = Math.Max(0f, totalLegendWidth - sectionSpacing);
-                float legendX = (renderSize.Width - totalLegendWidth) / 2f;
-                float legendY = 12f;
+                PointF legendLocation = CalculateLegendLocation(currentOptions, renderSize, totalLegendWidth);
+                float legendX = legendLocation.X;
+                float legendY = legendLocation.Y;
 
                 foreach (LightningRadarSeries radarSeries in currentSeries)
                 {
@@ -946,6 +1019,30 @@ namespace LightingChartSamples
             }
 
             graphics.DrawString(text, font, textBrush, x + 28f, y - 2f);
+        }
+
+        protected virtual PointF CalculateLegendLocation(LightningRadarOptions currentOptions, Size renderSize, float legendWidth)
+        {
+            const float horizontalPadding = 8f;
+            const float legendY = 8f;
+
+            float legendX;
+            switch (currentOptions.LegendLabelLocation)
+            {
+                case LightningRadarLegendLabelLocation.TopLeft:
+                    legendX = horizontalPadding;
+                    break;
+                case LightningRadarLegendLabelLocation.TopRight:
+                    legendX = renderSize.Width - legendWidth - horizontalPadding;
+                    break;
+                case LightningRadarLegendLabelLocation.TopCenter:
+                default:
+                    legendX = (renderSize.Width - legendWidth) / 2f;
+                    break;
+            }
+
+            legendX = Math.Max(horizontalPadding, legendX);
+            return new PointF(legendX, legendY);
         }
 
         protected virtual PointF GetRadarPoint(PointF center, float radius, int index, int totalCount)
@@ -994,6 +1091,94 @@ namespace LightingChartSamples
             }
 
             return format;
+        }
+
+        protected virtual void UpdateMarkerToolTip(Point location)
+        {
+            LightningRadarOptions currentOptions = Options;
+            if (!currentOptions.MarkerTooltipEnabled)
+            {
+                HideMarkerToolTip();
+                return;
+            }
+
+            RadarMarkerHitInfo hitInfo = FindMarkerHit(location, currentOptions.MarkerTooltipHitRadius);
+            if (hitInfo == null)
+            {
+                HideMarkerToolTip();
+                return;
+            }
+
+            string toolTipText = FormatMarkerToolTip(hitInfo, currentOptions);
+            if (toolTipText == currentToolTipText)
+            {
+                return;
+            }
+
+            currentToolTipText = toolTipText;
+            markerToolTip.Show(toolTipText, this, location.X + 14, location.Y + 14);
+        }
+
+        protected virtual RadarMarkerHitInfo FindMarkerHit(Point location, float hitRadius)
+        {
+            float effectiveRadius = Math.Max(2f, hitRadius);
+            float hitRadiusSquared = effectiveRadius * effectiveRadius;
+
+            return markerHitInfos
+                .Select(item => new
+                {
+                    HitInfo = item,
+                    DistanceSquared = GetDistanceSquared(item.Location, location)
+                })
+                .Where(item => item.DistanceSquared <= hitRadiusSquared)
+                .OrderBy(item => item.DistanceSquared)
+                .Select(item => item.HitInfo)
+                .FirstOrDefault();
+        }
+
+        protected virtual string FormatMarkerToolTip(RadarMarkerHitInfo hitInfo, LightningRadarOptions currentOptions)
+        {
+            string format = string.IsNullOrWhiteSpace(currentOptions.MarkerTooltipFormat)
+                ? "{0} / {1}: {2:0.#}"
+                : currentOptions.MarkerTooltipFormat;
+
+            try
+            {
+                return string.Format(format, hitInfo.SeriesName, hitInfo.CategoryName, hitInfo.Value);
+            }
+            catch (FormatException)
+            {
+                return string.Format("{0} / {1}: {2:0.#}", hitInfo.SeriesName, hitInfo.CategoryName, hitInfo.Value);
+            }
+        }
+
+        protected virtual void HideMarkerToolTip()
+        {
+            if (string.IsNullOrEmpty(currentToolTipText))
+            {
+                return;
+            }
+
+            currentToolTipText = string.Empty;
+            markerToolTip.Hide(this);
+        }
+
+        private static float GetDistanceSquared(PointF point, Point location)
+        {
+            float dx = point.X - location.X;
+            float dy = point.Y - location.Y;
+            return (dx * dx) + (dy * dy);
+        }
+
+        protected class RadarMarkerHitInfo
+        {
+            public PointF Location { get; set; }
+
+            public string SeriesName { get; set; }
+
+            public string CategoryName { get; set; }
+
+            public float Value { get; set; }
         }
 
         protected virtual void RefreshSafe()

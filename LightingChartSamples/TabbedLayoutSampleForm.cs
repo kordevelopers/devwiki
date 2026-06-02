@@ -11,8 +11,8 @@ namespace LightingChartSamples
         private const int ChartColumnCount = 2;
         private const int ChartSlotCount = 5;
         private const int ChartRowCount = 3;
-        private const int FixedFirstRowHeight = 320;
-        private const int ActiveChartRowHeight = 320;
+        private const int FixedFirstRowHeight = 450;
+        private const int ActiveChartRowHeight = 450;
         private const int EmptyChartRowHeight = 100;
 
         private readonly TabControl tabControl;
@@ -235,16 +235,17 @@ namespace LightingChartSamples
                 ShowTitle = false,
                 ShowLegend = false,
                 BackgroundColor = Color.White,
-                ChartPadding = 12,
-                TopOffset = 8,
-                CategoryLabelOffset = 8f,
-                TopCategoryLabelVerticalOffset = 10f,
-                RadiusPadding = 6f,
+                ChartPadding = 6,
+                TopOffset = 6,
+                CategoryLabelOffset = 4f,
+                TopCategoryLabelVerticalOffset = 0f,
+                RadiusPadding = 2f,
                 GridRingCount = 5,
                 SeriesLineWidth = 2f,
                 SeriesPointSize = 6f,
                 CategoryFontSize = 8f,
                 ScaleFontSize = 8f,
+                LegendLabelLocation = LightningRadarLegendLabelLocation.TopCenter,
                 CategoryLabelColor = Color.FromArgb(92, 99, 112),
                 ScaleLabelColor = Color.FromArgb(110, 116, 128)
             };

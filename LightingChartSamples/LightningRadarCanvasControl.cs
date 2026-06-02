@@ -43,8 +43,8 @@ namespace LightingChartSamples
                 BackgroundColor = Color.White,
                 ChartPadding = 4,
                 TopOffset = 4,
-                RadiusPadding = 8f,
-                CategoryLabelOffset = 8f,
+                RadiusPadding = 2f,
+                CategoryLabelOffset = 4f,
                 CategoryFontSize = 9f,
                 ScaleFontSize = 9f
             });
@@ -210,7 +210,22 @@ namespace LightingChartSamples
             }
 
             int legendY = Math.Max(0, (pnlHeader.Height - flpLegend.Height) / 2);
-            int legendX = Math.Max(4, (pnlHeader.ClientSize.Width - flpLegend.Width) / 2);
+            int legendX;
+            switch (radar.Options.LegendLabelLocation)
+            {
+                case LightningRadarLegendLabelLocation.TopLeft:
+                    legendX = 8;
+                    break;
+                case LightningRadarLegendLabelLocation.TopRight:
+                    legendX = pnlHeader.ClientSize.Width - flpLegend.Width - 8;
+                    break;
+                case LightningRadarLegendLabelLocation.TopCenter:
+                default:
+                    legendX = (pnlHeader.ClientSize.Width - flpLegend.Width) / 2;
+                    break;
+            }
+
+            legendX = Math.Max(4, legendX);
 
             flpLegend.Location = new Point(legendX, legendY);
         }
