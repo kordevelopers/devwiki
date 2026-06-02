@@ -788,16 +788,19 @@ namespace LightingChartSamples
             }
 
             int topOffset = GetEffectiveTopOffset(currentOptions);
-            int availableWidth = renderSize.Width - (currentOptions.ChartPadding * 2);
-            int availableHeight = renderSize.Height - topOffset - currentOptions.ChartPadding;
-            int diameter = Math.Min(availableWidth, availableHeight);
+            ChartLabelMargins labelMargins = CalculateCategoryLabelMargins(graphics, currentCategories, currentOptions);
+            float availableWidth = renderSize.Width - (currentOptions.ChartPadding * 2f) - labelMargins.Left - labelMargins.Right;
+            float availableHeight = renderSize.Height - topOffset - currentOptions.ChartPadding - labelMargins.Top - labelMargins.Bottom;
+            float diameter = Math.Min(availableWidth, availableHeight);
             if (diameter <= 100)
             {
                 return;
             }
 
             float radius = (diameter / 2f) - currentOptions.RadiusPadding;
-            PointF center = new PointF(renderSize.Width / 2f, topOffset + (diameter / 2f));
+            PointF center = new PointF(
+                currentOptions.ChartPadding + labelMargins.Left + (diameter / 2f),
+                topOffset + labelMargins.Top + (diameter / 2f));
 
             DrawGrid(graphics, center, radius, currentCategories, currentOptions);
             DrawScaleLabels(graphics, center, radius, currentOptions);
@@ -965,6 +968,38 @@ namespace LightingChartSamples
             }
 
             return Math.Max(0, currentOptions.ChartPadding);
+        }
+
+        protected virtual ChartLabelMargins CalculateCategoryLabelMargins(Graphics graphics, string[] currentCategories, LightningRadarOptions currentOptions)
+        {
+            if (currentCategories == null || currentCategories.Length == 0)
+            {
+                return new ChartLabelMargins();
+            }
+
+            using (var labelFont = new Font(Font.FontFamily, currentOptions.CategoryFontSize, FontStyle.Regular))
+            {
+                float maxWidth = 0f;
+                float maxHeight = 0f;
+
+                foreach (string category in currentCategories)
+                {
+                    SizeF labelSize = graphics.MeasureString(category ?? string.Empty, labelFont);
+                    maxWidth = Math.Max(maxWidth, labelSize.Width);
+                    maxHeight = Math.Max(maxHeight, labelSize.Height);
+                }
+
+                float labelOffset = Math.Max(0f, currentOptions.CategoryLabelOffset);
+                float topLabelExtraOffset = Math.Max(0f, currentOptions.TopCategoryLabelVerticalOffset);
+
+                return new ChartLabelMargins
+                {
+                    Top = maxHeight + labelOffset + topLabelExtraOffset + 2f,
+                    Right = maxWidth + labelOffset + 2f,
+                    Bottom = maxHeight + labelOffset + 2f,
+                    Left = maxWidth + labelOffset + 2f
+                };
+            }
         }
 
         protected virtual void DrawLegend(Graphics graphics, LightningRadarSeries[] currentSeries, LightningRadarOptions currentOptions)
@@ -1179,6 +1214,17 @@ namespace LightingChartSamples
             public string CategoryName { get; set; }
 
             public float Value { get; set; }
+        }
+
+        protected class ChartLabelMargins
+        {
+            public float Top { get; set; }
+
+            public float Right { get; set; }
+
+            public float Bottom { get; set; }
+
+            public float Left { get; set; }
         }
 
         protected virtual void RefreshSafe()
