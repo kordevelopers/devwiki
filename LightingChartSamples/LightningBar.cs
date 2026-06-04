@@ -59,6 +59,8 @@ namespace LightingChartSamples
             AxisColor = Color.FromArgb(170, 170, 170);
             GridColor = Color.FromArgb(225, 225, 225);
             LegendTextColor = Color.FromArgb(90, 90, 90);
+            LegendTextMaxWidth = 120f;
+            LegendTextMaxLines = 3;
             BarBorderWidth = 1.2f;
             BarGap = 8f;
             GroupPaddingRatio = 0.18f;
@@ -81,6 +83,8 @@ namespace LightingChartSamples
         public Color AxisColor { get; set; }
         public Color GridColor { get; set; }
         public Color LegendTextColor { get; set; }
+        public float LegendTextMaxWidth { get; set; }
+        public int LegendTextMaxLines { get; set; }
         public float BarBorderWidth { get; set; }
         public float BarGap { get; set; }
         public float GroupPaddingRatio { get; set; }
@@ -567,6 +571,7 @@ namespace LightingChartSamples
             const float markerWidth = 20f;
             const float labelSpacing = 8f;
             const float sectionSpacing = 28f;
+            float maxTextWidth = Math.Max(1f, currentOptions.LegendTextMaxWidth);
 
             using (var legendFont = new Font(Font.FontFamily, 9f, FontStyle.Regular))
             using (var textBrush = new SolidBrush(currentOptions.LegendTextColor))
@@ -575,7 +580,8 @@ namespace LightingChartSamples
                 foreach (LightningBarSeries barSeries in currentSeries)
                 {
                     SizeF textSize = graphics.MeasureString(barSeries.Name ?? string.Empty, legendFont);
-                    totalLegendWidth += markerWidth + labelSpacing + textSize.Width + sectionSpacing;
+                    float textWidth = Math.Min(maxTextWidth, textSize.Width);
+                    totalLegendWidth += markerWidth + labelSpacing + textWidth + sectionSpacing;
                 }
 
                 totalLegendWidth = Math.Max(0f, totalLegendWidth - sectionSpacing);
@@ -585,24 +591,36 @@ namespace LightingChartSamples
                 foreach (LightningBarSeries barSeries in currentSeries)
                 {
                     SizeF textSize = graphics.MeasureString(barSeries.Name ?? string.Empty, legendFont);
-                    DrawLegendItem(graphics, legendFont, textBrush, legendX, legendY, barSeries.FillColor, barSeries.BorderColor, barSeries.Name ?? string.Empty);
-                    legendX += markerWidth + labelSpacing + textSize.Width + sectionSpacing;
+                    float textWidth = Math.Min(maxTextWidth, textSize.Width);
+                    DrawLegendItem(graphics, legendFont, textBrush, legendX, legendY, barSeries.FillColor, barSeries.BorderColor, barSeries.Name ?? string.Empty, currentOptions);
+                    legendX += markerWidth + labelSpacing + textWidth + sectionSpacing;
                 }
             }
         }
 
-        protected virtual void DrawLegendItem(Graphics graphics, Font font, Brush textBrush, float x, float y, Color fillColor, Color borderColor, string text)
+        protected virtual void DrawLegendItem(Graphics graphics, Font font, Brush textBrush, float x, float y, Color fillColor, Color borderColor, string text, LightningBarOptions currentOptions)
         {
             RectangleF markerRect = new RectangleF(x, y, 20f, 14f);
 
             using (var fillBrush = new SolidBrush(fillColor))
             using (var borderPen = new Pen(borderColor, 1.5f))
+            using (var format = new StringFormat())
             {
                 graphics.FillRectangle(fillBrush, markerRect);
                 graphics.DrawRectangle(borderPen, markerRect.X, markerRect.Y, markerRect.Width, markerRect.Height);
-            }
 
-            graphics.DrawString(text, font, textBrush, x + 28f, y - 2f);
+                float maxTextWidth = Math.Max(1f, currentOptions.LegendTextMaxWidth);
+                int maxLines = Math.Max(1, currentOptions.LegendTextMaxLines);
+                float lineHeight = font.GetHeight(graphics);
+                RectangleF textRect = new RectangleF(x + 28f, y - 2f, maxTextWidth, lineHeight * maxLines);
+
+                format.Alignment = StringAlignment.Near;
+                format.LineAlignment = StringAlignment.Near;
+                format.Trimming = StringTrimming.EllipsisWord;
+                format.FormatFlags = StringFormatFlags.LineLimit;
+
+                graphics.DrawString(text ?? string.Empty, font, textBrush, textRect, format);
+            }
         }
 
         protected virtual void RefreshSafe()
