@@ -29,6 +29,7 @@ namespace LightingChartSamples
             MinimumSize = new Size(300, 300);
             lblTitle.AutoSize = true;
             lblTitle.Visible = false;
+            lblTitle.Font = new Font("맑은 고딕", 10f, FontStyle.Bold);
             flpLegend.AutoSize = true;
             flpLegend.Dock = DockStyle.None;
             pnlHeader.Height = 34;
@@ -164,7 +165,7 @@ namespace LightingChartSamples
             UpdateRadarBounds();
         }
 
-        public HorizontalAlignment ChartAlignment { get; set; } = HorizontalAlignment.Left;
+        public HorizontalAlignment ChartAlignment { get; set; } = HorizontalAlignment.Center;
 
         public string ChartTitle
         {

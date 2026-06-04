@@ -774,7 +774,7 @@ namespace LightingChartSamples
 
         protected virtual void DrawTitle(Graphics graphics, LightningRadarOptions currentOptions)
         {
-            using (var titleFont = new Font(Font.FontFamily, currentOptions.TitleFontSize, FontStyle.Bold))
+            using (var titleFont = new Font("맑은 고딕", currentOptions.TitleFontSize, FontStyle.Bold))
             using (var titleBrush = new SolidBrush(currentOptions.TitleColor))
             {
                 graphics.DrawString(currentOptions.Title ?? string.Empty, titleFont, titleBrush, 20f, 15f);
@@ -816,9 +816,15 @@ namespace LightingChartSamples
             }
 
             float radius = (diameter / 2f) - currentOptions.RadiusPadding;
+            float chartAreaWidth = renderSize.Width - (currentOptions.ChartPadding * 2f);
+            float chartAreaHeight = renderSize.Height - topOffset - currentOptions.ChartPadding;
+            float totalChartWidth = diameter + labelMargins.Left + labelMargins.Right;
+            float totalChartHeight = diameter + labelMargins.Top + labelMargins.Bottom;
+            float horizontalSlack = Math.Max(0f, chartAreaWidth - totalChartWidth);
+            float verticalSlack = Math.Max(0f, chartAreaHeight - totalChartHeight);
             PointF center = new PointF(
-                currentOptions.ChartPadding + labelMargins.Left + (diameter / 2f),
-                topOffset + labelMargins.Top + (diameter / 2f));
+                currentOptions.ChartPadding + labelMargins.Left + (horizontalSlack / 2f) + (diameter / 2f),
+                topOffset + labelMargins.Top + (verticalSlack / 2f) + (diameter / 2f));
 
             DrawGrid(graphics, center, radius, currentCategories, currentOptions);
             DrawScaleLabels(graphics, center, radius, currentOptions);
@@ -856,7 +862,7 @@ namespace LightingChartSamples
         protected virtual void DrawScaleLabels(Graphics graphics, PointF center, float radius, LightningRadarOptions currentOptions)
         {
             int ringCount = Math.Max(1, currentOptions.GridRingCount);
-            using (var labelFont = new Font(Font.FontFamily, currentOptions.ScaleFontSize, FontStyle.Bold))
+            using (var labelFont = new Font("맑은 고딕", currentOptions.ScaleFontSize, FontStyle.Bold))
             using (var labelBrush = new SolidBrush(currentOptions.ScaleLabelColor))
             {
                 // 동적 간격 계산: 라벨 높이와 반지름 기반 픽셀 간격을 비교해 표시할 라벨 간격(skip)을 결정합니다.
@@ -923,7 +929,7 @@ namespace LightingChartSamples
 
         protected virtual void DrawCategories(Graphics graphics, PointF center, float radius, string[] currentCategories, LightningRadarOptions currentOptions)
         {
-            using (var labelFont = new Font(Font.FontFamily, currentOptions.CategoryFontSize, FontStyle.Regular))
+            using (var labelFont = new Font("맑은 고딕", currentOptions.CategoryFontSize, FontStyle.Regular))
             using (var labelBrush = new SolidBrush(currentOptions.CategoryLabelColor))
             {
                 for (int i = 0; i < currentCategories.Length; i++)
@@ -1009,7 +1015,7 @@ namespace LightingChartSamples
                 return new ChartLabelMargins();
             }
 
-            using (var labelFont = new Font(Font.FontFamily, currentOptions.CategoryFontSize, FontStyle.Regular))
+            using (var labelFont = new Font("맑은 고딕", currentOptions.CategoryFontSize, FontStyle.Regular))
             {
                 float maxWidth = 0f;
                 float maxHeight = 0f;
@@ -1050,7 +1056,7 @@ namespace LightingChartSamples
             const float labelSpacing = 8f;
             float sectionSpacing = Math.Max(0f, currentOptions.LegendItemSpacing);
 
-            using (var legendFont = new Font(Font.FontFamily, 9f, FontStyle.Regular))
+            using (var legendFont = new Font("맑은 고딕", 9f, FontStyle.Regular))
             using (var textBrush = new SolidBrush(currentOptions.LegendTextColor))
             {
                 float totalLegendWidth = 0f;

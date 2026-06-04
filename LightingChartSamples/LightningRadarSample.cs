@@ -96,7 +96,7 @@ namespace LightingChartSamples
                 CategoryFontSize = 9f,
 
                 // 눈금 라벨 글자 크기입니다.
-                ScaleFontSize = 7f,
+                ScaleFontSize = 8f,
                 ScaleLabelDisplayMode = LightningRadarScaleLabelDisplayMode.All,
                 ScaleLabelValueMode = LightningRadarScaleLabelValueMode.RingIndex0ToGridRingCount,
 
@@ -104,7 +104,7 @@ namespace LightingChartSamples
                 BackgroundColor = Color.White,
                 CategoryLabelColor = Color.FromArgb(95, 95, 95),
                 ScaleLabelColor = Color.FromArgb(95, 95, 95),
-                LegendLabelLocation = LightningRadarLegendLabelLocation.TopCenter,
+                LegendLabelLocation = LightningRadarLegendLabelLocation.TopLeft,
 
                 // 이미지 저장 옵션입니다.
                 // AppData, Documents, Desktop, 사용자 지정 경로를 모두 지원합니다.
