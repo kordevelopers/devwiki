@@ -10,6 +10,24 @@ using System.Windows.Forms;
 
 namespace LightingChartSamples
 {
+    public class LightningBarSeriesClickEventArgs : EventArgs
+    {
+        public LightningBarSeriesClickEventArgs(string categoryName, int categoryIndex, LightningBarSeries series, int seriesIndex, float value)
+        {
+            CategoryName = categoryName;
+            CategoryIndex = categoryIndex;
+            Series = series;
+            SeriesIndex = seriesIndex;
+            Value = value;
+        }
+
+        public string CategoryName { get; private set; }
+        public int CategoryIndex { get; private set; }
+        public LightningBarSeries Series { get; private set; }
+        public int SeriesIndex { get; private set; }
+        public float Value { get; private set; }
+    }
+
     public class LightningBarSeries
     {
         public LightningBarSeries()
@@ -22,6 +40,8 @@ namespace LightingChartSamples
 
         public string Name { get; set; }
 
+        public string LegendLabel { get; set; }
+
         public float[] Values { get; set; }
 
         public Color FillColor { get; set; }
@@ -33,6 +53,7 @@ namespace LightingChartSamples
             return new LightningBarSeries
             {
                 Name = Name,
+                LegendLabel = LegendLabel,
                 Values = Values == null ? new float[0] : Values.ToArray(),
                 FillColor = FillColor,
                 BorderColor = BorderColor
@@ -61,6 +82,8 @@ namespace LightingChartSamples
             LegendTextColor = Color.FromArgb(90, 90, 90);
             LegendTextMaxWidth = 120f;
             LegendTextMaxLines = 3;
+            SeriesTooltipEnabled = true;
+            SeriesTooltipFormat = "Value:{2:0.#} (* 클릭할 경우 해당 계측 데이터 차트로 가 보입니다.)";
             BarBorderWidth = 1.2f;
             BarGap = 8f;
             GroupPaddingRatio = 0.18f;
@@ -85,6 +108,8 @@ namespace LightingChartSamples
         public Color LegendTextColor { get; set; }
         public float LegendTextMaxWidth { get; set; }
         public int LegendTextMaxLines { get; set; }
+        public bool SeriesTooltipEnabled { get; set; }
+        public string SeriesTooltipFormat { get; set; }
         public float BarBorderWidth { get; set; }
         public float BarGap { get; set; }
         public float GroupPaddingRatio { get; set; }
@@ -126,6 +151,12 @@ namespace LightingChartSamples
         private string[] categories = new string[0];
         private List<LightningBarSeries> series = new List<LightningBarSeries>();
         private LightningBarOptions options = new LightningBarOptions();
+        private readonly ToolTip seriesToolTip = new ToolTip();
+        private readonly List<LightningBarHitInfo> barHitInfos = new List<LightningBarHitInfo>();
+        private string currentToolTipText = string.Empty;
+        private bool collectBarHits;
+
+        public event EventHandler<LightningBarSeriesClickEventArgs> SeriesClicked;
 
         public LightningBar()
         {
@@ -133,6 +164,19 @@ namespace LightingChartSamples
             DoubleBuffered = true;
             BackColor = Color.White;
             Size = new Size(820, 540);
+            seriesToolTip.InitialDelay = 150;
+            seriesToolTip.ReshowDelay = 100;
+            seriesToolTip.AutoPopDelay = 5000;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                seriesToolTip.Dispose();
+            }
+
+            base.Dispose(disposing);
         }
 
         [Browsable(false)]
@@ -400,7 +444,10 @@ namespace LightingChartSamples
             e.Graphics.Clear(snapshotOptions.BackgroundColor);
 
             DrawTitle(e.Graphics, snapshotOptions);
+            barHitInfos.Clear();
+            collectBarHits = true;
             DrawBarChart(e.Graphics, snapshotCategories, snapshotSeries, snapshotOptions, ClientSize);
+            collectBarHits = false;
             DrawLegend(e.Graphics, snapshotSeries, snapshotOptions, ClientSize);
         }
 
@@ -411,6 +458,41 @@ namespace LightingChartSamples
             {
                 graphics.DrawString(currentOptions.Title ?? string.Empty, titleFont, titleBrush, 20f, 15f);
             }
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            UpdateSeriesToolTip(e.Location);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            HideSeriesToolTip();
+        }
+
+        protected override void OnMouseClick(MouseEventArgs e)
+        {
+            base.OnMouseClick(e);
+
+            if (e.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
+            LightningBarHitInfo hitInfo = FindBarHit(e.Location);
+            if (hitInfo == null)
+            {
+                return;
+            }
+
+            OnSeriesClicked(new LightningBarSeriesClickEventArgs(
+                hitInfo.CategoryName,
+                hitInfo.CategoryIndex,
+                hitInfo.Series.Clone(),
+                hitInfo.SeriesIndex,
+                hitInfo.Value));
         }
 
         protected virtual void DrawBarChart(Graphics graphics, string[] currentCategories, LightningBarSeries[] currentSeries, LightningBarOptions currentOptions, Size renderSize)
@@ -539,6 +621,19 @@ namespace LightingChartSamples
                         graphics.FillRectangle(fillBrush, barRect);
                         graphics.DrawRectangle(borderPen, barRect.X, barRect.Y, barRect.Width, barRect.Height);
                     }
+
+                    if (collectBarHits)
+                    {
+                        barHitInfos.Add(new LightningBarHitInfo
+                        {
+                            Bounds = barRect,
+                            CategoryName = currentCategories[categoryIndex],
+                            CategoryIndex = categoryIndex,
+                            Series = barSeries.Clone(),
+                            SeriesIndex = seriesIndex,
+                            Value = value
+                        });
+                    }
                 }
             }
         }
@@ -579,7 +674,7 @@ namespace LightingChartSamples
                 float totalLegendWidth = 0f;
                 foreach (LightningBarSeries barSeries in currentSeries)
                 {
-                    SizeF textSize = graphics.MeasureString(barSeries.Name ?? string.Empty, legendFont);
+                    SizeF textSize = MeasureLegendText(graphics, GetLegendLabel(barSeries), legendFont, currentOptions);
                     float textWidth = Math.Min(maxTextWidth, textSize.Width);
                     totalLegendWidth += markerWidth + labelSpacing + textWidth + sectionSpacing;
                 }
@@ -590,9 +685,10 @@ namespace LightingChartSamples
 
                 foreach (LightningBarSeries barSeries in currentSeries)
                 {
-                    SizeF textSize = graphics.MeasureString(barSeries.Name ?? string.Empty, legendFont);
+                    string legendText = GetLegendLabel(barSeries);
+                    SizeF textSize = MeasureLegendText(graphics, legendText, legendFont, currentOptions);
                     float textWidth = Math.Min(maxTextWidth, textSize.Width);
-                    DrawLegendItem(graphics, legendFont, textBrush, legendX, legendY, barSeries.FillColor, barSeries.BorderColor, barSeries.Name ?? string.Empty, currentOptions);
+                    DrawLegendItem(graphics, legendFont, textBrush, legendX, legendY, barSeries.FillColor, barSeries.BorderColor, legendText, currentOptions);
                     legendX += markerWidth + labelSpacing + textWidth + sectionSpacing;
                 }
             }
@@ -612,7 +708,7 @@ namespace LightingChartSamples
                 float maxTextWidth = Math.Max(1f, currentOptions.LegendTextMaxWidth);
                 int maxLines = Math.Max(1, currentOptions.LegendTextMaxLines);
                 float lineHeight = font.GetHeight(graphics);
-                RectangleF textRect = new RectangleF(x + 28f, y - 2f, maxTextWidth, lineHeight * maxLines);
+                RectangleF textRect = new RectangleF(x + 28f, y - 3f, maxTextWidth, (lineHeight * maxLines) + 8f);
 
                 format.Alignment = StringAlignment.Near;
                 format.LineAlignment = StringAlignment.Near;
@@ -621,6 +717,122 @@ namespace LightingChartSamples
 
                 graphics.DrawString(text ?? string.Empty, font, textBrush, textRect, format);
             }
+        }
+
+        protected virtual string GetLegendLabel(LightningBarSeries barSeries)
+        {
+            if (barSeries == null)
+            {
+                return string.Empty;
+            }
+
+            return string.IsNullOrEmpty(barSeries.LegendLabel)
+                ? (barSeries.Name ?? string.Empty)
+                : barSeries.LegendLabel;
+        }
+
+        protected virtual SizeF MeasureLegendText(Graphics graphics, string text, Font font, LightningBarOptions currentOptions)
+        {
+            float maxTextWidth = Math.Max(1f, currentOptions.LegendTextMaxWidth);
+            int maxLines = Math.Max(1, currentOptions.LegendTextMaxLines);
+            float maxTextHeight = (font.GetHeight(graphics) * maxLines) + 8f;
+
+            using (var format = new StringFormat())
+            {
+                format.Alignment = StringAlignment.Near;
+                format.LineAlignment = StringAlignment.Near;
+                format.Trimming = StringTrimming.EllipsisWord;
+                format.FormatFlags = StringFormatFlags.LineLimit;
+                return graphics.MeasureString(text ?? string.Empty, font, new SizeF(maxTextWidth, maxTextHeight), format);
+            }
+        }
+
+        protected virtual void UpdateSeriesToolTip(Point location)
+        {
+            LightningBarOptions currentOptions = Options;
+            if (!currentOptions.SeriesTooltipEnabled)
+            {
+                HideSeriesToolTip();
+                return;
+            }
+
+            LightningBarHitInfo hitInfo = FindBarHit(location);
+            if (hitInfo == null)
+            {
+                HideSeriesToolTip();
+                return;
+            }
+
+            string toolTipText = FormatSeriesToolTip(hitInfo, currentOptions);
+            if (toolTipText == currentToolTipText)
+            {
+                return;
+            }
+
+            currentToolTipText = toolTipText;
+            seriesToolTip.Show(toolTipText, this, location.X + 14, location.Y + 14);
+        }
+
+        protected virtual LightningBarHitInfo FindBarHit(Point location)
+        {
+            return barHitInfos.FirstOrDefault(item => item.Bounds.Contains(location));
+        }
+
+        protected virtual string FormatSeriesToolTip(LightningBarHitInfo hitInfo, LightningBarOptions currentOptions)
+        {
+            string format = string.IsNullOrWhiteSpace(currentOptions.SeriesTooltipFormat)
+                ? "Value:{2:0.#} (* 클릭할 경우 해당 계측 데이터 차트로 가 보입니다.)"
+                : currentOptions.SeriesTooltipFormat;
+
+            try
+            {
+                return string.Format(
+                    format,
+                    GetLegendLabel(hitInfo.Series),
+                    hitInfo.CategoryName,
+                    hitInfo.Value,
+                    hitInfo.SeriesIndex,
+                    hitInfo.CategoryIndex);
+            }
+            catch (FormatException)
+            {
+                return string.Format("Value:{0:0.#}", hitInfo.Value);
+            }
+        }
+
+        protected virtual void HideSeriesToolTip()
+        {
+            if (string.IsNullOrEmpty(currentToolTipText))
+            {
+                return;
+            }
+
+            currentToolTipText = string.Empty;
+            seriesToolTip.Hide(this);
+        }
+
+        protected virtual void OnSeriesClicked(LightningBarSeriesClickEventArgs e)
+        {
+            EventHandler<LightningBarSeriesClickEventArgs> handler = SeriesClicked;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+
+        protected class LightningBarHitInfo
+        {
+            public RectangleF Bounds { get; set; }
+
+            public string CategoryName { get; set; }
+
+            public int CategoryIndex { get; set; }
+
+            public LightningBarSeries Series { get; set; }
+
+            public int SeriesIndex { get; set; }
+
+            public float Value { get; set; }
         }
 
         protected virtual void RefreshSafe()

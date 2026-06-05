@@ -18,6 +18,7 @@ namespace LightingChartSamples
             Text = "LightningBar Common Sample";
 
             barChart = LightningBar.Create(pnlChartHost, CreateCategories(), CreateSeries(), CreateOptions());
+            barChart.SeriesClicked += BarChart_SeriesClicked;
             imagePathInfo = CreateImagePathInfo();
         }
 
@@ -34,6 +35,10 @@ namespace LightingChartSamples
                 BarGap = 8f,
                 GroupPaddingRatio = 0.2f,
                 MaxValue = 100f,
+                // Tooltip placeholders:
+                // {0}: series label, {1}: category label, {2}: value, {3}: series index, {4}: category index
+                SeriesTooltipEnabled = true,
+                SeriesTooltipFormat = "Value:{2:0.#} (* 클릭할 경우 해당 계측 데이터 차트로 가 보입니다.)",
                 ImageStorage = new LightningRadarImageStorageOptions
                 {
                     RootType = LightningRadarStorageRootType.Documents,
@@ -102,6 +107,17 @@ namespace LightingChartSamples
             {
                 MessageBox.Show(this, string.Format("이미지 저장 중 오류가 발생했습니다.\n{0}", ex.Message), "저장 실패", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void BarChart_SeriesClicked(object sender, LightningBarSeriesClickEventArgs e)
+        {
+            // 여기에서 상세 계측 데이터 폼을 열거나, 다른 화면 이동 이벤트를 실행하면 됩니다.
+            // 예: using (var form = new DetailChartForm(e.CategoryName, e.Series.Name)) { form.ShowDialog(this); }
+            MessageBox.Show(this,
+                string.Format("Series: {0}\nCategory: {1}\nValue: {2:0.#}", e.Series.Name, e.CategoryName, e.Value),
+                "Bar Series Clicked",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
     }
 }
