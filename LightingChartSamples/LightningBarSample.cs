@@ -30,6 +30,11 @@ namespace LightingChartSamples
                 ChartPadding = 36,
                 TopOffset = 90,
                 LegendWidth = 170,
+                LegendFontSize = 7f,
+                LegendMarkerWidth = 30f,
+                LegendMarkerHeight = 22f,
+                LegendTextMaxWidth = 130f,
+                LegendTextMaxLines = 3,
                 GridLineCount = 5,
                 BarBorderWidth = 1.2f,
                 BarGap = 8f,
@@ -82,6 +87,7 @@ namespace LightingChartSamples
                 new LightningBarSeries
                 {
                     Name = "설비 A",
+                    LegendLabel = "Series A\nCurrent value\nTarget line",
                     Values = new[] { 88f, 82f, 91f, 79f, 95f },
                     FillColor = Color.FromArgb(170, 255, 196, 214),
                     BorderColor = Color.FromArgb(230, 225, 104, 150)
@@ -89,6 +95,7 @@ namespace LightingChartSamples
                 new LightningBarSeries
                 {
                     Name = "설비 B",
+                    LegendLabel = "Series B\nPrevious value\nBaseline",
                     Values = new[] { 76f, 73f, 86f, 70f, 84f },
                     FillColor = Color.FromArgb(160, 186, 235, 255),
                     BorderColor = Color.FromArgb(230, 74, 166, 224)

@@ -72,6 +72,8 @@ namespace LightingChartSamples
 
         private TabPage CreateDocumentTab()
         {
+            const int PreferredSplitterDistance = 520;
+
             var tabPage = new TabPage("Document / Image")
             {
                 BackColor = Color.White,
@@ -83,9 +85,33 @@ namespace LightingChartSamples
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
                 SplitterWidth = 6,
-                SplitterDistance = 520,
                 Panel1MinSize = 260,
                 Panel2MinSize = 260
+            };
+
+            bool userAdjustedSplitter = false;
+            splitContainer.SplitterMoved += (_, __) => userAdjustedSplitter = true;
+
+            splitContainer.SizeChanged += (_, __) =>
+            {
+                int containerWidth = splitContainer.ClientSize.Width;
+                int minDistance = splitContainer.Panel1MinSize;
+                int maxDistance = containerWidth - splitContainer.Panel2MinSize;
+
+                if (containerWidth <= 0 || maxDistance < minDistance)
+                {
+                    return;
+                }
+
+                int targetDistance = userAdjustedSplitter
+                    ? splitContainer.SplitterDistance
+                    : PreferredSplitterDistance;
+
+                int clampedDistance = Math.Max(minDistance, Math.Min(targetDistance, maxDistance));
+                if (splitContainer.SplitterDistance != clampedDistance)
+                {
+                    splitContainer.SplitterDistance = clampedDistance;
+                }
             };
 
             richTextBox.Dock = DockStyle.Fill;

@@ -309,18 +309,22 @@ namespace LightingChartSamples
                 LegendWidth = 130,
                 GridLineCount = 5,
                 CategoryFontSize = 8F,
+                CategoryLabelMaxLines = 3,
                 ScaleFontSize = 8F,
                 BarBorderWidth = 1F,
                 BarGap = 5F,
                 GroupPaddingRatio = 0.15F,
                 MaxValue = 100F,
+                SeriesLabelEnabled = true,
+                SeriesLabelMaxLines = 3,
+                SeriesLabelMaxWidth = 120F,
                 BackgroundColor = Color.White
             };
         }
 
         private static IList<BarChartLayoutData> CreateSampleCharts()
         {
-            string[] categories = { "품질", "생산성", "안전", "원가", "납기" };
+            string[] categories = { "품\n질\n ", "생\n산\n성", "안\n전\n ", "원\n가\n ", "납\n기\n " };
 
             return new[]
             {
@@ -342,6 +346,7 @@ namespace LightingChartSamples
                     new LightningBarSeries
                     {
                         Name = "현재",
+                        LegendLabel = "1234567890\nABCDEFGHIJ\nKLMNOPQRST",
                         Values = values,
                         FillColor = Color.FromArgb(175, color),
                         BorderColor = color
