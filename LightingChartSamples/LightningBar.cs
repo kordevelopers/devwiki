@@ -791,7 +791,6 @@ namespace LightingChartSamples
             {
                 int maxLines = Math.Max(1, currentOptions.CategoryLabelMaxLines);
                 float lineHeight = labelFont.GetHeight(graphics);
-                float textHeight = lineHeight * maxLines;
                 float groupHeight = plotRect.Height / currentCategories.Length;
                 float textRight = plotRect.Left - 8f;
 
@@ -802,11 +801,23 @@ namespace LightingChartSamples
 
                 for (int i = 0; i < currentCategories.Length; i++)
                 {
+                    string[] labelLines = GetCategoryLabelLines(currentCategories[i], maxLines);
+                    float actualTextHeight = lineHeight * labelLines.Length;
                     float centerY = plotRect.Top + (groupHeight * i) + (groupHeight / 2f);
-                    RectangleF textRect = new RectangleF(0f, centerY - (textHeight / 2f), textRight, textHeight);
-                    graphics.DrawString(currentCategories[i], labelFont, labelBrush, textRect, rightTopFormat);
+                    float textY = centerY - (actualTextHeight / 2f);
+
+                    for (int lineIndex = 0; lineIndex < labelLines.Length; lineIndex++)
+                    {
+                        RectangleF lineRect = new RectangleF(0f, textY + (lineHeight * lineIndex), textRight, lineHeight + 2f);
+                        graphics.DrawString(labelLines[lineIndex], labelFont, labelBrush, lineRect, rightTopFormat);
+                    }
                 }
             }
+        }
+
+        protected virtual string[] GetCategoryLabelLines(string text, int maxLines)
+        {
+            return GetLegendTextLines(text, maxLines);
         }
 
         protected virtual void DrawLegend(Graphics graphics, LightningBarSeries[] currentSeries, LightningBarOptions currentOptions, Size renderSize)

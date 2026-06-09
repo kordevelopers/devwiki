@@ -315,7 +315,7 @@ namespace LightingChartSamples
                 BarGap = 5F,
                 GroupPaddingRatio = 0.15F,
                 MaxValue = 100F,
-                SeriesLabelEnabled = true,
+                SeriesLabelEnabled = false,
                 SeriesLabelMaxLines = 3,
                 SeriesLabelMaxWidth = 120F,
                 BackgroundColor = Color.White
