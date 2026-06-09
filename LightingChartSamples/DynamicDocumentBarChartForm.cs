@@ -314,6 +314,8 @@ namespace LightingChartSamples
                 BarBorderWidth = 1F,
                 BarGap = 5F,
                 GroupPaddingRatio = 0.15F,
+                BarHeightMode = LightningBarHeightMode.Manual,
+                FixedBarHeight = 18F,
                 MaxValue = 100F,
                 SeriesLabelEnabled = false,
                 SeriesLabelMaxLines = 3,

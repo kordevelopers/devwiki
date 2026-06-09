@@ -10,6 +10,12 @@ using System.Windows.Forms;
 
 namespace LightingChartSamples
 {
+    public enum LightningBarHeightMode
+    {
+        Auto,
+        Manual
+    }
+
     public class LightningBarSeriesClickEventArgs : EventArgs
     {
         public LightningBarSeriesClickEventArgs(string categoryName, int categoryIndex, LightningBarSeries series, int seriesIndex, float value)
@@ -100,6 +106,8 @@ namespace LightingChartSamples
             BarBorderWidth = 1.2f;
             BarGap = 8f;
             GroupPaddingRatio = 0.18f;
+            BarHeightMode = LightningBarHeightMode.Auto;
+            FixedBarHeight = 18f;
             MaxValue = 100f;
             ImageStorage = new LightningRadarImageStorageOptions();
         }
@@ -139,6 +147,8 @@ namespace LightingChartSamples
         public float BarBorderWidth { get; set; }
         public float BarGap { get; set; }
         public float GroupPaddingRatio { get; set; }
+        public LightningBarHeightMode BarHeightMode { get; set; }
+        public float FixedBarHeight { get; set; }
         public float MaxValue { get; set; }
         public LightningRadarImageStorageOptions ImageStorage { get; set; }
 
@@ -691,17 +701,26 @@ namespace LightingChartSamples
             float usableGroupHeight = groupHeight * (1f - safeRatio);
             float barGap = Math.Max(0f, currentOptions.BarGap);
             float totalGapWidth = barGap * Math.Max(0, seriesCount - 1);
-            float barHeight = (usableGroupHeight - totalGapWidth) / Math.Max(1, seriesCount);
+            bool useFixedBarHeight = currentOptions.BarHeightMode == LightningBarHeightMode.Manual;
+            float barHeight = useFixedBarHeight
+                ? Math.Max(1f, currentOptions.FixedBarHeight)
+                : (usableGroupHeight - totalGapWidth) / Math.Max(1, seriesCount);
 
-            if (barHeight < 1f)
+            if (!useFixedBarHeight && barHeight < 1f)
             {
                 barHeight = 1f;
                 barGap = 0f;
+                totalGapWidth = 0f;
             }
+
+            float barsTotalHeight = (barHeight * seriesCount) + totalGapWidth;
 
             for (int categoryIndex = 0; categoryIndex < categoryCount; categoryIndex++)
             {
-                float groupY = plotRect.Top + (groupHeight * categoryIndex) + ((groupHeight - usableGroupHeight) / 2f);
+                float groupTop = plotRect.Top + (groupHeight * categoryIndex);
+                float groupY = useFixedBarHeight
+                    ? groupTop + ((groupHeight - barsTotalHeight) / 2f)
+                    : groupTop + ((groupHeight - usableGroupHeight) / 2f);
 
                 for (int seriesIndex = 0; seriesIndex < seriesCount; seriesIndex++)
                 {
