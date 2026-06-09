@@ -75,7 +75,7 @@ namespace LightingChartSamples
             GridLineCount = 5;
             CategoryFontSize = 8.5f;
             CategoryLabelColor = Color.FromArgb(95, 95, 95);
-            CategoryLabelMaxLines = 1;
+            CategoryLabelMaxLines = 3;
             ScaleFontSize = 9f;
             ScaleLabelColor = Color.FromArgb(95, 95, 95);
             AxisColor = Color.FromArgb(170, 170, 170);
@@ -787,17 +787,17 @@ namespace LightingChartSamples
         {
             using (var labelFont = new Font(Font.FontFamily, currentOptions.CategoryFontSize, FontStyle.Regular))
             using (var labelBrush = new SolidBrush(currentOptions.CategoryLabelColor))
-            using (var rightTopFormat = new StringFormat())
+            using (var rightCenterFormat = new StringFormat(StringFormat.GenericTypographic))
             {
                 int maxLines = Math.Max(1, currentOptions.CategoryLabelMaxLines);
-                float lineHeight = labelFont.GetHeight(graphics);
+                float lineHeight = labelFont.GetHeight(graphics) + 2f;
                 float groupHeight = plotRect.Height / currentCategories.Length;
                 float textRight = plotRect.Left - 8f;
 
-                rightTopFormat.Alignment = StringAlignment.Far;
-                rightTopFormat.LineAlignment = StringAlignment.Near;
-                rightTopFormat.Trimming = StringTrimming.EllipsisWord;
-                rightTopFormat.FormatFlags = StringFormatFlags.LineLimit;
+                rightCenterFormat.Alignment = StringAlignment.Far;
+                rightCenterFormat.LineAlignment = StringAlignment.Center;
+                rightCenterFormat.Trimming = StringTrimming.EllipsisCharacter;
+                rightCenterFormat.FormatFlags |= StringFormatFlags.NoWrap;
 
                 for (int i = 0; i < currentCategories.Length; i++)
                 {
@@ -808,8 +808,8 @@ namespace LightingChartSamples
 
                     for (int lineIndex = 0; lineIndex < labelLines.Length; lineIndex++)
                     {
-                        RectangleF lineRect = new RectangleF(0f, textY + (lineHeight * lineIndex), textRight, lineHeight + 2f);
-                        graphics.DrawString(labelLines[lineIndex], labelFont, labelBrush, lineRect, rightTopFormat);
+                        RectangleF lineRect = new RectangleF(0f, textY + (lineHeight * lineIndex), textRight, lineHeight);
+                        graphics.DrawString(labelLines[lineIndex], labelFont, labelBrush, lineRect, rightCenterFormat);
                     }
                 }
             }
