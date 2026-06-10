@@ -8,7 +8,6 @@ namespace LightingChartSamples
     public partial class LightningBarSample : Form
     {
         private readonly LightningBar barChart;
-        private readonly LightningBarImagePathInfo imagePathInfo;
 
         public LightningBarSample()
         {
@@ -19,7 +18,11 @@ namespace LightingChartSamples
 
             barChart = LightningBar.Create(pnlChartHost, CreateCategories(), CreateSeries(), CreateOptions());
             barChart.SeriesClicked += BarChart_SeriesClicked;
-            imagePathInfo = CreateImagePathInfo();
+            barChart.UpdateOptions(options =>
+            {
+                options.TitleOptions.Text = "LightningBar Common Sample (Runtime Updated)";
+                options.TitleOptions.Position = LightningBarTitlePosition.TopCenter;
+            });
         }
 
         private static LightningBarOptions CreateOptions()
@@ -27,44 +30,66 @@ namespace LightingChartSamples
             return new LightningBarOptions
             {
                 Title = "LightningBar Common Sample",
-                ChartPadding = 36,
-                TopOffset = 90,
-                LegendWidth = 170,
-                LegendFontSize = 7f,
-                LegendMarkerWidth = 30f,
-                LegendMarkerHeight = 22f,
-                LegendTextMaxWidth = 130f,
-                LegendTextMaxLines = 3,
-                GridLineCount = 5,
-                BarBorderWidth = 1.2f,
-                BarGap = 8f,
-                GroupPaddingRatio = 0.2f,
-                MaxValue = 100f,
+                Layout = new LightningBarLayoutOptions
+                {
+                    ChartPadding = 36,
+                    TopOffset = 90,
+                    LegendReservedWidth = 170
+                },
+                Legend = new LightningBarLegendOptions
+                {
+                    Position = LightningBarLegendPosition.Top,
+                    Alignment = LightningBarLegendAlignment.Center,
+                    FontSize = 7f,
+                    MarkerWidth = 30f,
+                    MarkerHeight = 22f,
+                    LabelMaxWidth = 130f,
+                    LabelMaxLines = 3,
+                    MarginFromChart = 10f
+                },
+                Scale = new LightningBarScaleOptions
+                {
+                    GridLineCount = 5,
+                    MaxValue = 100f
+                },
+                Bars = new LightningBarBarOptions
+                {
+                    BorderWidth = 1.2f,
+                    Gap = 8f,
+                    GroupPaddingRatio = 0.2f,
+                    HeightMode = LightningBarHeightMode.Manual,
+                    FixedHeight = 18f,
+                    ReferenceSeriesCount = 5
+                },
+                CategoryLabels = new LightningBarCategoryLabelOptions
+                {
+                    FontSize = 8.5f,
+                    MaxLines = 3,
+                    LineSpacing = 3f
+                },
+                TitleOptions = new LightningBarTitleOptions
+                {
+                    Text = "LightningBar Common Sample",
+                    Position = LightningBarTitlePosition.TopLeft,
+                    FontSize = 12f,
+                    MarginTop = 12f,
+                    MarginHorizontal = 20f
+                },
+                NoData = new LightningBarNoDataOptions
+                {
+                    Text = "데이터가 없습니다.",
+                    IncludeTitle = true,
+                    ShowMessage = true
+                },
+                RawData = new LightningBarRawDataOptions
+                {
+                    ButtonMode = LightningBarRawDataButtonMode.Visible,
+                    ButtonText = "RawData"
+                },
                 // Tooltip placeholders:
                 // {0}: series label, {1}: category label, {2}: value, {3}: series index, {4}: category index
                 SeriesTooltipEnabled = true,
-                SeriesTooltipFormat = "Value:{2:0.#} (* 클릭할 경우 해당 계측 데이터 차트로 가 보입니다.)",
-                ImageStorage = new LightningRadarImageStorageOptions
-                {
-                    RootType = LightningRadarStorageRootType.Documents,
-                    CustomRootPath = string.Empty,
-                    RootFolderName = "LightningBarImages",
-                    ImageFormat = LightningRadarImageFormat.Png,
-                    ImageWidth = 1280,
-                    ImageHeight = 720,
-                    JpegQuality = 90L
-                }
-            };
-        }
-
-        private static LightningBarImagePathInfo CreateImagePathInfo()
-        {
-            return new LightningBarImagePathInfo
-            {
-                FabId = "FAB1",
-                LotCd = "LOT1001",
-                DraftNo = "DRAFT01",
-                FileNamePrefix = "bar"
+                SeriesTooltipFormat = "Value:{2:0.#} (* 클릭할 경우 해당 계측 데이터 차트로 가 보입니다.)"
             };
         }
 
@@ -101,19 +126,6 @@ namespace LightingChartSamples
                     BorderColor = Color.FromArgb(230, 74, 166, 224)
                 }
             };
-        }
-
-        private void btnSaveImage_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                string savedFilePath = barChart.SaveImage(imagePathInfo);
-                MessageBox.Show(this, string.Format("이미지가 저장되었습니다.\n{0}", savedFilePath), "저장 완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, string.Format("이미지 저장 중 오류가 발생했습니다.\n{0}", ex.Message), "저장 실패", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
         }
 
         private void BarChart_SeriesClicked(object sender, LightningBarSeriesClickEventArgs e)

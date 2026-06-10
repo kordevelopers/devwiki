@@ -29,30 +29,17 @@ namespace LightingChartSamples
         private void InitializeComponent()
         {
             this.pnlTop = new System.Windows.Forms.Panel();
-            this.btnSaveImage = new System.Windows.Forms.Button();
             this.pnlChartHost = new System.Windows.Forms.Panel();
             this.pnlTop.SuspendLayout();
             this.SuspendLayout();
             // 
             // pnlTop
             // 
-            this.pnlTop.Controls.Add(this.btnSaveImage);
             this.pnlTop.Dock = System.Windows.Forms.DockStyle.Top;
             this.pnlTop.Location = new System.Drawing.Point(0, 0);
             this.pnlTop.Name = "pnlTop";
             this.pnlTop.Size = new System.Drawing.Size(980, 44);
             this.pnlTop.TabIndex = 0;
-            // 
-            // btnSaveImage
-            // 
-            this.btnSaveImage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnSaveImage.Location = new System.Drawing.Point(845, 8);
-            this.btnSaveImage.Name = "btnSaveImage";
-            this.btnSaveImage.Size = new System.Drawing.Size(123, 28);
-            this.btnSaveImage.TabIndex = 0;
-            this.btnSaveImage.Text = "이미지 저장";
-            this.btnSaveImage.UseVisualStyleBackColor = true;
-            this.btnSaveImage.Click += new System.EventHandler(this.btnSaveImage_Click);
             // 
             // pnlChartHost
             // 
@@ -81,6 +68,5 @@ namespace LightingChartSamples
 
         private System.Windows.Forms.Panel pnlTop;
         private System.Windows.Forms.Panel pnlChartHost;
-        private System.Windows.Forms.Button btnSaveImage;
     }
 }
