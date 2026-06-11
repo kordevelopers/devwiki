@@ -23,6 +23,12 @@ namespace LightingChartSamples
                 options.TitleOptions.Text = "LightningBar Common Sample (Runtime Updated)";
                 options.TitleOptions.Position = LightningBarTitlePosition.TopCenter;
             });
+
+            // 메모리 이미지 사용:
+            // using (Bitmap chartImage = barChart.RenderImage()) { pictureBox.Image = new Bitmap(chartImage); }
+            // 파일 저장 후 로드:
+            // string imagePath = barChart.SaveImage();
+            // using (Image loadedImage = LightningBar.LoadImage(imagePath)) { pictureBox.Image = new Bitmap(loadedImage); }
         }
 
         private static LightningBarOptions CreateOptions()
@@ -78,13 +84,24 @@ namespace LightingChartSamples
                 NoData = new LightningBarNoDataOptions
                 {
                     Text = "데이터가 없습니다.",
-                    IncludeTitle = true,
-                    ShowMessage = true
+                    FontName = "맑은 고딕",
+                    TextColor = Color.Gray,
+                    IncludeTitle = false,
+                    ShowWhenDataMissing = true,
+                    ShowWhenAllValuesZero = true
                 },
                 RawData = new LightningBarRawDataOptions
                 {
-                    ButtonMode = LightningBarRawDataButtonMode.Visible,
+                    ButtonMode = LightningBarRawDataButtonMode.Hidden,
                     ButtonText = "RawData"
+                },
+                Image = new LightningBarImageOptions
+                {
+                    Width = 400,
+                    Height = 400,
+                    FileFormat = LightningBarImageFileFormat.Png,
+                    SaveDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                    FileName = string.Empty
                 },
                 // Tooltip placeholders:
                 // {0}: series label, {1}: category label, {2}: value, {3}: series index, {4}: category index

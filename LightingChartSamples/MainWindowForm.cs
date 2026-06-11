@@ -253,14 +253,17 @@ namespace LightingChartSamples
                 },
                 RawData = new LightningBarRawDataOptions
                 {
-                    ButtonMode = LightningBarRawDataButtonMode.Visible,
+                    ButtonMode = LightningBarRawDataButtonMode.Hidden,
                     ButtonText = "RawData"
                 },
                 NoData = new LightningBarNoDataOptions
                 {
                     Text = "가이드 샘플 데이터가 없습니다.",
-                    IncludeTitle = true,
-                    ShowMessage = true
+                    FontName = "맑은 고딕",
+                    TextColor = Color.Gray,
+                    IncludeTitle = false,
+                    ShowWhenDataMissing = true,
+                    ShowWhenAllValuesZero = true
                 }
             };
         }

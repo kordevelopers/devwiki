@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -38,6 +40,37 @@ namespace LightingChartSamples
     {
         Hidden,
         Visible
+    }
+
+    public enum LightningBarImageFileFormat
+    {
+        Png,
+        Jpeg
+    }
+
+    public class LightningBarImageOptions
+    {
+        public LightningBarImageOptions()
+        {
+            Width = 400;
+            Height = 400;
+            FileFormat = LightningBarImageFileFormat.Png;
+            SaveDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            FileName = string.Empty;
+            JpegQuality = 90L;
+        }
+
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public LightningBarImageFileFormat FileFormat { get; set; }
+        public string SaveDirectory { get; set; }
+        public string FileName { get; set; }
+        public long JpegQuality { get; set; }
+
+        public LightningBarImageOptions Clone()
+        {
+            return (LightningBarImageOptions)MemberwiseClone();
+        }
     }
 
     public class LightningBarTitleOptions
@@ -248,16 +281,26 @@ namespace LightingChartSamples
         {
             Text = "데이터가 없습니다.";
             TextColor = Color.FromArgb(120, 120, 120);
+            FontName = "맑은 고딕";
             FontSize = 11f;
-            ShowMessage = true;
-            IncludeTitle = true;
+            ShowWhenDataMissing = true;
+            ShowWhenAllValuesZero = false;
+            IncludeTitle = false;
         }
 
         public string Text { get; set; }
         public Color TextColor { get; set; }
+        public string FontName { get; set; }
         public float FontSize { get; set; }
-        public bool ShowMessage { get; set; }
+        public bool ShowWhenDataMissing { get; set; }
+        public bool ShowWhenAllValuesZero { get; set; }
         public bool IncludeTitle { get; set; }
+
+        public bool ShowMessage
+        {
+            get { return ShowWhenDataMissing; }
+            set { ShowWhenDataMissing = value; }
+        }
 
         public LightningBarNoDataOptions Clone()
         {
@@ -269,7 +312,7 @@ namespace LightingChartSamples
     {
         public LightningBarRawDataOptions()
         {
-            ButtonMode = LightningBarRawDataButtonMode.Visible;
+            ButtonMode = LightningBarRawDataButtonMode.Hidden;
             ButtonText = "RawData";
             ButtonWidth = 88f;
             ButtonHeight = 28f;
@@ -355,6 +398,7 @@ namespace LightingChartSamples
             Tooltip = new LightningBarTooltipOptions();
             NoData = new LightningBarNoDataOptions();
             RawData = new LightningBarRawDataOptions();
+            Image = new LightningBarImageOptions();
             BackgroundColor = Color.White;
         }
 
@@ -368,6 +412,7 @@ namespace LightingChartSamples
         public LightningBarTooltipOptions Tooltip { get; set; }
         public LightningBarNoDataOptions NoData { get; set; }
         public LightningBarRawDataOptions RawData { get; set; }
+        public LightningBarImageOptions Image { get; set; }
         public Color BackgroundColor { get; set; }
         public string Title { get { return TitleOptions.Text; } set { TitleOptions.Text = value; } }
         public Color TitleColor { get { return TitleOptions.Color; } set { TitleOptions.Color = value; } }
@@ -420,6 +465,7 @@ namespace LightingChartSamples
             clone.Tooltip = Tooltip == null ? new LightningBarTooltipOptions() : Tooltip.Clone();
             clone.NoData = NoData == null ? new LightningBarNoDataOptions() : NoData.Clone();
             clone.RawData = RawData == null ? new LightningBarRawDataOptions() : RawData.Clone();
+            clone.Image = Image == null ? new LightningBarImageOptions() : Image.Clone();
             return clone;
         }
 
@@ -473,6 +519,11 @@ namespace LightingChartSamples
             if (RawData == null)
             {
                 RawData = new LightningBarRawDataOptions();
+            }
+
+            if (Image == null)
+            {
+                Image = new LightningBarImageOptions();
             }
         }
     }
@@ -717,6 +768,133 @@ namespace LightingChartSamples
             ExecuteOnUiThread(this, delegate { updateAction(this); });
         }
 
+        public Bitmap RenderImage()
+        {
+            return RenderImage(Options.Image);
+        }
+
+        public Bitmap RenderImage(LightningBarImageOptions imageOptions)
+        {
+            LightningBarImageOptions effectiveImageOptions = imageOptions == null
+                ? new LightningBarImageOptions()
+                : imageOptions.Clone();
+            int width = Math.Max(1, effectiveImageOptions.Width);
+            int height = Math.Max(1, effectiveImageOptions.Height);
+
+            string[] snapshotCategories;
+            LightningBarSeries[] snapshotSeries;
+            LightningBarOptions snapshotOptions;
+            bool snapshotHasBoundData;
+
+            lock (syncRoot)
+            {
+                snapshotCategories = categories.ToArray();
+                snapshotSeries = series.Select(item => item.Clone()).ToArray();
+                snapshotOptions = options.Clone();
+                snapshotHasBoundData = hasBoundData;
+            }
+
+            Bitmap bitmap = new Bitmap(width, height);
+            using (Graphics graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                RenderChart(
+                    graphics,
+                    snapshotCategories,
+                    snapshotSeries,
+                    snapshotOptions,
+                    snapshotHasBoundData,
+                    new Size(width, height),
+                    false);
+            }
+
+            return bitmap;
+        }
+
+        public string SaveImage()
+        {
+            return SaveImage(Options.Image);
+        }
+
+        public string SaveImage(LightningBarImageOptions imageOptions)
+        {
+            LightningBarImageOptions effectiveOptions = imageOptions == null
+                ? new LightningBarImageOptions()
+                : imageOptions.Clone();
+            string fullPath = ResolveImageFilePath(effectiveOptions);
+
+            using (Bitmap bitmap = RenderImage(effectiveOptions))
+            {
+                SaveBitmap(bitmap, fullPath, effectiveOptions);
+            }
+
+            return fullPath;
+        }
+
+        public string SaveImage(string filePath, LightningBarImageOptions imageOptions)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                throw new ArgumentException("이미지 파일 경로가 필요합니다.", "filePath");
+            }
+
+            LightningBarImageOptions effectiveOptions = imageOptions == null
+                ? new LightningBarImageOptions()
+                : imageOptions.Clone();
+            string fullPath = Path.GetFullPath(filePath);
+            string directory = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            using (Bitmap bitmap = RenderImage(effectiveOptions))
+            {
+                SaveBitmap(bitmap, fullPath, effectiveOptions);
+            }
+
+            return fullPath;
+        }
+
+        public static Bitmap RenderImage(
+            IEnumerable<string> newCategories,
+            IEnumerable<LightningBarSeries> newSeries,
+            LightningBarOptions barOptions,
+            LightningBarImageOptions imageOptions)
+        {
+            using (var chart = new LightningBar())
+            {
+                chart.UpdateData(newCategories, newSeries, barOptions);
+                return chart.RenderImage(imageOptions);
+            }
+        }
+
+        public static string SaveImage(
+            IEnumerable<string> newCategories,
+            IEnumerable<LightningBarSeries> newSeries,
+            LightningBarOptions barOptions,
+            LightningBarImageOptions imageOptions)
+        {
+            using (var chart = new LightningBar())
+            {
+                chart.UpdateData(newCategories, newSeries, barOptions);
+                return chart.SaveImage(imageOptions);
+            }
+        }
+
+        public static Image LoadImage(string imagePath)
+        {
+            if (string.IsNullOrWhiteSpace(imagePath))
+            {
+                throw new ArgumentException("이미지 파일 경로가 필요합니다.", "imagePath");
+            }
+
+            using (Image source = System.Drawing.Image.FromFile(imagePath))
+            {
+                return new Bitmap(source);
+            }
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
@@ -735,39 +913,77 @@ namespace LightingChartSamples
             }
 
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            e.Graphics.Clear(snapshotOptions.BackgroundColor);
+            RenderChart(
+                e.Graphics,
+                snapshotCategories,
+                snapshotSeries,
+                snapshotOptions,
+                snapshotHasBoundData,
+                ClientSize,
+                true);
+        }
 
-            if (!snapshotHasBoundData)
+        protected virtual void RenderChart(
+            Graphics graphics,
+            string[] currentCategories,
+            LightningBarSeries[] currentSeries,
+            LightningBarOptions currentOptions,
+            bool currentHasBoundData,
+            Size renderSize,
+            bool enableInteraction)
+        {
+            graphics.Clear(currentOptions.BackgroundColor);
+
+            if (!currentHasBoundData)
+            {
+                if (enableInteraction)
+                {
+                    barHitInfos.Clear();
+                    rawDataButtonBounds = RectangleF.Empty;
+                }
+
+                return;
+            }
+
+            DrawTitle(graphics, currentOptions, renderSize);
+            if (enableInteraction)
             {
                 barHitInfos.Clear();
-                rawDataButtonBounds = RectangleF.Empty;
-                return;
             }
 
-            DrawTitle(e.Graphics, snapshotOptions);
-            barHitInfos.Clear();
-            if (!HasRenderableData(snapshotCategories, snapshotSeries))
+            if (!HasRenderableData(currentCategories, currentSeries))
             {
-                DrawNoDataMessage(e.Graphics, snapshotOptions, ClientSize);
-                DrawRawDataButton(e.Graphics, snapshotOptions, ClientSize);
+                LightningBarNoDataOptions noDataOptions = currentOptions.NoData ?? new LightningBarNoDataOptions();
+                if (noDataOptions.ShowWhenDataMissing)
+                {
+                    DrawNoDataMessage(graphics, currentOptions, renderSize);
+                }
+
+                DrawRawDataButton(graphics, currentOptions, renderSize, enableInteraction);
+
                 return;
             }
 
-            collectBarHits = true;
+            collectBarHits = enableInteraction;
             try
             {
-                DrawBarChart(e.Graphics, snapshotCategories, snapshotSeries, snapshotOptions, ClientSize);
+                DrawBarChart(graphics, currentCategories, currentSeries, currentOptions, renderSize);
             }
             finally
             {
                 collectBarHits = false;
             }
 
-            DrawLegend(e.Graphics, snapshotSeries, snapshotOptions, ClientSize);
-            DrawRawDataButton(e.Graphics, snapshotOptions, ClientSize);
+            DrawLegend(graphics, currentSeries, currentOptions, renderSize);
+            if (ShouldShowAllValuesZeroMessage(currentCategories, currentSeries, currentOptions))
+            {
+                DrawNoDataMessage(graphics, currentOptions, renderSize);
+            }
+
+            DrawRawDataButton(graphics, currentOptions, renderSize, enableInteraction);
         }
 
-        protected virtual void DrawTitle(Graphics graphics, LightningBarOptions currentOptions)
+        protected virtual void DrawTitle(Graphics graphics, LightningBarOptions currentOptions, Size renderSize)
         {
             LightningBarTitleOptions titleOptions = currentOptions.TitleOptions ?? new LightningBarTitleOptions();
             if (!titleOptions.Visible)
@@ -785,10 +1001,10 @@ namespace LightingChartSamples
                 switch (titleOptions.Position)
                 {
                     case LightningBarTitlePosition.TopCenter:
-                        x = (ClientSize.Width - textSize.Width) / 2f;
+                        x = (renderSize.Width - textSize.Width) / 2f;
                         break;
                     case LightningBarTitlePosition.TopRight:
-                        x = ClientSize.Width - textSize.Width - Math.Max(0f, titleOptions.MarginHorizontal);
+                        x = renderSize.Width - textSize.Width - Math.Max(0f, titleOptions.MarginHorizontal);
                         break;
                     case LightningBarTitlePosition.TopLeft:
                     default:
@@ -799,7 +1015,7 @@ namespace LightingChartSamples
                 x = Math.Max(0f, x);
                 float y = Math.Max(0f, titleOptions.MarginTop);
                 format.Trimming = StringTrimming.EllipsisCharacter;
-                graphics.DrawString(titleText, titleFont, titleBrush, new RectangleF(x, y, Math.Max(1f, ClientSize.Width - x), textSize.Height + 4f), format);
+                graphics.DrawString(titleText, titleFont, titleBrush, new RectangleF(x, y, Math.Max(1f, renderSize.Width - x), textSize.Height + 4f), format);
             }
         }
 
@@ -875,7 +1091,8 @@ namespace LightingChartSamples
 
         protected virtual void DrawNoDataMessage(Graphics graphics, LightningBarOptions currentOptions, Size renderSize)
         {
-            if (!currentOptions.ShowNoDataMessage)
+            LightningBarNoDataOptions noDataOptions = currentOptions.NoData ?? new LightningBarNoDataOptions();
+            if (string.IsNullOrWhiteSpace(noDataOptions.Text))
             {
                 return;
             }
@@ -886,13 +1103,14 @@ namespace LightingChartSamples
                 messageRect = new RectangleF(0f, 0f, renderSize.Width, renderSize.Height);
             }
 
-            using (var messageFont = new Font(Font.FontFamily, Math.Max(1f, currentOptions.NoDataFontSize), FontStyle.Regular))
-            using (var messageBrush = new SolidBrush(currentOptions.NoDataTextColor))
+            string fontName = string.IsNullOrWhiteSpace(noDataOptions.FontName) ? "맑은 고딕" : noDataOptions.FontName;
+            using (var messageFont = new Font(fontName, Math.Max(1f, noDataOptions.FontSize), FontStyle.Regular))
+            using (var messageBrush = new SolidBrush(noDataOptions.TextColor))
             using (var format = new StringFormat())
             {
-                string messageText = currentOptions.NoDataText ?? string.Empty;
+                string messageText = noDataOptions.Text ?? string.Empty;
                 string title = currentOptions.TitleOptions == null ? string.Empty : currentOptions.TitleOptions.Text;
-                if (currentOptions.NoData != null && currentOptions.NoData.IncludeTitle && !string.IsNullOrWhiteSpace(title))
+                if (noDataOptions.IncludeTitle && !string.IsNullOrWhiteSpace(title))
                 {
                     messageText = string.Format("{0}\n{1}", title, messageText);
                 }
@@ -902,6 +1120,41 @@ namespace LightingChartSamples
                 format.Trimming = StringTrimming.EllipsisWord;
                 graphics.DrawString(messageText, messageFont, messageBrush, messageRect, format);
             }
+        }
+
+        protected virtual bool ShouldShowAllValuesZeroMessage(string[] currentCategories, LightningBarSeries[] currentSeries, LightningBarOptions currentOptions)
+        {
+            LightningBarNoDataOptions noDataOptions = currentOptions.NoData ?? new LightningBarNoDataOptions();
+            return noDataOptions.ShowWhenAllValuesZero && AreAllSeriesValuesZero(currentCategories, currentSeries);
+        }
+
+        protected virtual bool AreAllSeriesValuesZero(string[] currentCategories, LightningBarSeries[] currentSeries)
+        {
+            if (!HasRenderableData(currentCategories, currentSeries))
+            {
+                return false;
+            }
+
+            int categoryCount = currentCategories.Length;
+            for (int seriesIndex = 0; seriesIndex < currentSeries.Length; seriesIndex++)
+            {
+                LightningBarSeries barSeries = currentSeries[seriesIndex];
+                if (barSeries == null || barSeries.Values == null)
+                {
+                    continue;
+                }
+
+                int valueCount = Math.Min(categoryCount, barSeries.Values.Length);
+                for (int valueIndex = 0; valueIndex < valueCount; valueIndex++)
+                {
+                    if (Math.Abs(barSeries.Values[valueIndex]) > 0.000001f)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         protected virtual RectangleF GetPlotRectangle(Size renderSize, LightningBarOptions currentOptions)
@@ -1276,11 +1529,15 @@ namespace LightingChartSamples
                 && currentOptions.RawData.ButtonMode == LightningBarRawDataButtonMode.Visible;
         }
 
-        protected virtual void DrawRawDataButton(Graphics graphics, LightningBarOptions currentOptions, Size renderSize)
+        protected virtual void DrawRawDataButton(Graphics graphics, LightningBarOptions currentOptions, Size renderSize, bool updateHitBounds)
         {
             if (!IsRawDataButtonVisible(currentOptions))
             {
-                rawDataButtonBounds = RectangleF.Empty;
+                if (updateHitBounds)
+                {
+                    rawDataButtonBounds = RectangleF.Empty;
+                }
+
                 return;
             }
 
@@ -1289,7 +1546,11 @@ namespace LightingChartSamples
             float height = Math.Max(20f, rawDataOptions.ButtonHeight);
             float x = renderSize.Width - width - Math.Max(0f, rawDataOptions.MarginRight);
             float y = Math.Max(0f, rawDataOptions.MarginTop);
-            rawDataButtonBounds = new RectangleF(x, y, width, height);
+            RectangleF buttonBounds = new RectangleF(x, y, width, height);
+            if (updateHitBounds)
+            {
+                rawDataButtonBounds = buttonBounds;
+            }
 
             using (var fillBrush = new SolidBrush(Color.FromArgb(240, 240, 240)))
             using (var borderPen = new Pen(Color.FromArgb(170, 170, 170), 1f))
@@ -1299,9 +1560,55 @@ namespace LightingChartSamples
             {
                 format.Alignment = StringAlignment.Center;
                 format.LineAlignment = StringAlignment.Center;
-                graphics.FillRectangle(fillBrush, rawDataButtonBounds);
-                graphics.DrawRectangle(borderPen, rawDataButtonBounds.X, rawDataButtonBounds.Y, rawDataButtonBounds.Width, rawDataButtonBounds.Height);
-                graphics.DrawString(rawDataOptions.ButtonText ?? "RawData", buttonFont, textBrush, rawDataButtonBounds, format);
+                graphics.FillRectangle(fillBrush, buttonBounds);
+                graphics.DrawRectangle(borderPen, buttonBounds.X, buttonBounds.Y, buttonBounds.Width, buttonBounds.Height);
+                graphics.DrawString(rawDataOptions.ButtonText ?? "RawData", buttonFont, textBrush, buttonBounds, format);
+            }
+        }
+
+        protected virtual string ResolveImageFilePath(LightningBarImageOptions imageOptions)
+        {
+            string directory = string.IsNullOrWhiteSpace(imageOptions.SaveDirectory)
+                ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+                : imageOptions.SaveDirectory;
+            directory = Path.GetFullPath(directory);
+            Directory.CreateDirectory(directory);
+
+            string extension = imageOptions.FileFormat == LightningBarImageFileFormat.Jpeg ? ".jpg" : ".png";
+            string fileName = string.IsNullOrWhiteSpace(imageOptions.FileName)
+                ? string.Format("LightningBar_{0:yyyyMMdd_HHmmssfff}{1}", DateTime.Now, extension)
+                : Path.GetFileName(imageOptions.FileName.Trim());
+
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = string.Format("LightningBar_{0:yyyyMMdd_HHmmssfff}{1}", DateTime.Now, extension);
+            }
+
+            fileName = Path.ChangeExtension(fileName, extension);
+            return Path.Combine(directory, fileName);
+        }
+
+        protected virtual void SaveBitmap(Bitmap bitmap, string fullPath, LightningBarImageOptions imageOptions)
+        {
+            if (imageOptions.FileFormat != LightningBarImageFileFormat.Jpeg)
+            {
+                bitmap.Save(fullPath, ImageFormat.Png);
+                return;
+            }
+
+            ImageCodecInfo jpegCodec = ImageCodecInfo.GetImageEncoders()
+                .FirstOrDefault(item => item.FormatID == ImageFormat.Jpeg.Guid);
+            if (jpegCodec == null)
+            {
+                bitmap.Save(fullPath, ImageFormat.Jpeg);
+                return;
+            }
+
+            using (var encoderParameters = new EncoderParameters(1))
+            {
+                long quality = Math.Max(1L, Math.Min(100L, imageOptions.JpegQuality));
+                encoderParameters.Param[0] = new EncoderParameter(Encoder.Quality, quality);
+                bitmap.Save(fullPath, jpegCodec, encoderParameters);
             }
         }
 
