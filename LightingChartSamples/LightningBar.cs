@@ -36,6 +36,12 @@ namespace LightingChartSamples
         Right
     }
 
+    public enum LightningBarCategoryLabelOrientation
+    {
+        Horizontal,
+        Vertical
+    }
+
     public enum LightningBarRawDataButtonMode
     {
         Hidden,
@@ -176,12 +182,14 @@ namespace LightingChartSamples
             Color = Color.FromArgb(95, 95, 95);
             MaxLines = 3;
             LineSpacing = 2f;
+            Orientation = LightningBarCategoryLabelOrientation.Horizontal;
         }
 
         public float FontSize { get; set; }
         public Color Color { get; set; }
         public int MaxLines { get; set; }
         public float LineSpacing { get; set; }
+        public LightningBarCategoryLabelOrientation Orientation { get; set; }
 
         public LightningBarCategoryLabelOptions Clone()
         {
@@ -950,6 +958,16 @@ namespace LightingChartSamples
 
             if (!currentHasBoundData)
             {
+                LightningBarNoDataOptions noDataOptionsWhenNotBound = currentOptions.NoData ?? new LightningBarNoDataOptions();
+                DrawTitle(graphics, currentOptions, renderSize);
+
+                if (noDataOptionsWhenNotBound.ShowWhenDataMissing)
+                {
+                    DrawNoDataMessage(graphics, currentOptions, renderSize);
+                }
+
+                DrawRawDataButton(graphics, currentOptions, renderSize, enableInteraction);
+
                 if (enableInteraction)
                 {
                     barHitInfos.Clear();
@@ -1422,7 +1440,7 @@ namespace LightingChartSamples
 
                 for (int i = 0; i < currentCategories.Length; i++)
                 {
-                    string[] labelLines = GetCategoryLabelLines(currentCategories[i], maxLines);
+                    string[] labelLines = GetCategoryLabelLines(currentCategories[i], maxLines, categoryOptions);
                     float actualTextHeight = lineHeight * labelLines.Length;
                     float centerY = plotRect.Top + (groupHeight * i) + (groupHeight / 2f);
                     float textY = centerY - (actualTextHeight / 2f);
@@ -1436,9 +1454,30 @@ namespace LightingChartSamples
             }
         }
 
-        protected virtual string[] GetCategoryLabelLines(string text, int maxLines)
+        protected virtual string[] GetCategoryLabelLines(string text, int maxLines, LightningBarCategoryLabelOptions categoryOptions)
         {
-            return GetLegendTextLines(text, maxLines);
+            string sourceText = text ?? string.Empty;
+            LightningBarCategoryLabelOrientation orientation = categoryOptions == null
+                ? LightningBarCategoryLabelOrientation.Horizontal
+                : categoryOptions.Orientation;
+
+            if (orientation == LightningBarCategoryLabelOrientation.Horizontal)
+            {
+                string horizontalText = sourceText
+                    .Replace("\r\n", " ")
+                    .Replace('\r', ' ')
+                    .Replace('\n', ' ')
+                    .Trim();
+
+                return GetLegendTextLines(horizontalText, maxLines);
+            }
+
+            if (!sourceText.Contains("\n") && !sourceText.Contains("\r") && sourceText.Length > 1)
+            {
+                sourceText = string.Join("\n", sourceText.ToCharArray());
+            }
+
+            return GetLegendTextLines(sourceText, maxLines);
         }
 
         protected virtual void DrawLegend(Graphics graphics, LightningBarSeries[] currentSeries, LightningBarOptions currentOptions, Size renderSize)
