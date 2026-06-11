@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 
@@ -13,7 +16,182 @@ namespace LightingChartSamples
             InitializeComponent();
             Load += TextDocument_Load;
             SizeChanged += TextDocument_SizeChanged;
+            btnExportExcel.Click += BtnExportExcel_Click;
             BuildDocument();
+        }
+
+        private void BtnExportExcel_Click(object sender, EventArgs e)
+        {
+            using (var dialog = new SaveFileDialog())
+            {
+                dialog.Title = "Excel로 내보내기";
+                dialog.Filter = "Excel Workbook (*.xlsx)|*.xlsx";
+                dialog.FileName = string.Format("StyledReport_{0:yyyyMMdd_HHmmss}.xlsx", DateTime.Now);
+
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    return;
+                }
+
+                try
+                {
+                    ExportCurrentViewToExcel(dialog.FileName);
+                    MessageBox.Show(this, "엑셀 파일 저장이 완료되었습니다.", "완료", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, string.Format("엑셀 내보내기 중 오류가 발생했습니다.\n{0}", ex.Message), "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void ExportCurrentViewToExcel(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                throw new ArgumentException("파일 경로가 유효하지 않습니다.", "filePath");
+            }
+
+            dynamic excel = null;
+            dynamic workbooks = null;
+            dynamic workbook = null;
+            dynamic worksheets = null;
+            dynamic worksheet = null;
+            dynamic usedRange = null;
+            dynamic startCell = null;
+            dynamic endCell = null;
+            dynamic firstColumn = null;
+
+            try
+            {
+                Type excelType = Type.GetTypeFromProgID("Excel.Application");
+                if (excelType == null)
+                {
+                    throw new InvalidOperationException("Microsoft Excel이 설치되어 있지 않습니다.");
+                }
+
+                excel = Activator.CreateInstance(excelType);
+                excel.Visible = false;
+                excel.DisplayAlerts = false;
+
+                workbooks = excel.Workbooks;
+                workbook = workbooks.Add();
+                worksheets = workbook.Worksheets;
+                worksheet = worksheets[1];
+                worksheet.Name = "Report";
+
+                string[] lines = richTextBoxDocument.Text
+                    .Replace("\r\n", "\n")
+                    .Replace('\r', '\n')
+                    .Split(new[] { '\n' }, StringSplitOptions.None);
+
+                int rowCount = Math.Max(lines.Length, 1);
+                for (int i = 0; i < rowCount; i++)
+                {
+                    int index = i;
+                    dynamic currentCell = null;
+                    try
+                    {
+                        InvokeComWithRetry(() => currentCell = worksheet.Cells[index + 1, 1]);
+                        InvokeComWithRetry(() => currentCell.Value2 = index < lines.Length ? lines[index] : string.Empty);
+                    }
+                    finally
+                    {
+                        ReleaseComObject(currentCell);
+                    }
+                }
+
+                startCell = worksheet.Cells[1, 1];
+                endCell = worksheet.Cells[rowCount, 1];
+                usedRange = worksheet.Range[startCell, endCell];
+                InvokeComWithRetry(() => usedRange.WrapText = true);
+
+                firstColumn = worksheet.Columns[1];
+                InvokeComWithRetry(() => firstColumn.ColumnWidth = 100);
+
+                InvokeComWithRetry(() => workbook.SaveAs(filePath));
+            }
+            finally
+            {
+                try
+                {
+                    if (workbook != null)
+                    {
+                        InvokeComWithRetry(() => workbook.Close(true));
+                    }
+                }
+                catch (COMException)
+                {
+                }
+
+                ReleaseComObject(firstColumn);
+                ReleaseComObject(usedRange);
+                ReleaseComObject(endCell);
+                ReleaseComObject(startCell);
+                ReleaseComObject(worksheet);
+                ReleaseComObject(worksheets);
+                ReleaseComObject(workbook);
+                ReleaseComObject(workbooks);
+
+                try
+                {
+                    if (excel != null)
+                    {
+                        InvokeComWithRetry(() => excel.Quit());
+                    }
+                }
+                catch (COMException)
+                {
+                }
+
+                ReleaseComObject(excel);
+            }
+        }
+
+        private static void ReleaseComObject(object comObject)
+        {
+            if (comObject == null)
+            {
+                return;
+            }
+
+            try
+            {
+                if (Marshal.IsComObject(comObject))
+                {
+                    Marshal.FinalReleaseComObject(comObject);
+                }
+            }
+            catch (COMException)
+            {
+            }
+            catch (InvalidComObjectException)
+            {
+            }
+        }
+
+        private static void InvokeComWithRetry(Action action)
+        {
+            const int rpcECallRejected = unchecked((int)0x80010001);
+            const int maxRetry = 10;
+
+            for (int attempt = 0; attempt < maxRetry; attempt++)
+            {
+                try
+                {
+                    action();
+                    return;
+                }
+                catch (COMException ex) when (ex.ErrorCode == rpcECallRejected)
+                {
+                    if (attempt == maxRetry - 1)
+                    {
+                        throw;
+                    }
+
+                    System.Threading.Thread.Sleep(100);
+                }
+            }
         }
 
         private void TextDocument_Load(object sender, EventArgs e)

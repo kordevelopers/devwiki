@@ -32,6 +32,7 @@
             this.panelCard = new System.Windows.Forms.Panel();
             this.richTextBoxDocument = new System.Windows.Forms.RichTextBox();
             this.panelBottom = new System.Windows.Forms.Panel();
+            this.btnExportExcel = new System.Windows.Forms.Button();
             this.lblProgressValue = new System.Windows.Forms.Label();
             this.progressImpact = new System.Windows.Forms.ProgressBar();
             this.lblProgressTitle = new System.Windows.Forms.Label();
@@ -85,6 +86,7 @@
             // panelBottom
             // 
             this.panelBottom.BackColor = System.Drawing.Color.White;
+            this.panelBottom.Controls.Add(this.btnExportExcel);
             this.panelBottom.Controls.Add(this.lblProgressValue);
             this.panelBottom.Controls.Add(this.progressImpact);
             this.panelBottom.Controls.Add(this.lblProgressTitle);
@@ -94,6 +96,21 @@
             this.panelBottom.Padding = new System.Windows.Forms.Padding(18, 10, 18, 10);
             this.panelBottom.Size = new System.Drawing.Size(852, 72);
             this.panelBottom.TabIndex = 1;
+            // 
+            // btnExportExcel
+            // 
+            this.btnExportExcel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnExportExcel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(58)))), ((int)(((byte)(123)))), ((int)(((byte)(213)))));
+            this.btnExportExcel.FlatAppearance.BorderSize = 0;
+            this.btnExportExcel.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExportExcel.Font = new System.Drawing.Font("맑은 고딕", 9F, System.Drawing.FontStyle.Bold);
+            this.btnExportExcel.ForeColor = System.Drawing.Color.White;
+            this.btnExportExcel.Location = new System.Drawing.Point(686, 20);
+            this.btnExportExcel.Name = "btnExportExcel";
+            this.btnExportExcel.Size = new System.Drawing.Size(145, 32);
+            this.btnExportExcel.TabIndex = 3;
+            this.btnExportExcel.Text = "Excel 내보내기";
+            this.btnExportExcel.UseVisualStyleBackColor = false;
             // 
             // lblProgressValue
             // 
@@ -206,6 +223,7 @@
         private System.Windows.Forms.Label lblProgressTitle;
         private System.Windows.Forms.ProgressBar progressImpact;
         private System.Windows.Forms.Label lblProgressValue;
+        private System.Windows.Forms.Button btnExportExcel;
         private System.Windows.Forms.Panel panelCard;
         private System.Windows.Forms.RichTextBox richTextBoxDocument;
     }
