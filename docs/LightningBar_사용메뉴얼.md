@@ -176,12 +176,38 @@ options.Bars.Gap = 6f;
 ## 5.9 NoData 옵션
 `options.NoData`
 
+- `DisplayMode`: `HideChartAndMessage`, `OverlayOnChartWatermark`
 - `Text`
 - `TextColor`
 - `FontName`, `FontSize`
 - `ShowWhenDataMissing`
 - `ShowWhenAllValuesZero`
 - `IncludeTitle`
+- `BadgeBackColor`
+- `BadgeBackOpacity` (0~255)
+- `BadgeBorderColor`
+
+모드 설명:
+- `HideChartAndMessage`: 기존 방식. no-data 상태에서 차트를 숨기고 메시지만 표시
+- `OverlayOnChartWatermark`: 신규 방식. 차트 프레임 위에 둥근 사각형 워터마크 메시지 표시
+
+예시(오버레이 워터마크 스타일):
+```csharp
+options.NoData = new LightningBarNoDataOptions
+{
+    DisplayMode = LightningBarNoDataDisplayMode.OverlayOnChartWatermark,
+    Text = "데이터가 없습니다.",
+    IncludeTitle = true,
+    FontName = "맑은 고딕",
+    FontSize = 12f,
+    TextColor = Color.FromArgb(100, 100, 100),
+    BadgeBackColor = Color.White,
+    BadgeBackOpacity = 220,
+    BadgeBorderColor = Color.FromArgb(180, 180, 180),
+    ShowWhenDataMissing = true,
+    ShowWhenAllValuesZero = true
+};
+```
 
 ## 5.10 RawData 버튼 옵션
 `options.RawData`
@@ -314,9 +340,14 @@ var options = new LightningBarOptions
     },
     NoData = new LightningBarNoDataOptions
     {
+        DisplayMode = LightningBarNoDataDisplayMode.OverlayOnChartWatermark,
         Text = "데이터가 없습니다.",
         IncludeTitle = true,
-        ShowWhenDataMissing = true
+        ShowWhenDataMissing = true,
+        ShowWhenAllValuesZero = true,
+        BadgeBackColor = Color.White,
+        BadgeBackOpacity = 220,
+        BadgeBorderColor = Color.FromArgb(180, 180, 180)
     }
 };
 ```

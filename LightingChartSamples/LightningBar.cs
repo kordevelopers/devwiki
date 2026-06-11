@@ -42,6 +42,12 @@ namespace LightingChartSamples
         Visible
     }
 
+    public enum LightningBarNoDataDisplayMode
+    {
+        HideChartAndMessage,
+        OverlayOnChartWatermark
+    }
+
     public enum LightningBarImageFileFormat
     {
         Png,
@@ -280,12 +286,16 @@ namespace LightingChartSamples
         public LightningBarNoDataOptions()
         {
             Text = "데이터가 없습니다.";
-            TextColor = Color.FromArgb(120, 120, 120);
+            TextColor = Color.FromArgb(138, 118, 30);
             FontName = "맑은 고딕";
             FontSize = 11f;
             ShowWhenDataMissing = true;
             ShowWhenAllValuesZero = false;
             IncludeTitle = false;
+            DisplayMode = LightningBarNoDataDisplayMode.HideChartAndMessage;
+            BadgeBackColor = Color.FromArgb(255, 249, 196);
+            BadgeBackOpacity = 128;
+            BadgeBorderColor = Color.FromArgb(240, 206, 84);
         }
 
         public string Text { get; set; }
@@ -295,6 +305,10 @@ namespace LightingChartSamples
         public bool ShowWhenDataMissing { get; set; }
         public bool ShowWhenAllValuesZero { get; set; }
         public bool IncludeTitle { get; set; }
+        public LightningBarNoDataDisplayMode DisplayMode { get; set; }
+        public Color BadgeBackColor { get; set; }
+        public int BadgeBackOpacity { get; set; }
+        public Color BadgeBorderColor { get; set; }
 
         public bool ShowMessage
         {
@@ -951,31 +965,37 @@ namespace LightingChartSamples
                 barHitInfos.Clear();
             }
 
-            if (!HasRenderableData(currentCategories, currentSeries))
+            bool hasChartFrame = currentCategories != null
+                && currentCategories.Length > 0
+                && currentSeries != null
+                && currentSeries.Length > 0;
+            bool hasRenderableData = HasRenderableData(currentCategories, currentSeries);
+            LightningBarNoDataOptions noDataOptions = currentOptions.NoData ?? new LightningBarNoDataOptions();
+            bool noDataByMissing = !hasRenderableData && noDataOptions.ShowWhenDataMissing;
+            bool noDataByAllZero = ShouldShowAllValuesZeroMessage(currentCategories, currentSeries, currentOptions);
+            bool isNoDataState = noDataByMissing || noDataByAllZero;
+
+            bool showChartFrameForNoData = noDataOptions.DisplayMode == LightningBarNoDataDisplayMode.OverlayOnChartWatermark;
+            bool shouldDrawChartFrame = hasChartFrame && (!isNoDataState || showChartFrameForNoData);
+
+            if (shouldDrawChartFrame)
             {
-                LightningBarNoDataOptions noDataOptions = currentOptions.NoData ?? new LightningBarNoDataOptions();
-                if (noDataOptions.ShowWhenDataMissing)
+                collectBarHits = enableInteraction;
+                try
                 {
-                    DrawNoDataMessage(graphics, currentOptions, renderSize);
+                    DrawBarChart(graphics, currentCategories, currentSeries, currentOptions, renderSize);
+                }
+                finally
+                {
+                    collectBarHits = false;
                 }
 
-                DrawRawDataButton(graphics, currentOptions, renderSize, enableInteraction);
-
-                return;
+                DrawLegend(graphics, currentSeries, currentOptions, renderSize);
             }
 
-            collectBarHits = enableInteraction;
-            try
-            {
-                DrawBarChart(graphics, currentCategories, currentSeries, currentOptions, renderSize);
-            }
-            finally
-            {
-                collectBarHits = false;
-            }
+            bool showNoDataMessage = isNoDataState;
 
-            DrawLegend(graphics, currentSeries, currentOptions, renderSize);
-            if (ShouldShowAllValuesZeroMessage(currentCategories, currentSeries, currentOptions))
+            if (showNoDataMessage)
             {
                 DrawNoDataMessage(graphics, currentOptions, renderSize);
             }
@@ -1106,6 +1126,11 @@ namespace LightingChartSamples
             string fontName = string.IsNullOrWhiteSpace(noDataOptions.FontName) ? "맑은 고딕" : noDataOptions.FontName;
             using (var messageFont = new Font(fontName, Math.Max(1f, noDataOptions.FontSize), FontStyle.Regular))
             using (var messageBrush = new SolidBrush(noDataOptions.TextColor))
+            using (var badgeBrush = new SolidBrush(Color.FromArgb(
+                Math.Max(0, Math.Min(255, noDataOptions.BadgeBackOpacity)),
+                noDataOptions.BadgeBackColor)))
+            using (var borderPen = new Pen(noDataOptions.BadgeBorderColor, 1.2f))
+            using (var shadowBrush = new SolidBrush(Color.FromArgb(0, 0, 0, 0)))
             using (var format = new StringFormat())
             {
                 string messageText = noDataOptions.Text ?? string.Empty;
@@ -1118,8 +1143,53 @@ namespace LightingChartSamples
                 format.Alignment = StringAlignment.Center;
                 format.LineAlignment = StringAlignment.Center;
                 format.Trimming = StringTrimming.EllipsisWord;
-                graphics.DrawString(messageText, messageFont, messageBrush, messageRect, format);
+
+                float minBadgeWidth = Math.Max(120f, messageRect.Width * 0.28f);
+                float maxBadgeWidth = Math.Max(minBadgeWidth, messageRect.Width * 0.82f);
+                float horizontalPadding = Math.Max(24f, messageRect.Width * 0.04f);
+                float verticalPadding = Math.Max(14f, messageRect.Height * 0.045f);
+                float maxTextMeasureWidth = Math.Max(1f, maxBadgeWidth - (horizontalPadding * 2f));
+
+                SizeF textSize = graphics.MeasureString(messageText, messageFont, new SizeF(maxTextMeasureWidth, messageRect.Height), format);
+
+                float badgeWidth = Math.Max(minBadgeWidth, textSize.Width + (horizontalPadding * 2f));
+                badgeWidth = Math.Min(maxBadgeWidth, badgeWidth);
+
+                float minBadgeHeight = Math.Max(44f, messageRect.Height * 0.14f);
+                float maxBadgeHeight = Math.Max(minBadgeHeight, messageRect.Height * 0.62f);
+                float badgeHeight = Math.Max(minBadgeHeight, textSize.Height + (verticalPadding * 2f));
+                badgeHeight = Math.Min(maxBadgeHeight, badgeHeight);
+
+                float badgeX = messageRect.Left + (messageRect.Width - badgeWidth) / 2f;
+                float badgeY = messageRect.Top + (messageRect.Height - badgeHeight) / 2f;
+                RectangleF badgeRect = new RectangleF(badgeX, badgeY, badgeWidth, badgeHeight);
+                RectangleF shadowRect = new RectangleF(badgeRect.X + 2f, badgeRect.Y + 2f, badgeRect.Width, badgeRect.Height);
+                float cornerRadius = Math.Max(8f, Math.Min(16f, Math.Min(badgeRect.Width, badgeRect.Height) * 0.12f));
+
+                using (GraphicsPath shadowPath = CreateRoundedRectanglePath(shadowRect, cornerRadius))
+                using (GraphicsPath badgePath = CreateRoundedRectanglePath(badgeRect, cornerRadius))
+                {
+                    graphics.FillPath(shadowBrush, shadowPath);
+                    graphics.FillPath(badgeBrush, badgePath);
+                    graphics.DrawPath(borderPen, badgePath);
+                }
+
+                graphics.DrawString(messageText, messageFont, messageBrush, badgeRect, format);
             }
+        }
+
+        protected virtual GraphicsPath CreateRoundedRectanglePath(RectangleF rectangle, float radius)
+        {
+            float safeRadius = Math.Max(1f, Math.Min(radius, Math.Min(rectangle.Width, rectangle.Height) / 2f));
+            float diameter = safeRadius * 2f;
+
+            GraphicsPath path = new GraphicsPath();
+            path.AddArc(rectangle.Left, rectangle.Top, diameter, diameter, 180f, 90f);
+            path.AddArc(rectangle.Right - diameter, rectangle.Top, diameter, diameter, 270f, 90f);
+            path.AddArc(rectangle.Right - diameter, rectangle.Bottom - diameter, diameter, diameter, 0f, 90f);
+            path.AddArc(rectangle.Left, rectangle.Bottom - diameter, diameter, diameter, 90f, 90f);
+            path.CloseFigure();
+            return path;
         }
 
         protected virtual bool ShouldShowAllValuesZeroMessage(string[] currentCategories, LightningBarSeries[] currentSeries, LightningBarOptions currentOptions)

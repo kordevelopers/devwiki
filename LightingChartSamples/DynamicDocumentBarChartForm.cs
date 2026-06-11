@@ -176,7 +176,11 @@ namespace LightingChartSamples
                 return host;
             }
 
-            LightningBar.Create(host, chartData.Categories, chartData.Series, CreateBarOptions(chartData.Title));
+            LightningBar.Create(
+                host,
+                chartData.Categories,
+                chartData.Series,
+                CreateBarOptions(chartData.Title, ResolveNoDataDisplayMode(chartData.Title)));
             return host;
         }
 
@@ -298,7 +302,7 @@ namespace LightingChartSamples
             return normalized;
         }
 
-        private static LightningBarOptions CreateBarOptions(string title)
+        private static LightningBarOptions CreateBarOptions(string title, LightningBarNoDataDisplayMode noDataDisplayMode)
         {
             return new LightningBarOptions
             {
@@ -320,6 +324,20 @@ namespace LightingChartSamples
                 SeriesLabelEnabled = false,
                 SeriesLabelMaxLines = 3,
                 SeriesLabelMaxWidth = 120F,
+                NoData = new LightningBarNoDataOptions
+                {
+                    Text = "데이터가 없습니다.",
+                    FontName = "맑은 고딕",
+                    FontSize = 11f,
+                    TextColor = Color.FromArgb(138, 118, 30),
+                    BadgeBackColor = Color.FromArgb(255, 249, 196),
+                    BadgeBackOpacity = 128,
+                    BadgeBorderColor = Color.FromArgb(240, 206, 84),
+                    IncludeTitle = true,
+                    DisplayMode = noDataDisplayMode,
+                    ShowWhenDataMissing = true,
+                    ShowWhenAllValuesZero = true
+                },
                 BackgroundColor = Color.White
             };
         }
@@ -332,7 +350,9 @@ namespace LightingChartSamples
             {
                 CreateChartData("생산 지표", categories, Color.FromArgb(76, 132, 210), new[] { 88f, 82f, 91f, 79f, 95f }),
                 CreateChartData("운영 지표", categories, Color.FromArgb(86, 166, 112), new[] { 76f, 90f, 84f, 72f, 88f }),
-                CreateChartData("품질 지표", categories, Color.FromArgb(229, 148, 65), new[] { 92f, 74f, 89f, 85f, 81f })
+                CreateChartData("품질 지표", categories, Color.FromArgb(229, 148, 65), new[] { 92f, 74f, 89f, 85f, 81f }),
+                CreateChartData("무데이터(기존 모드)", categories, Color.FromArgb(148, 160, 178), new[] { 0f, 0f, 0f, 0f, 0f }),
+                CreateChartData("무데이터(오버레이 모드)", categories, Color.FromArgb(120, 146, 189), new[] { 0f, 0f, 0f, 0f, 0f })
             };
         }
 
@@ -355,6 +375,16 @@ namespace LightingChartSamples
                     }
                 }
             };
+        }
+
+        private static LightningBarNoDataDisplayMode ResolveNoDataDisplayMode(string title)
+        {
+            if (string.Equals(title, "무데이터(오버레이 모드)", StringComparison.Ordinal))
+            {
+                return LightningBarNoDataDisplayMode.OverlayOnChartWatermark;
+            }
+
+            return LightningBarNoDataDisplayMode.HideChartAndMessage;
         }
 
         private void PopulateRichDocument()
