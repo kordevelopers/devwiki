@@ -303,9 +303,11 @@ namespace LightingChartSamples
 
     public class LightningBarNoDataOptions
     {
+        public const string DefaultText = "데이터가 없습니다.";
+
         public LightningBarNoDataOptions()
         {
-            Text = "데이터가 없습니다.";
+            Text = DefaultText;
             TextColor = Color.FromArgb(138, 118, 30);
             FontName = "맑은 고딕";
             FontSize = 11f;
@@ -422,6 +424,9 @@ namespace LightingChartSamples
 
     public class LightningBarOptions
     {
+        private LightningBarNoDataOptions noData;
+        private bool noDataTextSetExplicitly;
+
         public LightningBarOptions()
         {
             TitleOptions = new LightningBarTitleOptions();
@@ -432,7 +437,7 @@ namespace LightingChartSamples
             SeriesLabels = new LightningBarSeriesLabelOptions();
             Bars = new LightningBarBarOptions();
             Tooltip = new LightningBarTooltipOptions();
-            NoData = new LightningBarNoDataOptions();
+            noData = new LightningBarNoDataOptions();
             RawData = new LightningBarRawDataOptions();
             Image = new LightningBarImageOptions();
             BackgroundColor = Color.White;
@@ -446,7 +451,20 @@ namespace LightingChartSamples
         public LightningBarSeriesLabelOptions SeriesLabels { get; set; }
         public LightningBarBarOptions Bars { get; set; }
         public LightningBarTooltipOptions Tooltip { get; set; }
-        public LightningBarNoDataOptions NoData { get; set; }
+        public LightningBarNoDataOptions NoData
+        {
+            get { return noData; }
+            set
+            {
+                LightningBarNoDataOptions nextNoData = value ?? new LightningBarNoDataOptions();
+                if (ShouldKeepLegacyNoDataText(nextNoData))
+                {
+                    nextNoData.Text = noData.Text;
+                }
+
+                noData = nextNoData;
+            }
+        }
         public LightningBarRawDataOptions RawData { get; set; }
         public LightningBarImageOptions Image { get; set; }
         public Color BackgroundColor { get; set; }
@@ -477,7 +495,15 @@ namespace LightingChartSamples
         public int SeriesLabelMaxLines { get { return SeriesLabels.MaxLines; } set { SeriesLabels.MaxLines = value; } }
         public bool SeriesTooltipEnabled { get { return Tooltip.Enabled; } set { Tooltip.Enabled = value; } }
         public string SeriesTooltipFormat { get { return Tooltip.Format; } set { Tooltip.Format = value; } }
-        public string NoDataText { get { return NoData.Text; } set { NoData.Text = value; } }
+        public string NoDataText
+        {
+            get { return NoData.Text; }
+            set
+            {
+                NoData.Text = value;
+                noDataTextSetExplicitly = true;
+            }
+        }
         public Color NoDataTextColor { get { return NoData.TextColor; } set { NoData.TextColor = value; } }
         public float NoDataFontSize { get { return NoData.FontSize; } set { NoData.FontSize = value; } }
         public bool ShowNoDataMessage { get { return NoData.ShowMessage; } set { NoData.ShowMessage = value; } }
@@ -499,10 +525,19 @@ namespace LightingChartSamples
             clone.SeriesLabels = SeriesLabels == null ? new LightningBarSeriesLabelOptions() : SeriesLabels.Clone();
             clone.Bars = Bars == null ? new LightningBarBarOptions() : Bars.Clone();
             clone.Tooltip = Tooltip == null ? new LightningBarTooltipOptions() : Tooltip.Clone();
-            clone.NoData = NoData == null ? new LightningBarNoDataOptions() : NoData.Clone();
+            clone.noData = NoData == null ? new LightningBarNoDataOptions() : NoData.Clone();
             clone.RawData = RawData == null ? new LightningBarRawDataOptions() : RawData.Clone();
             clone.Image = Image == null ? new LightningBarImageOptions() : Image.Clone();
             return clone;
+        }
+
+        private bool ShouldKeepLegacyNoDataText(LightningBarNoDataOptions nextNoData)
+        {
+            return noDataTextSetExplicitly
+                && noData != null
+                && !string.IsNullOrWhiteSpace(noData.Text)
+                && nextNoData != null
+                && string.Equals(nextNoData.Text, LightningBarNoDataOptions.DefaultText, StringComparison.Ordinal);
         }
 
         public void EnsureGroups()
@@ -547,9 +582,9 @@ namespace LightingChartSamples
                 Tooltip = new LightningBarTooltipOptions();
             }
 
-            if (NoData == null)
+            if (noData == null)
             {
-                NoData = new LightningBarNoDataOptions();
+                noData = new LightningBarNoDataOptions();
             }
 
             if (RawData == null)
@@ -843,6 +878,19 @@ namespace LightingChartSamples
             }
 
             RefreshSafe();
+        }
+
+        public void SetNoDataText(string text)
+        {
+            UpdateOptions(delegate (LightningBarOptions mutableOptions)
+            {
+                mutableOptions.NoData.Text = text ?? string.Empty;
+            });
+        }
+
+        public void SetNoDataMessage(string message)
+        {
+            SetNoDataText(message);
         }
 
         public void Update(Action<LightningBar> updateAction)
