@@ -47,3 +47,6 @@ C:\Users\android\AppData\Local\Temp\LightingChartSamples_NoDataOptionsVerify\Lig
 C:\Users\android\AppData\Local\Temp\LightingChartSamples_ImageFeatureVerify\LightingChartSamples.exe.config
 C:\Users\android\AppData\Local\Temp\LightingChartSamples_ImageFeatureVerify\LightingChartSamples.exe
 C:\Users\android\AppData\Local\Temp\LightingChartSamples_ImageFeatureVerify\LightingChartSamples.pdb
+C:\Users\android\AppData\Local\Temp\LightingChartSamples_ExcelImageVerify\LightingChartSamples.exe.config
+C:\Users\android\AppData\Local\Temp\LightingChartSamples_ExcelImageVerify\LightingChartSamples.exe
+C:\Users\android\AppData\Local\Temp\LightingChartSamples_ExcelImageVerify\LightingChartSamples.pdb

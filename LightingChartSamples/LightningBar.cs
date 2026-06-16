@@ -66,18 +66,30 @@ namespace LightingChartSamples
         {
             Width = 400;
             Height = 400;
+            DpiX = 96f;
+            DpiY = 96f;
             FileFormat = LightningBarImageFileFormat.Png;
             SaveDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             FileName = string.Empty;
             JpegQuality = 90L;
+            OptimizeForExcel = false;
+            ContentScale = 1f;
+            ReduceOuterPadding = false;
+            HideRawDataButtonOnImage = true;
         }
 
         public int Width { get; set; }
         public int Height { get; set; }
+        public float DpiX { get; set; }
+        public float DpiY { get; set; }
         public LightningBarImageFileFormat FileFormat { get; set; }
         public string SaveDirectory { get; set; }
         public string FileName { get; set; }
         public long JpegQuality { get; set; }
+        public bool OptimizeForExcel { get; set; }
+        public float ContentScale { get; set; }
+        public bool ReduceOuterPadding { get; set; }
+        public bool HideRawDataButtonOnImage { get; set; }
 
         public LightningBarImageOptions Clone()
         {
@@ -562,6 +574,8 @@ namespace LightingChartSamples
         private bool collectBarHits;
         private bool hasBoundData;
         private RectangleF rawDataButtonBounds = RectangleF.Empty;
+        private Bitmap lastSavedImage;
+        private string lastSavedImagePath = string.Empty;
 
         public event EventHandler<LightningBarSeriesClickEventArgs> SeriesClicked;
 
@@ -581,6 +595,7 @@ namespace LightingChartSamples
             if (disposing)
             {
                 seriesToolTip.Dispose();
+                ClearSavedImage();
             }
 
             base.Dispose(disposing);
@@ -619,6 +634,30 @@ namespace LightingChartSamples
                 lock (syncRoot)
                 {
                     return options.Clone();
+                }
+            }
+        }
+
+        [Browsable(false)]
+        public string LastSavedImagePath
+        {
+            get
+            {
+                lock (syncRoot)
+                {
+                    return lastSavedImagePath;
+                }
+            }
+        }
+
+        [Browsable(false)]
+        public bool HasLastSavedImage
+        {
+            get
+            {
+                lock (syncRoot)
+                {
+                    return lastSavedImage != null;
                 }
             }
         }
@@ -802,6 +841,8 @@ namespace LightingChartSamples
                 : imageOptions.Clone();
             int width = Math.Max(1, effectiveImageOptions.Width);
             int height = Math.Max(1, effectiveImageOptions.Height);
+            float dpiX = Math.Max(1f, effectiveImageOptions.DpiX);
+            float dpiY = Math.Max(1f, effectiveImageOptions.DpiY);
 
             string[] snapshotCategories;
             LightningBarSeries[] snapshotSeries;
@@ -816,10 +857,15 @@ namespace LightingChartSamples
                 snapshotHasBoundData = hasBoundData;
             }
 
+            snapshotOptions.EnsureGroups();
+            ApplyImageRenderOptions(snapshotOptions, effectiveImageOptions);
+
             Bitmap bitmap = new Bitmap(width, height);
+            bitmap.SetResolution(dpiX, dpiY);
             using (Graphics graphics = Graphics.FromImage(bitmap))
             {
                 graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                 RenderChart(
                     graphics,
                     snapshotCategories,
@@ -848,9 +894,15 @@ namespace LightingChartSamples
             using (Bitmap bitmap = RenderImage(effectiveOptions))
             {
                 SaveBitmap(bitmap, fullPath, effectiveOptions);
+                StoreSavedImage(fullPath, bitmap);
             }
 
             return fullPath;
+        }
+
+        public string SaveImage(string filePath)
+        {
+            return SaveImage(filePath, Options.Image);
         }
 
         public string SaveImage(string filePath, LightningBarImageOptions imageOptions)
@@ -864,6 +916,7 @@ namespace LightingChartSamples
                 ? new LightningBarImageOptions()
                 : imageOptions.Clone();
             string fullPath = Path.GetFullPath(filePath);
+            fullPath = Path.ChangeExtension(fullPath, GetImageFileExtension(effectiveOptions.FileFormat));
             string directory = Path.GetDirectoryName(fullPath);
             if (!string.IsNullOrWhiteSpace(directory))
             {
@@ -873,6 +926,7 @@ namespace LightingChartSamples
             using (Bitmap bitmap = RenderImage(effectiveOptions))
             {
                 SaveBitmap(bitmap, fullPath, effectiveOptions);
+                StoreSavedImage(fullPath, bitmap);
             }
 
             return fullPath;
@@ -904,6 +958,49 @@ namespace LightingChartSamples
             }
         }
 
+        public Image GetLastSavedImage()
+        {
+            lock (syncRoot)
+            {
+                return lastSavedImage == null ? null : CloneImagePreservingResolution(lastSavedImage);
+            }
+        }
+
+        public Image LoadLastSavedImage()
+        {
+            string path;
+            lock (syncRoot)
+            {
+                path = lastSavedImagePath;
+            }
+
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+                return GetLastSavedImage();
+            }
+
+            using (Image loadedImage = LoadImage(path))
+            {
+                StoreSavedImage(path, loadedImage);
+            }
+
+            return GetLastSavedImage();
+        }
+
+        public void ClearSavedImage()
+        {
+            lock (syncRoot)
+            {
+                if (lastSavedImage != null)
+                {
+                    lastSavedImage.Dispose();
+                    lastSavedImage = null;
+                }
+
+                lastSavedImagePath = string.Empty;
+            }
+        }
+
         public static Image LoadImage(string imagePath)
         {
             if (string.IsNullOrWhiteSpace(imagePath))
@@ -913,7 +1010,7 @@ namespace LightingChartSamples
 
             using (Image source = System.Drawing.Image.FromFile(imagePath))
             {
-                return new Bitmap(source);
+                return CloneImagePreservingResolution(source);
             }
         }
 
@@ -1675,6 +1772,99 @@ namespace LightingChartSamples
             }
         }
 
+        protected virtual void ApplyImageRenderOptions(LightningBarOptions renderOptions, LightningBarImageOptions imageOptions)
+        {
+            if (renderOptions == null || imageOptions == null)
+            {
+                return;
+            }
+
+            renderOptions.EnsureGroups();
+
+            if (imageOptions.HideRawDataButtonOnImage && renderOptions.RawData != null)
+            {
+                renderOptions.RawData.ButtonMode = LightningBarRawDataButtonMode.Hidden;
+            }
+
+            bool reducePadding = imageOptions.OptimizeForExcel || imageOptions.ReduceOuterPadding;
+            if (reducePadding && renderOptions.Layout != null)
+            {
+                renderOptions.Layout.ChartPadding = Math.Max(6, (int)Math.Round(renderOptions.Layout.ChartPadding * 0.55f));
+                renderOptions.Layout.TopOffset = Math.Max(48, Math.Min(renderOptions.Layout.TopOffset, 68));
+                renderOptions.Layout.BottomScaleAreaHeight = Math.Max(22f, renderOptions.Layout.BottomScaleAreaHeight * 0.72f);
+
+                if (renderOptions.Legend == null || renderOptions.Legend.Position == LightningBarLegendPosition.Top || renderOptions.Legend.Position == LightningBarLegendPosition.Bottom)
+                {
+                    renderOptions.Layout.LegendReservedWidth = Math.Min(renderOptions.Layout.LegendReservedWidth, 24);
+                }
+            }
+
+            float scale = Math.Max(0.1f, imageOptions.ContentScale);
+            if (Math.Abs(scale - 1f) < 0.0001f)
+            {
+                return;
+            }
+
+            ScaleImageRenderText(renderOptions, scale);
+        }
+
+        protected virtual void ScaleImageRenderText(LightningBarOptions renderOptions, float scale)
+        {
+            if (renderOptions.TitleOptions != null)
+            {
+                renderOptions.TitleOptions.FontSize = ScaleValue(renderOptions.TitleOptions.FontSize, scale, 1f);
+            }
+
+            if (renderOptions.Legend != null)
+            {
+                renderOptions.Legend.FontSize = ScaleValue(renderOptions.Legend.FontSize, scale, 1f);
+                renderOptions.Legend.MarkerWidth = ScaleValue(renderOptions.Legend.MarkerWidth, scale, 1f);
+                renderOptions.Legend.MarkerHeight = ScaleValue(renderOptions.Legend.MarkerHeight, scale, 1f);
+                renderOptions.Legend.LabelMaxWidth = ScaleValue(renderOptions.Legend.LabelMaxWidth, scale, 1f);
+                renderOptions.Legend.ItemSpacing = ScaleValue(renderOptions.Legend.ItemSpacing, scale, 0f);
+                renderOptions.Legend.SectionSpacing = ScaleValue(renderOptions.Legend.SectionSpacing, scale, 0f);
+            }
+
+            if (renderOptions.CategoryLabels != null)
+            {
+                renderOptions.CategoryLabels.FontSize = ScaleValue(renderOptions.CategoryLabels.FontSize, scale, 1f);
+                renderOptions.CategoryLabels.LineSpacing = ScaleValue(renderOptions.CategoryLabels.LineSpacing, scale, 0f);
+            }
+
+            if (renderOptions.Scale != null)
+            {
+                renderOptions.Scale.FontSize = ScaleValue(renderOptions.Scale.FontSize, scale, 1f);
+            }
+
+            if (renderOptions.SeriesLabels != null)
+            {
+                renderOptions.SeriesLabels.FontSize = ScaleValue(renderOptions.SeriesLabels.FontSize, scale, 1f);
+                renderOptions.SeriesLabels.MaxWidth = ScaleValue(renderOptions.SeriesLabels.MaxWidth, scale, 1f);
+            }
+
+            if (renderOptions.Bars != null)
+            {
+                renderOptions.Bars.BorderWidth = ScaleValue(renderOptions.Bars.BorderWidth, scale, 0.5f);
+                renderOptions.Bars.Gap = ScaleValue(renderOptions.Bars.Gap, scale, 0f);
+                renderOptions.Bars.FixedHeight = ScaleValue(renderOptions.Bars.FixedHeight, scale, renderOptions.Bars.MinHeight);
+            }
+
+            if (renderOptions.NoData != null)
+            {
+                renderOptions.NoData.FontSize = ScaleValue(renderOptions.NoData.FontSize, scale, 1f);
+            }
+
+            if (renderOptions.Layout != null)
+            {
+                renderOptions.Layout.CategoryLabelReservedWidth = ScaleValue(renderOptions.Layout.CategoryLabelReservedWidth, scale, 1f);
+            }
+        }
+
+        protected virtual float ScaleValue(float value, float scale, float minimum)
+        {
+            return Math.Max(minimum, value * scale);
+        }
+
         protected virtual string ResolveImageFilePath(LightningBarImageOptions imageOptions)
         {
             string directory = string.IsNullOrWhiteSpace(imageOptions.SaveDirectory)
@@ -1683,7 +1873,7 @@ namespace LightingChartSamples
             directory = Path.GetFullPath(directory);
             Directory.CreateDirectory(directory);
 
-            string extension = imageOptions.FileFormat == LightningBarImageFileFormat.Jpeg ? ".jpg" : ".png";
+            string extension = GetImageFileExtension(imageOptions.FileFormat);
             string fileName = string.IsNullOrWhiteSpace(imageOptions.FileName)
                 ? string.Format("LightningBar_{0:yyyyMMdd_HHmmssfff}{1}", DateTime.Now, extension)
                 : Path.GetFileName(imageOptions.FileName.Trim());
@@ -1695,6 +1885,42 @@ namespace LightingChartSamples
 
             fileName = Path.ChangeExtension(fileName, extension);
             return Path.Combine(directory, fileName);
+        }
+
+        protected virtual string GetImageFileExtension(LightningBarImageFileFormat fileFormat)
+        {
+            return fileFormat == LightningBarImageFileFormat.Jpeg ? ".jpg" : ".png";
+        }
+
+        protected virtual void StoreSavedImage(string fullPath, Image image)
+        {
+            Bitmap imageCopy = image == null ? null : CloneImagePreservingResolution(image);
+
+            lock (syncRoot)
+            {
+                if (lastSavedImage != null)
+                {
+                    lastSavedImage.Dispose();
+                    lastSavedImage = null;
+                }
+
+                lastSavedImage = imageCopy;
+                lastSavedImagePath = fullPath ?? string.Empty;
+            }
+        }
+
+        private static Bitmap CloneImagePreservingResolution(Image image)
+        {
+            if (image == null)
+            {
+                return null;
+            }
+
+            Bitmap clone = new Bitmap(image);
+            clone.SetResolution(
+                Math.Max(1f, image.HorizontalResolution),
+                Math.Max(1f, image.VerticalResolution));
+            return clone;
         }
 
         protected virtual void SaveBitmap(Bitmap bitmap, string fullPath, LightningBarImageOptions imageOptions)

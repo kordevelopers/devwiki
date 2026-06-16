@@ -122,6 +122,7 @@
       <DependentUpon>TextDocument.cs</DependentUpon>
     </Compile>
     <Compile Include="LightningBar.cs" />
+    <Compile Include="LightningBarImageExportSampleForm.cs" />
     <Compile Include="LightningBarSample.cs">
       <SubType>Form</SubType>
     </Compile>

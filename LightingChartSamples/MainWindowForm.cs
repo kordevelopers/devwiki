@@ -13,6 +13,7 @@ namespace LightingChartSamples
             AddTabbedLayoutSampleButton();
             AddDynamicDocumentBarChartButton();
             AddNewBarChartGuideButton();
+            AddBarChartImageExportSampleButton();
         }
 
         private void btnTextDocument_Click(object sender, EventArgs e)
@@ -71,6 +72,14 @@ namespace LightingChartSamples
         private void btnNewBarChartGuide_Click(object sender, EventArgs e)
         {
             using (var form = new NewBarChartGuideForm())
+            {
+                form.ShowDialog(this);
+            }
+        }
+
+        private void btnBarChartImageExportSample_Click(object sender, EventArgs e)
+        {
+            using (var form = new LightningBarImageExportSampleForm())
             {
                 form.ShowDialog(this);
             }
@@ -146,6 +155,30 @@ namespace LightingChartSamples
             btnClose.Location = new Point(392, 481);
             btnClose.TabIndex = 8;
             ClientSize = new Size(520, 530);
+        }
+
+        private void AddBarChartImageExportSampleButton()
+        {
+            var button = new Button
+            {
+                BackColor = Color.FromArgb(118, 91, 166),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = Color.White,
+                Location = new Point(32, 480),
+                Name = "btnBarChartImageExportSample",
+                Size = new Size(456, 46),
+                TabIndex = 8,
+                Text = "Bar Chart Image Export Sample",
+                UseVisualStyleBackColor = false
+            };
+
+            button.Click += btnBarChartImageExportSample_Click;
+            pnlContainer.Controls.Add(button);
+
+            btnClose.Location = new Point(392, 539);
+            btnClose.TabIndex = 9;
+            ClientSize = new Size(520, 588);
         }
     }
 
