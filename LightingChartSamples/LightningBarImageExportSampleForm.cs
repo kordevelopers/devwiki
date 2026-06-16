@@ -170,6 +170,7 @@ namespace LightingChartSamples
         {
             return new LightningBarImageOptions
             {
+                Preset = LightningBarImagePreset.ChartZoom,
                 Width = 900,
                 Height = 600,
                 DpiX = 150f,
@@ -180,9 +181,6 @@ namespace LightingChartSamples
                     ? "bar_chart_excel.jpg"
                     : "bar_chart_excel.png",
                 JpegQuality = 92L,
-                OptimizeForExcel = true,
-                ContentScale = 1.2f,
-                ReduceOuterPadding = true,
                 HideRawDataButtonOnImage = true
             };
         }
@@ -234,13 +232,11 @@ namespace LightingChartSamples
                 },
                 Image = new LightningBarImageOptions
                 {
+                    Preset = LightningBarImagePreset.ChartZoom,
                     Width = 900,
                     Height = 600,
                     DpiX = 150f,
                     DpiY = 150f,
-                    OptimizeForExcel = true,
-                    ContentScale = 1.2f,
-                    ReduceOuterPadding = true,
                     HideRawDataButtonOnImage = true
                 }
             };

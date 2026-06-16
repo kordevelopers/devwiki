@@ -60,10 +60,18 @@ namespace LightingChartSamples
         Jpeg
     }
 
+    public enum LightningBarImagePreset
+    {
+        Default,
+        ChartZoom,
+        Custom
+    }
+
     public class LightningBarImageOptions
     {
         public LightningBarImageOptions()
         {
+            Preset = LightningBarImagePreset.Default;
             Width = 400;
             Height = 400;
             DpiX = 96f;
@@ -78,6 +86,7 @@ namespace LightingChartSamples
             HideRawDataButtonOnImage = true;
         }
 
+        public LightningBarImagePreset Preset { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
         public float DpiX { get; set; }
@@ -970,9 +979,7 @@ namespace LightingChartSamples
 
         public Bitmap SaveImageToMemory(LightningBarImageOptions imageOptions)
         {
-            LightningBarImageOptions effectiveOptions = imageOptions == null
-                ? new LightningBarImageOptions()
-                : imageOptions.Clone();
+            LightningBarImageOptions effectiveOptions = CreateEffectiveImageOptions(imageOptions);
 
             using (Bitmap bitmap = RenderImage(effectiveOptions))
             {
@@ -984,9 +991,7 @@ namespace LightingChartSamples
 
         public Bitmap RenderImage(LightningBarImageOptions imageOptions)
         {
-            LightningBarImageOptions effectiveImageOptions = imageOptions == null
-                ? new LightningBarImageOptions()
-                : imageOptions.Clone();
+            LightningBarImageOptions effectiveImageOptions = CreateEffectiveImageOptions(imageOptions);
             int width = Math.Max(1, effectiveImageOptions.Width);
             int height = Math.Max(1, effectiveImageOptions.Height);
             float dpiX = Math.Max(1f, effectiveImageOptions.DpiX);
@@ -1034,9 +1039,7 @@ namespace LightingChartSamples
 
         public string SaveImage(LightningBarImageOptions imageOptions)
         {
-            LightningBarImageOptions effectiveOptions = imageOptions == null
-                ? new LightningBarImageOptions()
-                : imageOptions.Clone();
+            LightningBarImageOptions effectiveOptions = CreateEffectiveImageOptions(imageOptions);
             string fullPath = ResolveImageFilePath(effectiveOptions);
 
             using (Bitmap bitmap = RenderImage(effectiveOptions))
@@ -1060,9 +1063,7 @@ namespace LightingChartSamples
                 throw new ArgumentException("이미지 파일 경로가 필요합니다.", "filePath");
             }
 
-            LightningBarImageOptions effectiveOptions = imageOptions == null
-                ? new LightningBarImageOptions()
-                : imageOptions.Clone();
+            LightningBarImageOptions effectiveOptions = CreateEffectiveImageOptions(imageOptions);
             string fullPath = Path.GetFullPath(filePath);
             fullPath = Path.ChangeExtension(fullPath, GetImageFileExtension(effectiveOptions.FileFormat));
             string directory = Path.GetDirectoryName(fullPath);
@@ -1893,6 +1894,47 @@ namespace LightingChartSamples
             return currentOptions != null
                 && currentOptions.RawData != null
                 && currentOptions.RawData.ButtonMode == LightningBarRawDataButtonMode.Visible;
+        }
+
+        protected virtual LightningBarImageOptions CreateEffectiveImageOptions(LightningBarImageOptions imageOptions)
+        {
+            LightningBarImageOptions effectiveOptions = imageOptions == null
+                ? new LightningBarImageOptions()
+                : imageOptions.Clone();
+
+            if (effectiveOptions.Preset == LightningBarImagePreset.ChartZoom)
+            {
+                if (effectiveOptions.Width <= 400)
+                {
+                    effectiveOptions.Width = 900;
+                }
+
+                if (effectiveOptions.Height <= 400)
+                {
+                    effectiveOptions.Height = 650;
+                }
+
+                if (effectiveOptions.DpiX <= 96f)
+                {
+                    effectiveOptions.DpiX = 150f;
+                }
+
+                if (effectiveOptions.DpiY <= 96f)
+                {
+                    effectiveOptions.DpiY = 150f;
+                }
+
+                if (effectiveOptions.ContentScale <= 1f)
+                {
+                    effectiveOptions.ContentScale = 1.2f;
+                }
+
+                effectiveOptions.OptimizeForExcel = true;
+                effectiveOptions.ReduceOuterPadding = true;
+                effectiveOptions.HideRawDataButtonOnImage = true;
+            }
+
+            return effectiveOptions;
         }
 
         protected virtual void DrawRawDataButton(Graphics graphics, LightningBarOptions currentOptions, Size renderSize, bool updateHitBounds)
