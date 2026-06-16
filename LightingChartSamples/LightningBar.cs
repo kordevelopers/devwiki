@@ -62,9 +62,22 @@ namespace LightingChartSamples
 
     public enum LightningBarImagePreset
     {
-        Default,
-        ChartZoom,
-        Custom
+        Default = 0,
+        ChartZoom = 1,
+        ExcelOptimized = 1,
+        Custom = 2
+    }
+
+    public enum LightningBarLegendReservedWidthMode
+    {
+        Always,
+        CollapseForTopBottomLegend
+    }
+
+    public enum LightningBarNoDataBadgeWidthMode
+    {
+        Auto,
+        Fixed
     }
 
     public class LightningBarImageOptions
@@ -99,6 +112,37 @@ namespace LightingChartSamples
         public float ContentScale { get; set; }
         public bool ReduceOuterPadding { get; set; }
         public bool HideRawDataButtonOnImage { get; set; }
+
+        public static LightningBarImageOptions CreateDefault()
+        {
+            return new LightningBarImageOptions();
+        }
+
+        public static LightningBarImageOptions CreateChartZoom()
+        {
+            return new LightningBarImageOptions
+            {
+                Preset = LightningBarImagePreset.ChartZoom,
+                Width = 900,
+                Height = 650,
+                DpiX = 150f,
+                DpiY = 150f,
+                OptimizeForExcel = true,
+                ContentScale = 1.2f,
+                ReduceOuterPadding = true,
+                HideRawDataButtonOnImage = true
+            };
+        }
+
+        public static LightningBarImageOptions CreateCustom(int width, int height)
+        {
+            return new LightningBarImageOptions
+            {
+                Preset = LightningBarImagePreset.Custom,
+                Width = width,
+                Height = height
+            };
+        }
 
         public LightningBarImageOptions Clone()
         {
@@ -142,14 +186,22 @@ namespace LightingChartSamples
             ChartPadding = 32;
             TopOffset = 90;
             LegendReservedWidth = 180;
+            LegendReservedWidthMode = LightningBarLegendReservedWidthMode.Always;
             CategoryLabelReservedWidth = 90f;
+            AutoCategoryLabelReservedWidth = false;
+            MinCategoryLabelReservedWidth = 60f;
+            MaxCategoryLabelReservedWidth = 220f;
             BottomScaleAreaHeight = 34f;
         }
 
         public int ChartPadding { get; set; }
         public int TopOffset { get; set; }
         public int LegendReservedWidth { get; set; }
+        public LightningBarLegendReservedWidthMode LegendReservedWidthMode { get; set; }
         public float CategoryLabelReservedWidth { get; set; }
+        public bool AutoCategoryLabelReservedWidth { get; set; }
+        public float MinCategoryLabelReservedWidth { get; set; }
+        public float MaxCategoryLabelReservedWidth { get; set; }
         public float BottomScaleAreaHeight { get; set; }
 
         public LightningBarLayoutOptions Clone()
@@ -275,6 +327,7 @@ namespace LightingChartSamples
             GroupPaddingRatio = 0.18f;
             HeightMode = LightningBarHeightMode.Manual;
             FixedHeight = 30f;
+            ClampFixedHeightToGroup = false;
             ReferenceSeriesCount = 5;
             MinHeight = 1f;
         }
@@ -284,6 +337,7 @@ namespace LightingChartSamples
         public float GroupPaddingRatio { get; set; }
         public LightningBarHeightMode HeightMode { get; set; }
         public float FixedHeight { get; set; }
+        public bool ClampFixedHeightToGroup { get; set; }
         public int ReferenceSeriesCount { get; set; }
         public float MinHeight { get; set; }
 
@@ -327,6 +381,7 @@ namespace LightingChartSamples
             BadgeBackColor = Color.FromArgb(255, 249, 196);
             BadgeBackOpacity = 128;
             BadgeBorderColor = Color.FromArgb(240, 206, 84);
+            BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Fixed;
             BadgeFixedWidth = 200f;
         }
 
@@ -341,6 +396,7 @@ namespace LightingChartSamples
         public Color BadgeBackColor { get; set; }
         public int BadgeBackOpacity { get; set; }
         public Color BadgeBorderColor { get; set; }
+        public LightningBarNoDataBadgeWidthMode BadgeWidthMode { get; set; }
         public float BadgeFixedWidth { get; set; }
 
         public bool ShowMessage
@@ -1252,7 +1308,7 @@ namespace LightingChartSamples
                     collectBarHits = false;
                 }
 
-                DrawLegend(graphics, currentSeries, currentOptions, renderSize);
+                DrawLegend(graphics, currentSeries, currentOptions, renderSize, currentCategories);
             }
 
             bool showNoDataMessage = isNoDataState;
@@ -1349,7 +1405,7 @@ namespace LightingChartSamples
                 return;
             }
 
-            RectangleF plotRect = GetPlotRectangle(renderSize, currentOptions);
+            RectangleF plotRect = GetPlotRectangle(graphics, renderSize, currentOptions, currentCategories);
             if (plotRect.Width <= 40f || plotRect.Height <= 40f)
             {
                 return;
@@ -1411,12 +1467,13 @@ namespace LightingChartSamples
                 float horizontalPadding = Math.Max(24f, messageRect.Width * 0.04f);
                 float verticalPadding = Math.Max(14f, messageRect.Height * 0.045f);
                 float fixedBadgeWidth = Math.Max(0f, noDataOptions.BadgeFixedWidth);
+                bool useFixedBadgeWidth = noDataOptions.BadgeWidthMode == LightningBarNoDataBadgeWidthMode.Fixed && fixedBadgeWidth > 0f;
                 float badgeWidth = 0f;
                 float maxTextMeasureWidth;
 
-                if (fixedBadgeWidth > 0f)
+                if (useFixedBadgeWidth)
                 {
-                    badgeWidth = Math.Min(maxBadgeWidth, Math.Max(minBadgeWidth, fixedBadgeWidth));
+                    badgeWidth = Math.Min(Math.Max(1f, messageRect.Width), fixedBadgeWidth);
                     maxTextMeasureWidth = Math.Max(1f, badgeWidth - (horizontalPadding * 2f));
                 }
                 else
@@ -1506,12 +1563,68 @@ namespace LightingChartSamples
 
         protected virtual RectangleF GetPlotRectangle(Size renderSize, LightningBarOptions currentOptions)
         {
+            return GetPlotRectangle(null, renderSize, currentOptions, null);
+        }
+
+        protected virtual RectangleF GetPlotRectangle(Graphics graphics, Size renderSize, LightningBarOptions currentOptions, string[] currentCategories)
+        {
             LightningBarLayoutOptions layout = currentOptions.Layout ?? new LightningBarLayoutOptions();
-            float left = layout.ChartPadding + layout.CategoryLabelReservedWidth;
+            float categoryLabelReservedWidth = GetEffectiveCategoryLabelReservedWidth(graphics, currentOptions, currentCategories);
+            float legendReservedWidth = ShouldReserveLegendWidth(currentOptions) ? layout.LegendReservedWidth : 0f;
+            float left = layout.ChartPadding + categoryLabelReservedWidth;
             float top = layout.TopOffset;
-            float right = renderSize.Width - layout.ChartPadding - layout.LegendReservedWidth;
+            float right = renderSize.Width - layout.ChartPadding - legendReservedWidth;
             float bottom = renderSize.Height - layout.ChartPadding - layout.BottomScaleAreaHeight;
             return RectangleF.FromLTRB(left, top, right, bottom);
+        }
+
+        protected virtual bool ShouldReserveLegendWidth(LightningBarOptions currentOptions)
+        {
+            LightningBarLayoutOptions layout = currentOptions.Layout ?? new LightningBarLayoutOptions();
+            if (layout.LegendReservedWidthMode != LightningBarLegendReservedWidthMode.CollapseForTopBottomLegend)
+            {
+                return true;
+            }
+
+            LightningBarLegendOptions legendOptions = currentOptions.Legend ?? new LightningBarLegendOptions();
+            if (!legendOptions.Visible)
+            {
+                return false;
+            }
+
+            return legendOptions.Position != LightningBarLegendPosition.Top
+                && legendOptions.Position != LightningBarLegendPosition.Bottom;
+        }
+
+        protected virtual float GetEffectiveCategoryLabelReservedWidth(Graphics graphics, LightningBarOptions currentOptions, string[] currentCategories)
+        {
+            LightningBarLayoutOptions layout = currentOptions.Layout ?? new LightningBarLayoutOptions();
+            float configuredWidth = Math.Max(0f, layout.CategoryLabelReservedWidth);
+            if (!layout.AutoCategoryLabelReservedWidth || graphics == null || currentCategories == null || currentCategories.Length == 0)
+            {
+                return configuredWidth;
+            }
+
+            LightningBarCategoryLabelOptions categoryOptions = currentOptions.CategoryLabels ?? new LightningBarCategoryLabelOptions();
+            float measuredWidth = 0f;
+            int maxLines = Math.Max(1, categoryOptions.MaxLines);
+            using (var labelFont = new Font(Font.FontFamily, Math.Max(1f, categoryOptions.FontSize), FontStyle.Regular))
+            {
+                for (int i = 0; i < currentCategories.Length; i++)
+                {
+                    string[] lines = GetCategoryLabelLines(currentCategories[i], maxLines, categoryOptions);
+                    for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+                    {
+                        SizeF lineSize = graphics.MeasureString(lines[lineIndex] ?? string.Empty, labelFont);
+                        measuredWidth = Math.Max(measuredWidth, lineSize.Width);
+                    }
+                }
+            }
+
+            float minWidth = Math.Max(0f, layout.MinCategoryLabelReservedWidth);
+            float maxWidth = Math.Max(minWidth, layout.MaxCategoryLabelReservedWidth);
+            float requiredWidth = measuredWidth + 18f;
+            return Math.Min(maxWidth, Math.Max(minWidth, requiredWidth));
         }
 
         protected virtual float GetMaxValue(string[] currentCategories, LightningBarSeries[] currentSeries, LightningBarOptions currentOptions)
@@ -1581,6 +1694,16 @@ namespace LightingChartSamples
             float barHeight = useFixedBarHeight
                 ? Math.Max(barOptions.MinHeight, barOptions.FixedHeight)
                 : (usableGroupHeight - totalGapWidth) / Math.Max(1, referenceSeriesCount);
+
+            if (useFixedBarHeight && barOptions.ClampFixedHeightToGroup)
+            {
+                float actualGapWidth = barGap * Math.Max(0, seriesCount - 1);
+                float maxBarHeightInGroup = (usableGroupHeight - actualGapWidth) / Math.Max(1, seriesCount);
+                if (maxBarHeightInGroup >= barOptions.MinHeight)
+                {
+                    barHeight = Math.Min(barHeight, maxBarHeightInGroup);
+                }
+            }
 
             if (barHeight < barOptions.MinHeight)
             {
@@ -1740,6 +1863,11 @@ namespace LightingChartSamples
 
         protected virtual void DrawLegend(Graphics graphics, LightningBarSeries[] currentSeries, LightningBarOptions currentOptions, Size renderSize)
         {
+            DrawLegend(graphics, currentSeries, currentOptions, renderSize, null);
+        }
+
+        protected virtual void DrawLegend(Graphics graphics, LightningBarSeries[] currentSeries, LightningBarOptions currentOptions, Size renderSize, string[] currentCategories)
+        {
             LightningBarLegendOptions legendOptions = currentOptions.Legend ?? new LightningBarLegendOptions();
             if (!legendOptions.Visible || currentSeries == null || currentSeries.Length == 0)
             {
@@ -1750,7 +1878,7 @@ namespace LightingChartSamples
             float sectionSpacing = Math.Max(0f, legendOptions.SectionSpacing);
             float maxTextWidth = Math.Max(1f, legendOptions.LabelMaxWidth);
             float markerWidth = Math.Max(1f, legendOptions.MarkerWidth);
-            RectangleF plotRect = GetPlotRectangle(renderSize, currentOptions);
+            RectangleF plotRect = GetPlotRectangle(graphics, renderSize, currentOptions, currentCategories);
 
             using (var legendFont = new Font(Font.FontFamily, Math.Max(1f, legendOptions.FontSize), FontStyle.Regular))
             using (var textBrush = new SolidBrush(legendOptions.TextColor))
@@ -1994,10 +2122,12 @@ namespace LightingChartSamples
                 renderOptions.Layout.ChartPadding = Math.Max(6, (int)Math.Round(renderOptions.Layout.ChartPadding * 0.55f));
                 renderOptions.Layout.TopOffset = Math.Max(48, Math.Min(renderOptions.Layout.TopOffset, 68));
                 renderOptions.Layout.BottomScaleAreaHeight = Math.Max(22f, renderOptions.Layout.BottomScaleAreaHeight * 0.72f);
+                renderOptions.Layout.AutoCategoryLabelReservedWidth = true;
+                renderOptions.Layout.LegendReservedWidthMode = LightningBarLegendReservedWidthMode.CollapseForTopBottomLegend;
 
                 if (renderOptions.Legend == null || renderOptions.Legend.Position == LightningBarLegendPosition.Top || renderOptions.Legend.Position == LightningBarLegendPosition.Bottom)
                 {
-                    renderOptions.Layout.LegendReservedWidth = Math.Min(renderOptions.Layout.LegendReservedWidth, 24);
+                    renderOptions.Layout.LegendReservedWidth = 0;
                 }
             }
 
@@ -2054,11 +2184,14 @@ namespace LightingChartSamples
             if (renderOptions.NoData != null)
             {
                 renderOptions.NoData.FontSize = ScaleValue(renderOptions.NoData.FontSize, scale, 1f);
+                renderOptions.NoData.BadgeFixedWidth = ScaleValue(renderOptions.NoData.BadgeFixedWidth, scale, 1f);
             }
 
             if (renderOptions.Layout != null)
             {
                 renderOptions.Layout.CategoryLabelReservedWidth = ScaleValue(renderOptions.Layout.CategoryLabelReservedWidth, scale, 1f);
+                renderOptions.Layout.MinCategoryLabelReservedWidth = ScaleValue(renderOptions.Layout.MinCategoryLabelReservedWidth, scale, 1f);
+                renderOptions.Layout.MaxCategoryLabelReservedWidth = ScaleValue(renderOptions.Layout.MaxCategoryLabelReservedWidth, scale, renderOptions.Layout.MinCategoryLabelReservedWidth);
             }
         }
 
@@ -2265,13 +2398,11 @@ namespace LightingChartSamples
 
         protected virtual void HideSeriesToolTip()
         {
-            if (string.IsNullOrEmpty(currentToolTipText))
-            {
-                return;
-            }
-
             currentToolTipText = string.Empty;
-            seriesToolTip.Hide(this);
+            if (!IsDisposed)
+            {
+                seriesToolTip.Hide(this);
+            }
         }
 
         protected virtual void OnSeriesClicked(LightningBarSeriesClickEventArgs e)
