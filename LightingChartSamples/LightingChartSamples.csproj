@@ -138,6 +138,12 @@
     <Compile Include="LightningRadarSample.Designer.cs">
       <DependentUpon>LightningRadarSample.cs</DependentUpon>
     </Compile>
+    <Compile Include="Scatter\LightningScatter.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Scatter\LightningScatterSampleForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="LightningBarSample.resx">
@@ -171,9 +177,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Scatter\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

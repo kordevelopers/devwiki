@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using LightingChartSamples.Scatter;
 
 namespace LightingChartSamples
 {
@@ -14,6 +15,7 @@ namespace LightingChartSamples
             AddDynamicDocumentBarChartButton();
             AddNewBarChartGuideButton();
             AddBarChartImageExportSampleButton();
+            AddLightningScatterSampleButton();
         }
 
         private void btnTextDocument_Click(object sender, EventArgs e)
@@ -80,6 +82,14 @@ namespace LightingChartSamples
         private void btnBarChartImageExportSample_Click(object sender, EventArgs e)
         {
             using (var form = new LightningBarImageExportSampleForm())
+            {
+                form.ShowDialog(this);
+            }
+        }
+
+        private void btnLightningScatterSample_Click(object sender, EventArgs e)
+        {
+            using (var form = new LightningScatterSampleForm())
             {
                 form.ShowDialog(this);
             }
@@ -179,6 +189,30 @@ namespace LightingChartSamples
             btnClose.Location = new Point(392, 539);
             btnClose.TabIndex = 9;
             ClientSize = new Size(520, 588);
+        }
+
+        private void AddLightningScatterSampleButton()
+        {
+            var button = new Button
+            {
+                BackColor = Color.FromArgb(54, 132, 156),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("맑은 고딕", 10F, FontStyle.Bold),
+                ForeColor = Color.White,
+                Location = new Point(32, 538),
+                Name = "btnLightningScatterSample",
+                Size = new Size(456, 46),
+                TabIndex = 9,
+                Text = "Scatter Chart 샘플 열기 (LightningChart API)",
+                UseVisualStyleBackColor = false
+            };
+
+            button.Click += btnLightningScatterSample_Click;
+            pnlContainer.Controls.Add(button);
+
+            btnClose.Location = new Point(392, 597);
+            btnClose.TabIndex = 10;
+            ClientSize = new Size(520, 646);
         }
     }
 
