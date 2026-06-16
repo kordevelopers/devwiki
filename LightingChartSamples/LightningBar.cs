@@ -77,16 +77,20 @@ namespace LightingChartSamples
     public enum LightningBarNoDataBadgeWidthMode
     {
         Auto,
-        Fixed
+        Fixed,
+        Percent
     }
 
     public class LightningBarImageOptions
     {
+        public const int DefaultWidth = 600;
+        public const int DefaultHeight = 400;
+
         public LightningBarImageOptions()
         {
             Preset = LightningBarImagePreset.Default;
-            Width = 400;
-            Height = 400;
+            Width = DefaultWidth;
+            Height = DefaultHeight;
             DpiX = 96f;
             DpiY = 96f;
             FileFormat = LightningBarImageFileFormat.Png;
@@ -124,7 +128,7 @@ namespace LightingChartSamples
             {
                 Preset = LightningBarImagePreset.ChartZoom,
                 Width = 900,
-                Height = 650,
+                Height = 600,
                 DpiX = 150f,
                 DpiY = 150f,
                 OptimizeForExcel = true,
@@ -183,15 +187,15 @@ namespace LightingChartSamples
     {
         public LightningBarLayoutOptions()
         {
-            ChartPadding = 32;
-            TopOffset = 90;
-            LegendReservedWidth = 180;
-            LegendReservedWidthMode = LightningBarLegendReservedWidthMode.Always;
-            CategoryLabelReservedWidth = 90f;
-            AutoCategoryLabelReservedWidth = false;
-            MinCategoryLabelReservedWidth = 60f;
-            MaxCategoryLabelReservedWidth = 220f;
-            BottomScaleAreaHeight = 34f;
+            ChartPadding = 20;
+            TopOffset = 72;
+            LegendReservedWidth = 120;
+            LegendReservedWidthMode = LightningBarLegendReservedWidthMode.CollapseForTopBottomLegend;
+            CategoryLabelReservedWidth = 110f;
+            AutoCategoryLabelReservedWidth = true;
+            MinCategoryLabelReservedWidth = 78f;
+            MaxCategoryLabelReservedWidth = 150f;
+            BottomScaleAreaHeight = 30f;
         }
 
         public int ChartPadding { get; set; }
@@ -217,15 +221,15 @@ namespace LightingChartSamples
             Visible = true;
             Position = LightningBarLegendPosition.Top;
             Alignment = LightningBarLegendAlignment.Center;
-            MarginFromChart = 12f;
-            FontSize = 8f;
+            MarginFromChart = 8f;
+            FontSize = 7.5f;
             TextColor = Color.FromArgb(90, 90, 90);
-            MarkerWidth = 26f;
-            MarkerHeight = 18f;
-            LabelMaxWidth = 120f;
+            MarkerWidth = 22f;
+            MarkerHeight = 14f;
+            LabelMaxWidth = 110f;
             LabelMaxLines = 3;
-            ItemSpacing = 8f;
-            SectionSpacing = 28f;
+            ItemSpacing = 6f;
+            SectionSpacing = 20f;
         }
 
         public bool Visible { get; set; }
@@ -251,10 +255,10 @@ namespace LightingChartSamples
     {
         public LightningBarCategoryLabelOptions()
         {
-            FontSize = 8.5f;
+            FontSize = 8f;
             Color = Color.FromArgb(95, 95, 95);
             MaxLines = 3;
-            LineSpacing = 2f;
+            LineSpacing = 1.5f;
             Orientation = LightningBarCategoryLabelOrientation.Horizontal;
         }
 
@@ -275,7 +279,7 @@ namespace LightingChartSamples
         public LightningBarScaleOptions()
         {
             GridLineCount = 5;
-            FontSize = 9f;
+            FontSize = 8f;
             LabelColor = Color.FromArgb(95, 95, 95);
             AxisColor = Color.FromArgb(170, 170, 170);
             GridColor = Color.FromArgb(225, 225, 225);
@@ -323,11 +327,11 @@ namespace LightingChartSamples
         public LightningBarBarOptions()
         {
             BorderWidth = 1.2f;
-            Gap = 8f;
-            GroupPaddingRatio = 0.18f;
+            Gap = 5f;
+            GroupPaddingRatio = 0.16f;
             HeightMode = LightningBarHeightMode.Manual;
             FixedHeight = 30f;
-            ClampFixedHeightToGroup = false;
+            ClampFixedHeightToGroup = true;
             ReferenceSeriesCount = 5;
             MinHeight = 1f;
         }
@@ -381,8 +385,10 @@ namespace LightingChartSamples
             BadgeBackColor = Color.FromArgb(255, 249, 196);
             BadgeBackOpacity = 128;
             BadgeBorderColor = Color.FromArgb(240, 206, 84);
-            BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Fixed;
+            BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Percent;
             BadgeFixedWidth = 200f;
+            BadgeWidthRatio = 0.8f;
+            BadgeSingleLine = false;
         }
 
         public string Text { get; set; }
@@ -398,6 +404,8 @@ namespace LightingChartSamples
         public Color BadgeBorderColor { get; set; }
         public LightningBarNoDataBadgeWidthMode BadgeWidthMode { get; set; }
         public float BadgeFixedWidth { get; set; }
+        public float BadgeWidthRatio { get; set; }
+        public bool BadgeSingleLine { get; set; }
 
         public bool ShowMessage
         {
@@ -506,6 +514,11 @@ namespace LightingChartSamples
             RawData = new LightningBarRawDataOptions();
             Image = new LightningBarImageOptions();
             BackgroundColor = Color.White;
+        }
+
+        public static LightningBarOptions CreateDefault600x400()
+        {
+            return new LightningBarOptions();
         }
 
         public LightningBarTitleOptions TitleOptions { get; set; }
@@ -1330,6 +1343,11 @@ namespace LightingChartSamples
             }
 
             string titleText = titleOptions.Text ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(titleText))
+            {
+                return;
+            }
+
             using (var titleFont = new Font(Font.FontFamily, Math.Max(1f, titleOptions.FontSize), titleOptions.FontStyle))
             using (var titleBrush = new SolidBrush(titleOptions.Color))
             using (var format = new StringFormat())
@@ -1458,9 +1476,22 @@ namespace LightingChartSamples
                     messageText = string.Format("{0}\n{1}", title, messageText);
                 }
 
+                if (noDataOptions.BadgeSingleLine)
+                {
+                    messageText = messageText
+                        .Replace("\r\n", " ")
+                        .Replace('\r', ' ')
+                        .Replace('\n', ' ')
+                        .Trim();
+                }
+
                 format.Alignment = StringAlignment.Center;
                 format.LineAlignment = StringAlignment.Center;
-                format.Trimming = StringTrimming.EllipsisWord;
+                format.Trimming = StringTrimming.Word;
+                if (noDataOptions.BadgeSingleLine)
+                {
+                    format.FormatFlags |= StringFormatFlags.NoWrap;
+                }
 
                 float minBadgeWidth = Math.Max(120f, messageRect.Width * 0.28f);
                 float maxBadgeWidth = Math.Max(minBadgeWidth, messageRect.Width * 0.82f);
@@ -1468,12 +1499,19 @@ namespace LightingChartSamples
                 float verticalPadding = Math.Max(14f, messageRect.Height * 0.045f);
                 float fixedBadgeWidth = Math.Max(0f, noDataOptions.BadgeFixedWidth);
                 bool useFixedBadgeWidth = noDataOptions.BadgeWidthMode == LightningBarNoDataBadgeWidthMode.Fixed && fixedBadgeWidth > 0f;
+                bool usePercentBadgeWidth = noDataOptions.BadgeWidthMode == LightningBarNoDataBadgeWidthMode.Percent;
                 float badgeWidth = 0f;
                 float maxTextMeasureWidth;
 
                 if (useFixedBadgeWidth)
                 {
                     badgeWidth = Math.Min(Math.Max(1f, messageRect.Width), fixedBadgeWidth);
+                    maxTextMeasureWidth = Math.Max(1f, badgeWidth - (horizontalPadding * 2f));
+                }
+                else if (usePercentBadgeWidth)
+                {
+                    float safeRatio = Math.Max(0.1f, Math.Min(1f, noDataOptions.BadgeWidthRatio));
+                    badgeWidth = Math.Max(1f, messageRect.Width * safeRatio);
                     maxTextMeasureWidth = Math.Max(1f, badgeWidth - (horizontalPadding * 2f));
                 }
                 else
@@ -2039,7 +2077,7 @@ namespace LightingChartSamples
 
                 if (effectiveOptions.Height <= 400)
                 {
-                    effectiveOptions.Height = 650;
+                    effectiveOptions.Height = 600;
                 }
 
                 if (effectiveOptions.DpiX <= 96f)

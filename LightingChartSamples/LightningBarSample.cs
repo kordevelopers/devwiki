@@ -18,12 +18,6 @@ namespace LightingChartSamples
 
             barChart = LightningBar.Create(pnlChartHost, CreateCategories(), CreateSeries(), CreateOptions());
             barChart.SeriesClicked += BarChart_SeriesClicked;
-            barChart.UpdateOptions(options =>
-            {
-                options.TitleOptions.Text = "LightningBar Common Sample (Runtime Updated)";
-                options.TitleOptions.Position = LightningBarTitlePosition.TopCenter;
-            });
-
             // 메모리 이미지 사용:
             // using (Bitmap chartImage = barChart.RenderImage()) { pictureBox.Image = new Bitmap(chartImage); }
             // 파일 저장 후 로드:
@@ -35,23 +29,31 @@ namespace LightingChartSamples
         {
             return new LightningBarOptions
             {
-                Title = "LightningBar Common Sample",
+                Title = string.Empty,
                 Layout = new LightningBarLayoutOptions
                 {
-                    ChartPadding = 36,
-                    TopOffset = 90,
-                    LegendReservedWidth = 170
+                    ChartPadding = 20,
+                    TopOffset = 72,
+                    LegendReservedWidth = 120,
+                    LegendReservedWidthMode = LightningBarLegendReservedWidthMode.CollapseForTopBottomLegend,
+                    CategoryLabelReservedWidth = 110f,
+                    AutoCategoryLabelReservedWidth = true,
+                    MinCategoryLabelReservedWidth = 78f,
+                    MaxCategoryLabelReservedWidth = 150f,
+                    BottomScaleAreaHeight = 30f
                 },
                 Legend = new LightningBarLegendOptions
                 {
                     Position = LightningBarLegendPosition.Top,
                     Alignment = LightningBarLegendAlignment.Center,
-                    FontSize = 7f,
-                    MarkerWidth = 30f,
-                    MarkerHeight = 22f,
-                    LabelMaxWidth = 130f,
+                    FontSize = 7.5f,
+                    MarkerWidth = 22f,
+                    MarkerHeight = 14f,
+                    LabelMaxWidth = 110f,
                     LabelMaxLines = 3,
-                    MarginFromChart = 10f
+                    MarginFromChart = 8f,
+                    ItemSpacing = 6f,
+                    SectionSpacing = 20f
                 },
                 Scale = new LightningBarScaleOptions
                 {
@@ -61,21 +63,22 @@ namespace LightingChartSamples
                 Bars = new LightningBarBarOptions
                 {
                     BorderWidth = 1.2f,
-                    Gap = 8f,
-                    GroupPaddingRatio = 0.2f,
+                    Gap = 5f,
+                    GroupPaddingRatio = 0.16f,
                     HeightMode = LightningBarHeightMode.Manual,
-                    FixedHeight = 18f,
+                    FixedHeight = 30f,
+                    ClampFixedHeightToGroup = true,
                     ReferenceSeriesCount = 5
                 },
                 CategoryLabels = new LightningBarCategoryLabelOptions
                 {
-                    FontSize = 8.5f,
+                    FontSize = 8f,
                     MaxLines = 3,
-                    LineSpacing = 3f
+                    LineSpacing = 1.5f
                 },
                 TitleOptions = new LightningBarTitleOptions
                 {
-                    Text = "LightningBar Common Sample",
+                    Text = string.Empty,
                     Position = LightningBarTitlePosition.TopLeft,
                     FontSize = 12f,
                     MarginTop = 12f,
@@ -97,7 +100,7 @@ namespace LightingChartSamples
                 },
                 Image = new LightningBarImageOptions
                 {
-                    Width = 400,
+                    Width = 600,
                     Height = 400,
                     FileFormat = LightningBarImageFileFormat.Png,
                     SaveDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),

@@ -244,6 +244,7 @@ namespace LightingChartSamples
                 TitleOptions = new LightningBarTitleOptions
                 {
                     Text = "신규 Bar Chart 사용 가이드",
+                    Visible = false,
                     Position = LightningBarTitlePosition.TopCenter,
                     FontSize = 13f,
                     MarginTop = 10f,
@@ -251,33 +252,43 @@ namespace LightingChartSamples
                 },
                 Layout = new LightningBarLayoutOptions
                 {
-                    ChartPadding = 32,
-                    TopOffset = 88,
-                    LegendReservedWidth = 180,
-                    CategoryLabelReservedWidth = 120f
+                    ChartPadding = 20,
+                    TopOffset = 72,
+                    LegendReservedWidth = 120,
+                    LegendReservedWidthMode = LightningBarLegendReservedWidthMode.CollapseForTopBottomLegend,
+                    CategoryLabelReservedWidth = 110f,
+                    AutoCategoryLabelReservedWidth = true,
+                    MinCategoryLabelReservedWidth = 78f,
+                    MaxCategoryLabelReservedWidth = 150f,
+                    BottomScaleAreaHeight = 30f
                 },
                 Legend = new LightningBarLegendOptions
                 {
                     Position = LightningBarLegendPosition.Top,
                     Alignment = LightningBarLegendAlignment.Center,
-                    MarginFromChart = 10f,
-                    FontSize = 8f,
-                    LabelMaxWidth = 120f,
-                    LabelMaxLines = 2
+                    MarginFromChart = 8f,
+                    FontSize = 7.5f,
+                    MarkerWidth = 22f,
+                    MarkerHeight = 14f,
+                    LabelMaxWidth = 110f,
+                    LabelMaxLines = 3,
+                    ItemSpacing = 6f,
+                    SectionSpacing = 20f
                 },
                 CategoryLabels = new LightningBarCategoryLabelOptions
                 {
-                    FontSize = 8.5f,
-                    MaxLines = 2,
-                    LineSpacing = 2f
+                    FontSize = 8f,
+                    MaxLines = 3,
+                    LineSpacing = 1.5f
                 },
                 Bars = new LightningBarBarOptions
                 {
                     HeightMode = LightningBarHeightMode.Manual,
-                    FixedHeight = 16f,
+                    FixedHeight = 30f,
+                    ClampFixedHeightToGroup = true,
                     ReferenceSeriesCount = 5,
-                    Gap = 6f,
-                    GroupPaddingRatio = 0.2f
+                    Gap = 5f,
+                    GroupPaddingRatio = 0.16f
                 },
                 Scale = new LightningBarScaleOptions
                 {
@@ -328,6 +339,7 @@ namespace LightingChartSamples
             barChart.UpdateOptions(options =>
             {
                 options.TitleOptions.Text = string.Format("신규 Bar Chart 사용 가이드 ({0:HH:mm:ss})", DateTime.Now);
+                options.TitleOptions.Visible = true;
                 options.TitleOptions.Position = LightningBarTitlePosition.TopCenter;
             });
         }

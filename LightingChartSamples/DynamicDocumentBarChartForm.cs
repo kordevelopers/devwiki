@@ -14,7 +14,7 @@ namespace LightingChartSamples
         private const int ChartColumnCount = 2;
         private const int MinimumChartRowCount = 3;
         private const int EmptyChartRowHeight = 100;
-        private static readonly Size DefaultChartSize = new Size(400, 400);
+        private static readonly Size DefaultChartSize = new Size(600, 400);
 
         private readonly Panel scrollPanel;
         private readonly TableLayoutPanel contentTable;
@@ -245,7 +245,7 @@ namespace LightingChartSamples
                 width -= SystemInformation.VerticalScrollBarWidth;
             }
 
-            contentTable.Width = Math.Max(600, width);
+            contentTable.Width = Math.Max(DefaultChartSize.Width * ChartColumnCount, width);
         }
 
         private static int CalculateActiveChartRowHeight(IEnumerable<BarChartLayoutData> rowData)
@@ -308,18 +308,40 @@ namespace LightingChartSamples
             {
                 Title = title ?? string.Empty,
                 TitleFontSize = 11F,
-                ChartPadding = 22,
-                TopOffset = 62,
-                LegendWidth = 130,
+                Layout = new LightningBarLayoutOptions
+                {
+                    ChartPadding = 20,
+                    TopOffset = 72,
+                    LegendReservedWidth = 120,
+                    LegendReservedWidthMode = LightningBarLegendReservedWidthMode.CollapseForTopBottomLegend,
+                    CategoryLabelReservedWidth = 110f,
+                    AutoCategoryLabelReservedWidth = true,
+                    MinCategoryLabelReservedWidth = 78f,
+                    MaxCategoryLabelReservedWidth = 150f,
+                    BottomScaleAreaHeight = 30f
+                },
+                ChartPadding = 20,
+                TopOffset = 72,
+                LegendWidth = 120,
                 GridLineCount = 5,
                 CategoryFontSize = 8F,
                 CategoryLabelMaxLines = 3,
                 ScaleFontSize = 8F,
                 BarBorderWidth = 1F,
                 BarGap = 5F,
-                GroupPaddingRatio = 0.15F,
+                GroupPaddingRatio = 0.16F,
+                Bars = new LightningBarBarOptions
+                {
+                    BorderWidth = 1F,
+                    Gap = 5F,
+                    GroupPaddingRatio = 0.16F,
+                    HeightMode = LightningBarHeightMode.Manual,
+                    FixedHeight = 30F,
+                    ClampFixedHeightToGroup = true,
+                    ReferenceSeriesCount = 5
+                },
                 BarHeightMode = LightningBarHeightMode.Manual,
-                FixedBarHeight = 18F,
+                FixedBarHeight = 30F,
                 MaxValue = 100F,
                 SeriesLabelEnabled = false,
                 SeriesLabelMaxLines = 3,
@@ -519,7 +541,7 @@ namespace LightingChartSamples
     {
         public BarChartLayoutData()
         {
-            ChartSize = new Size(400, 400);
+            ChartSize = new Size(600, 400);
         }
 
         public bool HasData { get; set; }

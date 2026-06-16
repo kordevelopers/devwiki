@@ -170,11 +170,11 @@ namespace LightingChartSamples
         {
             return new LightningBarImageOptions
             {
-                Preset = LightningBarImagePreset.ChartZoom,
-                Width = 900,
-                Height = 600,
-                DpiX = 150f,
-                DpiY = 150f,
+                Preset = LightningBarImagePreset.Default,
+                Width = 600,
+                Height = 400,
+                DpiX = 96f,
+                DpiY = 96f,
                 FileFormat = fileFormat,
                 SaveDirectory = txtSaveDirectory.Text,
                 FileName = fileFormat == LightningBarImageFileFormat.Jpeg
@@ -192,39 +192,49 @@ namespace LightingChartSamples
                 BackgroundColor = Color.White,
                 TitleOptions = new LightningBarTitleOptions
                 {
-                    Text = "Excel Export Chart",
+                    Text = string.Empty,
                     Position = LightningBarTitlePosition.TopCenter,
                     FontSize = 12f,
                     MarginTop = 12f
                 },
                 Layout = new LightningBarLayoutOptions
                 {
-                    ChartPadding = 28,
-                    TopOffset = 86,
-                    LegendReservedWidth = 150,
-                    CategoryLabelReservedWidth = 130f,
-                    BottomScaleAreaHeight = 34f
+                    ChartPadding = 20,
+                    TopOffset = 72,
+                    LegendReservedWidth = 120,
+                    LegendReservedWidthMode = LightningBarLegendReservedWidthMode.CollapseForTopBottomLegend,
+                    CategoryLabelReservedWidth = 110f,
+                    AutoCategoryLabelReservedWidth = true,
+                    MinCategoryLabelReservedWidth = 78f,
+                    MaxCategoryLabelReservedWidth = 150f,
+                    BottomScaleAreaHeight = 30f
                 },
                 Legend = new LightningBarLegendOptions
                 {
                     Position = LightningBarLegendPosition.Top,
                     Alignment = LightningBarLegendAlignment.Center,
-                    FontSize = 8f,
-                    LabelMaxLines = 2,
-                    LabelMaxWidth = 140f
+                    MarginFromChart = 8f,
+                    FontSize = 7.5f,
+                    MarkerWidth = 22f,
+                    MarkerHeight = 14f,
+                    LabelMaxLines = 3,
+                    LabelMaxWidth = 110f,
+                    ItemSpacing = 6f,
+                    SectionSpacing = 20f
                 },
                 CategoryLabels = new LightningBarCategoryLabelOptions
                 {
                     FontSize = 8f,
                     MaxLines = 3,
-                    LineSpacing = 2f
+                    LineSpacing = 1.5f
                 },
                 Bars = new LightningBarBarOptions
                 {
                     HeightMode = LightningBarHeightMode.Manual,
-                    FixedHeight = 18f,
+                    FixedHeight = 30f,
+                    ClampFixedHeightToGroup = true,
                     Gap = 5f,
-                    GroupPaddingRatio = 0.18f
+                    GroupPaddingRatio = 0.16f
                 },
                 RawData = new LightningBarRawDataOptions
                 {
@@ -232,11 +242,11 @@ namespace LightingChartSamples
                 },
                 Image = new LightningBarImageOptions
                 {
-                    Preset = LightningBarImagePreset.ChartZoom,
-                    Width = 900,
-                    Height = 600,
-                    DpiX = 150f,
-                    DpiY = 150f,
+                    Preset = LightningBarImagePreset.Default,
+                    Width = 600,
+                    Height = 400,
+                    DpiX = 96f,
+                    DpiY = 96f,
                     HideRawDataButtonOnImage = true
                 }
             };

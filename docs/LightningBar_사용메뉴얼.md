@@ -1,353 +1,884 @@
 # LightningBar 사용 메뉴얼
 
-## 1. 개요
-`LightningBar`는 WinForms(`.NET Framework 4.5.1`)용 Bar Chart 컨트롤입니다.
+`LightningBar`는 WinForms 화면과 이미지 출력에서 공통으로 사용할 수 있도록 만든 가로 Bar Chart 컨트롤입니다.
 
-- 데이터 바인딩: Category + Series
-- 옵션 기반 렌더링 제어
-- 런타임 옵션 변경
-- 클릭 이벤트 처리
-- RawData 버튼/팝업
-- 이미지 렌더링/저장
+이 문서는 개발자가 화면별로 옵션을 설정할 때 바로 참고할 수 있도록 기능별 사용법과 코드 예제를 정리합니다.
 
----
+## 1. 기본 사용
 
-## 2. 빠른 시작
+필요한 네임스페이스:
 
 ```csharp
-var chart = LightningBar.Create(
-    parent: pnlChartHost,
-    newCategories: new[] { "품질", "생산성", "안전" },
-    newSeries: new[]
-    {
-        new LightningBarSeries
-        {
-            Name = "설비 A",
-            Values = new[] { 88f, 82f, 91f },
-            FillColor = Color.LightBlue,
-            BorderColor = Color.SteelBlue
-        }
-    },
-    barOptions: new LightningBarOptions());
-
-chart.SeriesClicked += (s, e) =>
-{
-    MessageBox.Show($"{e.Series.Name} / {e.CategoryName} / {e.Value}");
-};
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+using LightingChartSamples;
 ```
 
----
+가장 기본적인 생성 방식:
 
-## 3. 데이터 모델
+```csharp
+string[] categories =
+{
+    "온도\r\n센서\r\nA라인",
+    "압력\r\n센서\r\nB라인",
+    "진동\r\n센서\r\nC라인"
+};
 
-### 3.1 `LightningBarSeries`
-- `Name`: 시리즈 이름
-- `LegendLabel`: 레전드 표시 라벨(멀티라인 가능)
-- `Values`: 카테고리별 값 배열
-- `FillColor`, `BorderColor`: bar 색상
+LightningBarSeries[] series =
+{
+    new LightningBarSeries
+    {
+        Name = "현재값",
+        LegendLabel = "현재값",
+        Values = new[] { 78f, 92f, 66f },
+        FillColor = Color.FromArgb(92, 168, 232),
+        BorderColor = Color.FromArgb(42, 118, 190)
+    }
+};
 
-### 3.2 데이터 설정 API
-- `SetData(IEnumerable<string> categories, IEnumerable<LightningBarSeries> series)`
-- `SetCategories(...)`
-- `SetSeries(...)`
-- `UpdateData(categories, series, options)`
-- `Clear()`, `ClearData()`, `Reset()`
+LightningBarOptions options = LightningBarOptions.CreateDefault600x400();
 
----
+LightningBar chart = LightningBar.Create(
+    parent: pnlChartHost,
+    newCategories: categories,
+    newSeries: series,
+    barOptions: options);
 
-## 4. 생성/배치 API
+chart.Dock = DockStyle.Fill;
+```
 
-- `LightningBar.Create(parent, categories, series, options)`
-- `LightningBar.AttachTo<T>(parent, dock, bounds, options)`
-- `AddTo(Control parent)`
+컨트롤 자체 크기를 고정하려면 WinForms 컨트롤 크기를 지정합니다.
 
----
+```csharp
+chart.Dock = DockStyle.None;
+chart.Size = new Size(600, 400);
+chart.Location = new Point(0, 0);
+```
 
-## 5. 옵션 구조 (기능별 분류)
+## 2. 데이터 모델
 
-## 5.1 타이틀 옵션
-`options.TitleOptions`
+`categories`는 Y축 카테고리입니다. 문자열에 `\r\n`을 넣으면 여러 줄 라벨로 표시됩니다.
+
+`LightningBarSeries`는 막대 시리즈입니다.
+
+```csharp
+new LightningBarSeries
+{
+    Name = "설비 A",
+    LegendLabel = "설비 A 표시명",
+    Values = new[] { 80f, 65f, 90f },
+    FillColor = Color.SteelBlue,
+    BorderColor = Color.Navy
+};
+```
 
 주요 속성:
-- `Text`
-- `Position`: `TopLeft`, `TopCenter`, `TopRight`
-- `FontSize`, `FontStyle`, `Color`
-- `MarginTop`, `MarginHorizontal`
-- `Visible`
 
-예시:
+| 속성 | 설명 |
+| --- | --- |
+| `Name` | 시리즈 이름. 범례/툴팁/클릭 이벤트에서 사용됩니다. |
+| `LegendLabel` | 범례에 표시할 별도 문자열입니다. 비어 있으면 `Name`을 사용합니다. |
+| `Values` | 카테고리별 값 배열입니다. |
+| `FillColor` | 막대 내부 색상입니다. |
+| `BorderColor` | 막대 테두리 색상입니다. |
+
+## 3. 데이터 바인딩과 초기화
+
+데이터만 다시 바인딩:
+
 ```csharp
-options.TitleOptions.Text = "월간 KPI";
-options.TitleOptions.Position = LightningBarTitlePosition.TopCenter;
-options.TitleOptions.FontSize = 14f;
+chart.SetData(categories, series);
 ```
 
-## 5.2 레이아웃 옵션
-`options.Layout`
+데이터와 옵션을 함께 변경:
 
-- `ChartPadding`
-- `TopOffset`
-- `LegendReservedWidth`
-- `CategoryLabelReservedWidth`
-- `BottomScaleAreaHeight`
-
-## 5.3 레전드 옵션
-`options.Legend`
-
-- `Visible`
-- `Position`: `Top`, `Bottom`
-- `Alignment`: `Left`, `Center`, `Right`
-- `MarginFromChart`
-- `FontSize`, `TextColor`
-- `MarkerWidth`, `MarkerHeight`
-- `LabelMaxWidth`, `LabelMaxLines`
-- `ItemSpacing`, `SectionSpacing`
-
-예시:
-```csharp
-options.Legend.Visible = true;
-options.Legend.Position = LightningBarLegendPosition.Bottom;
-options.Legend.Alignment = LightningBarLegendAlignment.Right;
-```
-
-## 5.4 축/스케일 옵션
-`options.Scale`
-
-- `GridLineCount`
-- `FontSize`
-- `LabelColor`
-- `AxisColor`
-- `GridColor`
-- `MaxValue`
-
-## 5.5 Y축(카테고리 라벨) 옵션
-`options.CategoryLabels`
-
-- `FontSize`
-- `Color`
-- `MaxLines`
-- `LineSpacing`
-
-예시:
-```csharp
-options.CategoryLabels.MaxLines = 4;
-options.CategoryLabels.LineSpacing = 3f;
-```
-
-## 5.6 바(시리즈 높이 포함) 옵션
-`options.Bars`
-
-- `HeightMode`: `Manual`, `Auto`
-- `FixedHeight`: 고정 높이
-- `ReferenceSeriesCount`: 기준 시리즈 개수
-- `Gap`: 시리즈 간 간격
-- `GroupPaddingRatio`
-- `BorderWidth`
-- `MinHeight`
-
-시리즈 높이 고정 추천 예시:
-```csharp
-options.Bars.HeightMode = LightningBarHeightMode.Manual;
-options.Bars.FixedHeight = 16f;
-options.Bars.ReferenceSeriesCount = 5;
-options.Bars.Gap = 6f;
-```
-
-## 5.7 시리즈 라벨 옵션
-`options.SeriesLabels`
-
-- `Enabled`
-- `FontSize`, `Color`
-- `MaxWidth`, `MaxLines`
-
-## 5.8 툴팁 옵션
-`options.Tooltip`
-
-- `Enabled`
-- `Format`
-
-포맷 플레이스홀더:
-- `{0}`: series label
-- `{1}`: category label
-- `{2}`: value
-- `{3}`: series index
-- `{4}`: category index
-
-## 5.9 NoData 옵션
-`options.NoData`
-
-- `DisplayMode`: `HideChartAndMessage`, `OverlayOnChartWatermark`
-- `Text`
-- `TextColor`
-- `FontName`, `FontSize`
-- `ShowWhenDataMissing`
-- `ShowWhenAllValuesZero`
-- `IncludeTitle`
-- `BadgeBackColor`
-- `BadgeBackOpacity` (0~255)
-- `BadgeBorderColor`
-
-모드 설명:
-- `HideChartAndMessage`: 기존 방식. no-data 상태에서 차트를 숨기고 메시지만 표시
-- `OverlayOnChartWatermark`: 신규 방식. 차트 프레임 위에 둥근 사각형 워터마크 메시지 표시
-
-예시(오버레이 워터마크 스타일):
-```csharp
-options.NoData = new LightningBarNoDataOptions
-{
-    DisplayMode = LightningBarNoDataDisplayMode.OverlayOnChartWatermark,
-    Text = "데이터가 없습니다.",
-    IncludeTitle = true,
-    FontName = "맑은 고딕",
-    FontSize = 12f,
-    TextColor = Color.FromArgb(100, 100, 100),
-    BadgeBackColor = Color.White,
-    BadgeBackOpacity = 220,
-    BadgeBorderColor = Color.FromArgb(180, 180, 180),
-    ShowWhenDataMissing = true,
-    ShowWhenAllValuesZero = true
-};
-```
-
-## 5.10 RawData 버튼 옵션
-`options.RawData`
-
-- `ButtonMode`: `Hidden`, `Visible`
-- `ButtonText`
-- `ButtonWidth`, `ButtonHeight`
-- `MarginTop`, `MarginRight`
-
-예시:
-```csharp
-options.RawData.ButtonMode = LightningBarRawDataButtonMode.Visible;
-options.RawData.ButtonText = "원본데이터";
-```
-
-## 5.11 이미지 옵션
-`options.Image`
-
-- `Width`, `Height`
-- `FileFormat`: `Png`, `Jpeg`
-- `SaveDirectory`
-- `FileName`
-- `JpegQuality`
-
----
-
-## 6. 런타임 업데이트 패턴
-
-## 6.1 옵션만 변경
-```csharp
-chart.UpdateOptions(o =>
-{
-    o.TitleOptions.Text = "실시간 모니터링";
-    o.Bars.FixedHeight = 14f;
-    o.Legend.Alignment = LightningBarLegendAlignment.Left;
-});
-```
-
-## 6.2 데이터와 옵션 동시 변경
 ```csharp
 chart.UpdateData(categories, series, options);
 ```
 
----
+옵션만 변경:
 
-## 7. 이벤트
-
-## 7.1 시리즈 클릭 이벤트
-- 이벤트: `SeriesClicked`
-- 인자: `LightningBarSeriesClickEventArgs`
-  - `CategoryName`, `CategoryIndex`
-  - `Series`, `SeriesIndex`
-  - `Value`
-
-예시:
 ```csharp
-chart.SeriesClicked += (s, e) =>
+chart.UpdateOptions(o =>
 {
-    // 상세 화면 이동 등
-    MessageBox.Show($"{e.Series.Name} / {e.CategoryName} / {e.Value:0.###}");
-};
-```
-
----
-
-## 8. 이미지 API
-
-- `Bitmap RenderImage()`
-- `Bitmap RenderImage(LightningBarImageOptions imageOptions)`
-- `string SaveImage()`
-- `string SaveImage(LightningBarImageOptions imageOptions)`
-- `string SaveImage(string filePath, LightningBarImageOptions imageOptions)`
-- `static Bitmap RenderImage(categories, series, options, imageOptions)`
-- `static string SaveImage(categories, series, options, imageOptions)`
-- `static Image LoadImage(string imagePath)`
-
-예시:
-```csharp
-string path = chart.SaveImage(new LightningBarImageOptions
-{
-    Width = 1280,
-    Height = 720,
-    FileFormat = LightningBarImageFileFormat.Png,
-    SaveDirectory = @"C:\Temp",
-    FileName = "kpi_chart"
+    o.Legend.Alignment = LightningBarLegendAlignment.Right;
+    o.Bars.FixedHeight = 30f;
 });
 ```
 
----
-
-## 9. 호환 속성(기존 코드용)
-
-`LightningBarOptions`에는 기존 평면 속성도 유지됩니다.
-
-예)
-- `Title`, `TitleColor`, `TitleFontSize`
-- `BarHeightMode`, `FixedBarHeight`, `BarGap`
-- `LegendFontSize`, `LegendMarkerWidth` 등
-
-신규 개발은 그룹 옵션(`TitleOptions`, `Bars`, `Legend` 등) 사용을 권장합니다.
-
----
-
-## 10. 권장 설정 템플릿
+조회 전 상태처럼 차트를 완전히 비우기:
 
 ```csharp
-var options = new LightningBarOptions
+chart.Clear();
+```
+
+동일한 기능의 별칭:
+
+```csharp
+chart.ClearData();
+chart.Reset();
+```
+
+`Clear()`는 카테고리, 시리즈, 마지막 저장 이미지, 마지막 저장 이미지 경로를 함께 초기화합니다.
+
+## 4. 600x400 기본 옵션
+
+현재 기본 옵션은 `600 x 400` 차트에 맞춰 조정되어 있습니다.
+
+```csharp
+LightningBarOptions options = LightningBarOptions.CreateDefault600x400();
+```
+
+주요 기본값:
+
+| 영역 | 기본값 |
+| --- | --- |
+| 이미지 크기 | `600 x 400` |
+| 차트 제목 | 빈 문자열. 제목을 그리지 않습니다. |
+| 범례 | 상단 중앙 |
+| Y축 라벨 | 최대 3줄 |
+| 막대 높이 | 수동, `30f` |
+| RawData 버튼 | 숨김 |
+| NoData 박스 | 차트 영역 중앙, 폭 80%, 줄바꿈 허용 |
+
+## 5. 차트 제목
+
+기본값은 제목 없음입니다. `TitleOptions.Text`가 비어 있으면 제목을 렌더링하지 않습니다.
+
+제목을 표시하려면 필요한 화면에서만 입력합니다.
+
+```csharp
+options.TitleOptions.Text = "월간 설비 상태";
+options.TitleOptions.Position = LightningBarTitlePosition.TopCenter;
+options.TitleOptions.FontSize = 13f;
+options.TitleOptions.Visible = true;
+```
+
+제목 위치:
+
+```csharp
+options.TitleOptions.Position = LightningBarTitlePosition.TopLeft;
+options.TitleOptions.Position = LightningBarTitlePosition.TopCenter;
+options.TitleOptions.Position = LightningBarTitlePosition.TopRight;
+```
+
+제목을 숨기려면:
+
+```csharp
+options.TitleOptions.Text = string.Empty;
+```
+
+또는:
+
+```csharp
+options.TitleOptions.Visible = false;
+```
+
+## 6. 레이아웃
+
+`Layout`은 실제 차트가 그려지는 영역과 여백을 제어합니다.
+
+```csharp
+options.Layout = new LightningBarLayoutOptions
 {
+    ChartPadding = 20,
+    TopOffset = 72,
+    LegendReservedWidth = 120,
+    LegendReservedWidthMode = LightningBarLegendReservedWidthMode.CollapseForTopBottomLegend,
+    CategoryLabelReservedWidth = 110f,
+    AutoCategoryLabelReservedWidth = true,
+    MinCategoryLabelReservedWidth = 78f,
+    MaxCategoryLabelReservedWidth = 150f,
+    BottomScaleAreaHeight = 30f
+};
+```
+
+주요 속성:
+
+| 속성 | 설명 |
+| --- | --- |
+| `ChartPadding` | 차트 외곽 여백입니다. |
+| `TopOffset` | 상단 영역 높이입니다. 범례/제목과 차트 사이를 조정합니다. |
+| `LegendReservedWidth` | 우측 범례 등을 위해 예약할 폭입니다. |
+| `LegendReservedWidthMode` | 상/하단 범례일 때 우측 예약 폭을 접을지 결정합니다. |
+| `CategoryLabelReservedWidth` | Y축 카테고리 라벨 영역 폭입니다. |
+| `AutoCategoryLabelReservedWidth` | 라벨 길이에 따라 Y축 라벨 영역을 자동 계산합니다. |
+| `MinCategoryLabelReservedWidth` | 자동 계산 시 최소 폭입니다. |
+| `MaxCategoryLabelReservedWidth` | 자동 계산 시 최대 폭입니다. |
+| `BottomScaleAreaHeight` | X축 눈금 라벨 영역 높이입니다. |
+
+Y축 라벨이 잘리면 아래 값을 우선 조정합니다.
+
+```csharp
+options.Layout.AutoCategoryLabelReservedWidth = true;
+options.Layout.MaxCategoryLabelReservedWidth = 180f;
+options.Layout.CategoryLabelReservedWidth = 140f;
+```
+
+## 7. 범례
+
+범례는 상단/하단 위치와 좌측/중앙/우측 정렬을 지원합니다.
+
+```csharp
+options.Legend = new LightningBarLegendOptions
+{
+    Visible = true,
+    Position = LightningBarLegendPosition.Top,
+    Alignment = LightningBarLegendAlignment.Center,
+    MarginFromChart = 8f,
+    FontSize = 7.5f,
+    MarkerWidth = 22f,
+    MarkerHeight = 14f,
+    LabelMaxWidth = 110f,
+    LabelMaxLines = 3,
+    ItemSpacing = 6f,
+    SectionSpacing = 20f
+};
+```
+
+좌측 상단:
+
+```csharp
+options.Legend.Position = LightningBarLegendPosition.Top;
+options.Legend.Alignment = LightningBarLegendAlignment.Left;
+```
+
+가운데 상단:
+
+```csharp
+options.Legend.Position = LightningBarLegendPosition.Top;
+options.Legend.Alignment = LightningBarLegendAlignment.Center;
+```
+
+우측 상단:
+
+```csharp
+options.Legend.Position = LightningBarLegendPosition.Top;
+options.Legend.Alignment = LightningBarLegendAlignment.Right;
+```
+
+범례를 숨기려면:
+
+```csharp
+options.Legend.Visible = false;
+```
+
+## 8. Y축 카테고리 라벨
+
+Y축 카테고리 라벨은 문자열에 엔터를 넣어 여러 줄로 표시합니다.
+
+```csharp
+string[] categories =
+{
+    "PM Motor\r\nTemperature\r\nSensor A",
+    "Pump\r\nPressure\r\nSensor B",
+    "Line 3\r\nVibration\r\nSensor C"
+};
+
+options.CategoryLabels.MaxLines = 3;
+options.CategoryLabels.FontSize = 8f;
+options.CategoryLabels.LineSpacing = 1.5f;
+```
+
+라벨이 길어서 잘리면 폰트를 더 줄이기보다 Y축 라벨 영역을 넓히는 것이 좋습니다.
+
+```csharp
+options.Layout.AutoCategoryLabelReservedWidth = true;
+options.Layout.MinCategoryLabelReservedWidth = 110f;
+options.Layout.MaxCategoryLabelReservedWidth = 180f;
+```
+
+## 9. X축 눈금과 값 범위
+
+기본 최대값은 `100`입니다.
+
+```csharp
+options.Scale.MaxValue = 100f;
+options.Scale.GridLineCount = 5;
+```
+
+0부터 10까지 표시하려면:
+
+```csharp
+options.Scale.MaxValue = 10f;
+options.Scale.GridLineCount = 10;
+options.Scale.FontSize = 8f;
+```
+
+색상과 폰트:
+
+```csharp
+options.Scale.LabelColor = Color.FromArgb(95, 95, 95);
+options.Scale.AxisColor = Color.FromArgb(170, 170, 170);
+options.Scale.GridColor = Color.FromArgb(225, 225, 225);
+```
+
+## 10. 막대 높이와 간격
+
+막대 높이는 자동/수동 모드를 지원합니다.
+
+수동 고정 높이:
+
+```csharp
+options.Bars.HeightMode = LightningBarHeightMode.Manual;
+options.Bars.FixedHeight = 30f;
+options.Bars.ReferenceSeriesCount = 5;
+options.Bars.ClampFixedHeightToGroup = true;
+options.Bars.Gap = 5f;
+options.Bars.GroupPaddingRatio = 0.16f;
+```
+
+자동 높이:
+
+```csharp
+options.Bars.HeightMode = LightningBarHeightMode.Auto;
+```
+
+주요 속성:
+
+| 속성 | 설명 |
+| --- | --- |
+| `HeightMode` | `Auto` 또는 `Manual`입니다. |
+| `FixedHeight` | 수동 모드에서 막대 1개의 높이입니다. |
+| `ReferenceSeriesCount` | 고정 높이 계산 기준 시리즈 수입니다. |
+| `ClampFixedHeightToGroup` | 카테고리 행 영역보다 막대가 커지지 않도록 제한합니다. |
+| `Gap` | 시리즈 막대 사이 간격입니다. |
+| `GroupPaddingRatio` | 카테고리 그룹 내부 여백 비율입니다. |
+| `BorderWidth` | 막대 테두리 두께입니다. |
+
+시리즈가 1개일 때 막대가 너무 크게 보이면 수동 고정 높이를 사용합니다.
+
+```csharp
+options.Bars.HeightMode = LightningBarHeightMode.Manual;
+options.Bars.FixedHeight = 30f;
+```
+
+## 11. 시리즈 라벨
+
+막대 끝에 값 라벨을 표시할지 결정합니다.
+
+```csharp
+options.SeriesLabels.Enabled = false;
+```
+
+표시하려면:
+
+```csharp
+options.SeriesLabels.Enabled = true;
+options.SeriesLabels.FontSize = 8f;
+options.SeriesLabels.MaxWidth = 140f;
+options.SeriesLabels.MaxLines = 3;
+```
+
+막대 끝 글씨를 보이지 않게 하려면 `Enabled = false`로 둡니다.
+
+## 12. Tooltip
+
+막대 위에 마우스를 올리면 Tooltip을 표시할 수 있습니다.
+
+```csharp
+options.Tooltip.Enabled = true;
+options.Tooltip.Format = "Value:{2:0.#} (* 클릭할 경우 해당 계측 데이터 차트로 가 보입니다.)";
+```
+
+포맷 인덱스:
+
+| 인덱스 | 값 |
+| --- | --- |
+| `{0}` | 시리즈 표시명 |
+| `{1}` | 카테고리 라벨 |
+| `{2}` | 값 |
+| `{3}` | 시리즈 인덱스 |
+| `{4}` | 카테고리 인덱스 |
+
+예시:
+
+```csharp
+options.Tooltip.Format = "{1}\r\n{0}\r\nValue:{2:0.##}";
+```
+
+## 13. 시리즈 클릭 이벤트
+
+막대를 클릭하면 `SeriesClicked` 이벤트가 발생합니다.
+
+```csharp
+chart.SeriesClicked += (sender, e) =>
+{
+    string category = e.CategoryName;
+    string seriesName = e.Series.Name;
+    float value = e.Value;
+
+    MessageBox.Show(
+        string.Format("{0} / {1} / {2:0.##}", category, seriesName, value));
+};
+```
+
+상세 차트 화면을 열고 싶을 때:
+
+```csharp
+chart.SeriesClicked += (sender, e) =>
+{
+    using (var form = new DetailChartForm(e.CategoryName, e.Series.Name))
+    {
+        form.ShowDialog(this);
+    }
+};
+```
+
+## 14. RawData 버튼
+
+RawData 버튼은 기본값이 숨김입니다.
+
+```csharp
+options.RawData.ButtonMode = LightningBarRawDataButtonMode.Hidden;
+```
+
+표시하려면:
+
+```csharp
+options.RawData.ButtonMode = LightningBarRawDataButtonMode.Visible;
+options.RawData.ButtonText = "RawData";
+options.RawData.ButtonWidth = 88f;
+options.RawData.ButtonHeight = 28f;
+options.RawData.MarginTop = 8f;
+options.RawData.MarginRight = 10f;
+```
+
+이미지 저장 시에는 기본적으로 RawData 버튼을 숨깁니다.
+
+```csharp
+imageOptions.HideRawDataButtonOnImage = true;
+```
+
+## 15. 데이터 없음 표시
+
+데이터 없음 상태는 두 가지로 나눠서 처리할 수 있습니다.
+
+| 상황 | 옵션 |
+| --- | --- |
+| 카테고리/시리즈/값 배열이 없어 그릴 데이터가 없는 경우 | `ShowWhenDataMissing` |
+| 시리즈 값은 있으나 표시 범위의 값이 모두 0인 경우 | `ShowWhenAllValuesZero` |
+
+기본 설정:
+
+```csharp
+options.NoData = new LightningBarNoDataOptions
+{
+    Text = "데이터가 없습니다.",
+    ShowWhenDataMissing = true,
+    ShowWhenAllValuesZero = false,
+    IncludeTitle = false,
+    DisplayMode = LightningBarNoDataDisplayMode.HideChartAndMessage,
+    FontName = "맑은 고딕",
+    FontSize = 11f,
+    TextColor = Color.FromArgb(138, 118, 30),
+    BadgeBackColor = Color.FromArgb(255, 249, 196),
+    BadgeBackOpacity = 128,
+    BadgeBorderColor = Color.FromArgb(240, 206, 84),
+    BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Percent,
+    BadgeWidthRatio = 0.8f,
+    BadgeSingleLine = false
+};
+```
+
+현재 기본값은 노란색 박스를 차트 영역 중앙에 표시하고, 박스 폭은 차트 영역의 약 `80%`를 사용합니다. 긴 문구는 말줄임이 아니라 줄바꿈으로 표시됩니다.
+
+차트를 그리지 않고 데이터 없음 메시지만 표시:
+
+```csharp
+options.NoData.DisplayMode = LightningBarNoDataDisplayMode.HideChartAndMessage;
+options.NoData.ShowWhenDataMissing = true;
+
+chart.UpdateData(
+    new[] { "센서 A", "센서 B" },
+    new[]
+    {
+        new LightningBarSeries
+        {
+            Name = "현재값",
+            Values = new float[0]
+        }
+    },
+    options);
+```
+
+값이 모두 0일 때도 데이터 없음으로 표시:
+
+```csharp
+options.NoData.ShowWhenAllValuesZero = true;
+
+chart.UpdateData(
+    new[] { "센서 A", "센서 B" },
+    new[]
+    {
+        new LightningBarSeries
+        {
+            Name = "현재값",
+            Values = new[] { 0f, 0f }
+        }
+    },
+    options);
+```
+
+차트 프레임 위에 워터마크처럼 겹쳐 표시:
+
+```csharp
+options.NoData.DisplayMode = LightningBarNoDataDisplayMode.OverlayOnChartWatermark;
+```
+
+박스 폭을 고정값으로 지정:
+
+```csharp
+options.NoData.BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Fixed;
+options.NoData.BadgeFixedWidth = 260f;
+```
+
+박스 폭을 차트 영역 비율로 지정:
+
+```csharp
+options.NoData.BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Percent;
+options.NoData.BadgeWidthRatio = 0.8f;
+```
+
+메시지를 코드에서 나중에 바꾸기:
+
+```csharp
+chart.SetNoDataText("조회 조건에 해당하는 계측 데이터가 없습니다.");
+```
+
+차트별로 다른 NoData 문구를 쓰고 옵션 객체를 공유하지 않으려면 옵션을 복제하거나 새로 생성합니다.
+
+```csharp
+LightningBarOptions options1 = LightningBarOptions.CreateDefault600x400();
+options1.NoData.Text = "A 설비 데이터가 없습니다.";
+
+LightningBarOptions options2 = LightningBarOptions.CreateDefault600x400();
+options2.NoData.Text = "B 설비 데이터가 없습니다.";
+```
+
+이미 생성된 차트에서 차트별 문구만 바꾸려면:
+
+```csharp
+chartA.SetNoDataText("A 설비 데이터가 없습니다.");
+chartB.SetNoDataText("B 설비 데이터가 없습니다.");
+```
+
+## 16. 이미지 저장 옵션
+
+이미지 옵션 기본값:
+
+```csharp
+LightningBarImageOptions imageOptions = LightningBarImageOptions.CreateDefault();
+```
+
+기본값은 `600 x 400`, PNG, 96 DPI, 저장 경로는 My Documents입니다.
+
+직접 지정:
+
+```csharp
+LightningBarImageOptions imageOptions = new LightningBarImageOptions
+{
+    Width = 600,
+    Height = 400,
+    DpiX = 96f,
+    DpiY = 96f,
+    FileFormat = LightningBarImageFileFormat.Png,
+    SaveDirectory = @"C:\Temp\ChartImages",
+    FileName = "line_a_status",
+    JpegQuality = 90L
+};
+```
+
+엑셀 첨부용으로 조금 더 크게 저장:
+
+```csharp
+LightningBarImageOptions imageOptions = LightningBarImageOptions.CreateChartZoom();
+imageOptions.SaveDirectory = @"C:\Temp\ExcelImages";
+imageOptions.FileName = "line_a_status";
+```
+
+`CreateChartZoom()` 기본값:
+
+| 속성 | 값 |
+| --- | --- |
+| `Width` | `900` |
+| `Height` | `600` |
+| `DpiX` / `DpiY` | `150` |
+| `OptimizeForExcel` | `true` |
+| `ContentScale` | `1.2f` |
+| `ReduceOuterPadding` | `true` |
+| `HideRawDataButtonOnImage` | `true` |
+
+커스텀 크기:
+
+```csharp
+LightningBarImageOptions imageOptions = LightningBarImageOptions.CreateCustom(1200, 800);
+imageOptions.DpiX = 150f;
+imageOptions.DpiY = 150f;
+```
+
+## 17. 이미지 저장과 이미지 객체 사용
+
+파일로 저장:
+
+```csharp
+string savedPath = chart.SaveImage(new LightningBarImageOptions
+{
+    Width = 600,
+    Height = 400,
+    FileFormat = LightningBarImageFileFormat.Png,
+    SaveDirectory = @"C:\Temp\ChartImages",
+    FileName = "chart_001"
+});
+```
+
+저장 후 차트 인스턴스는 마지막 저장 이미지와 경로를 보관합니다.
+
+```csharp
+string path = chart.LastSavedImagePath;
+bool hasImage = chart.HasLastSavedImage;
+```
+
+이미지 객체 가져오기:
+
+```csharp
+using (Image image = chart.GetLastSavedImage())
+{
+    // Excel 시트에 image를 삽입
+}
+```
+
+Bitmap으로 가져오기:
+
+```csharp
+using (Bitmap bitmap = chart.GetLastSavedBitmap())
+{
+    // Excel 또는 다른 출력 로직에 사용
+}
+```
+
+`LastSavedImage`와 `LastSavedBitmap` 속성도 사용할 수 있습니다.
+
+```csharp
+using (Image image = chart.LastSavedImage)
+{
+    // 사용
+}
+
+using (Bitmap bitmap = chart.LastSavedBitmap)
+{
+    // 사용
+}
+```
+
+반환되는 이미지는 내부 이미지의 복사본입니다. 호출한 쪽에서 `Dispose()`해도 차트 내부에 저장된 이미지는 유지됩니다.
+
+파일 저장 없이 메모리 이미지로만 생성:
+
+```csharp
+using (Bitmap bitmap = chart.SaveImageToMemory(new LightningBarImageOptions
+{
+    Width = 600,
+    Height = 400,
+    DpiX = 150f,
+    DpiY = 150f
+}))
+{
+    // bitmap 사용
+}
+```
+
+현재 화면에 보이는 그대로 캡처:
+
+```csharp
+using (Bitmap bitmap = chart.CaptureVisibleImage())
+{
+    // 현재 컨트롤 크기 그대로 사용
+}
+```
+
+마지막 저장 경로에서 이미지를 다시 로드:
+
+```csharp
+using (Image image = chart.LoadLastSavedImage())
+{
+    // image 사용
+}
+```
+
+이미지 캐시 초기화:
+
+```csharp
+chart.ClearSavedImage();
+```
+
+정적 메서드로 화면에 붙이지 않고 바로 이미지 생성:
+
+```csharp
+using (Bitmap bitmap = LightningBar.RenderImage(
+    newCategories: categories,
+    newSeries: series,
+    barOptions: options,
+    imageOptions: imageOptions))
+{
+    // bitmap 사용
+}
+```
+
+정적 메서드로 바로 파일 저장:
+
+```csharp
+string path = LightningBar.SaveImage(
+    newCategories: categories,
+    newSeries: series,
+    barOptions: options,
+    imageOptions: imageOptions);
+```
+
+## 18. 엑셀 출력용 권장 패턴
+
+화면에서는 600x400으로 표시하고, 엑셀에는 더 큰 이미지로 저장하는 예시입니다.
+
+```csharp
+LightningBarOptions options = LightningBarOptions.CreateDefault600x400();
+
+LightningBar chart = LightningBar.Create(
+    pnlChartHost,
+    categories,
+    series,
+    options);
+
+chart.Size = new Size(600, 400);
+
+LightningBarImageOptions excelImageOptions = LightningBarImageOptions.CreateChartZoom();
+excelImageOptions.SaveDirectory = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+    "LightningBarExcelImages");
+excelImageOptions.FileName = "equipment_status";
+excelImageOptions.FileFormat = LightningBarImageFileFormat.Png;
+
+string imagePath = chart.SaveImage(excelImageOptions);
+
+using (Image image = chart.GetLastSavedImage())
+{
+    // Excel 시트에 image 또는 imagePath를 사용해서 삽입
+}
+```
+
+## 19. 기존 호환 속성
+
+기존 코드와의 호환을 위해 `LightningBarOptions`에는 단축 속성이 남아 있습니다.
+
+| 기존 속성 | 권장 그룹 옵션 |
+| --- | --- |
+| `Title` | `TitleOptions.Text` |
+| `TitleColor` | `TitleOptions.Color` |
+| `TitleFontSize` | `TitleOptions.FontSize` |
+| `ChartPadding` | `Layout.ChartPadding` |
+| `TopOffset` | `Layout.TopOffset` |
+| `LegendWidth` | `Layout.LegendReservedWidth` |
+| `GridLineCount` | `Scale.GridLineCount` |
+| `MaxValue` | `Scale.MaxValue` |
+| `CategoryFontSize` | `CategoryLabels.FontSize` |
+| `CategoryLabelMaxLines` | `CategoryLabels.MaxLines` |
+| `LegendFontSize` | `Legend.FontSize` |
+| `LegendMarkerWidth` | `Legend.MarkerWidth` |
+| `LegendTextMaxLines` | `Legend.LabelMaxLines` |
+| `SeriesLabelEnabled` | `SeriesLabels.Enabled` |
+| `SeriesTooltipEnabled` | `Tooltip.Enabled` |
+| `SeriesTooltipFormat` | `Tooltip.Format` |
+| `NoDataText` | `NoData.Text` |
+| `ShowNoDataMessage` | `NoData.ShowWhenDataMissing` |
+| `BarHeightMode` | `Bars.HeightMode` |
+| `FixedBarHeight` | `Bars.FixedHeight` |
+| `BarGap` | `Bars.Gap` |
+
+신규 화면에서는 그룹 옵션을 사용하는 것을 권장합니다.
+
+## 20. 전체 옵션 예제
+
+```csharp
+LightningBarOptions options = new LightningBarOptions
+{
+    BackgroundColor = Color.White,
     TitleOptions = new LightningBarTitleOptions
     {
-        Text = "생산 지표",
+        Text = string.Empty,
+        Visible = true,
         Position = LightningBarTitlePosition.TopCenter,
         FontSize = 13f
+    },
+    Layout = new LightningBarLayoutOptions
+    {
+        ChartPadding = 20,
+        TopOffset = 72,
+        LegendReservedWidth = 120,
+        LegendReservedWidthMode = LightningBarLegendReservedWidthMode.CollapseForTopBottomLegend,
+        CategoryLabelReservedWidth = 110f,
+        AutoCategoryLabelReservedWidth = true,
+        MinCategoryLabelReservedWidth = 78f,
+        MaxCategoryLabelReservedWidth = 150f,
+        BottomScaleAreaHeight = 30f
+    },
+    Legend = new LightningBarLegendOptions
+    {
+        Visible = true,
+        Position = LightningBarLegendPosition.Top,
+        Alignment = LightningBarLegendAlignment.Center,
+        FontSize = 7.5f,
+        LabelMaxLines = 3
+    },
+    CategoryLabels = new LightningBarCategoryLabelOptions
+    {
+        FontSize = 8f,
+        MaxLines = 3,
+        LineSpacing = 1.5f
+    },
+    Scale = new LightningBarScaleOptions
+    {
+        MaxValue = 100f,
+        GridLineCount = 5,
+        FontSize = 8f
     },
     Bars = new LightningBarBarOptions
     {
         HeightMode = LightningBarHeightMode.Manual,
-        FixedHeight = 16f,
+        FixedHeight = 30f,
         ReferenceSeriesCount = 5,
-        Gap = 6f
+        ClampFixedHeightToGroup = true,
+        Gap = 5f,
+        GroupPaddingRatio = 0.16f
     },
-    Legend = new LightningBarLegendOptions
+    SeriesLabels = new LightningBarSeriesLabelOptions
     {
-        Position = LightningBarLegendPosition.Top,
-        Alignment = LightningBarLegendAlignment.Center
+        Enabled = false
+    },
+    Tooltip = new LightningBarTooltipOptions
+    {
+        Enabled = true,
+        Format = "Value:{2:0.#} (* 클릭할 경우 해당 계측 데이터 차트로 가 보입니다.)"
     },
     RawData = new LightningBarRawDataOptions
     {
-        ButtonMode = LightningBarRawDataButtonMode.Visible
+        ButtonMode = LightningBarRawDataButtonMode.Hidden
     },
     NoData = new LightningBarNoDataOptions
     {
-        DisplayMode = LightningBarNoDataDisplayMode.OverlayOnChartWatermark,
         Text = "데이터가 없습니다.",
-        IncludeTitle = true,
         ShowWhenDataMissing = true,
-        ShowWhenAllValuesZero = true,
-        BadgeBackColor = Color.White,
-        BadgeBackOpacity = 220,
-        BadgeBorderColor = Color.FromArgb(180, 180, 180)
+        ShowWhenAllValuesZero = false,
+        DisplayMode = LightningBarNoDataDisplayMode.HideChartAndMessage,
+        BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Percent,
+        BadgeWidthRatio = 0.8f,
+        BadgeSingleLine = false
+    },
+    Image = new LightningBarImageOptions
+    {
+        Width = 600,
+        Height = 400,
+        FileFormat = LightningBarImageFileFormat.Png,
+        SaveDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
     }
 };
 ```
