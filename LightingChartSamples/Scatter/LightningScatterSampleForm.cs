@@ -147,10 +147,6 @@ namespace LightingChartSamples.Scatter
                 {
                     Name = "Temperature",
                     LegendLabel = "온도",
-                    PointColor = Color.FromArgb(217, 94, 86),
-                    LineColor = Color.FromArgb(217, 94, 86),
-                    PointSize = 9f,
-                    ShowLine = true,
                     Points = new List<LightningScatterPoint>
                     {
                         new LightningScatterPoint(0, 21, "T-001"),
@@ -164,10 +160,6 @@ namespace LightingChartSamples.Scatter
                 {
                     Name = "Pressure",
                     LegendLabel = "압력",
-                    PointColor = Color.FromArgb(71, 126, 207),
-                    LineColor = Color.FromArgb(71, 126, 207),
-                    PointSize = 9f,
-                    ShowLine = true,
                     Points = new List<LightningScatterPoint>
                     {
                         new LightningScatterPoint(0, 18, "P-001"),
@@ -181,10 +173,6 @@ namespace LightingChartSamples.Scatter
                 {
                     Name = "Vibration",
                     LegendLabel = "진동",
-                    PointColor = Color.FromArgb(77, 158, 117),
-                    LineColor = Color.FromArgb(77, 158, 117),
-                    PointSize = 9f,
-                    ShowLine = false,
                     Points = new List<LightningScatterPoint>
                     {
                         new LightningScatterPoint(0.2, 10, "V-001"),
@@ -204,63 +192,29 @@ namespace LightingChartSamples.Scatter
                     ? (LightningScatterImageSaveFolder)cboSaveFolder.SelectedItem
                     : LightningScatterImageSaveFolder.LocalApplicationData;
 
-            return new LightningScatterOptions
-            {
-                Title = string.Empty,
-                ShowTitle = false,
-                BackgroundColor = Color.White,
-                GraphBackgroundColor = Color.White,
-                XAxis = new LightningScatterAxisOptions
-                {
-                    Title = "시간",
-                    Minimum = 0,
-                    Maximum = 5,
-                    AutoFit = true,
-                    MajorDivCount = 5,
-                    LabelFormat = "0.#"
-                },
-                YAxis = new LightningScatterAxisOptions
-                {
-                    Title = "측정값",
-                    Minimum = 0,
-                    Maximum = 50,
-                    AutoFit = true,
-                    MajorDivCount = 5,
-                    LabelFormat = "0.#"
-                },
-                Legend = new LightningScatterLegendOptions
-                {
-                    Visible = true,
-                    Position = LightningScatterLegendPosition.TopCenter,
-                    FontSize = 8f,
-                    ShowCheckboxes = true,
-                    ShowIcons = true
-                },
-                Tooltip = new LightningScatterTooltipOptions
-                {
-                    Enabled = true,
-                    HitPixelTolerance = 14,
-                    Format = "{0}\r\nX:{1:0.###}, Y:{2:0.###}\r\n* 클릭할 경우 해당 계측 데이터 차트로 이동합니다."
-                },
-                NoData = new LightningScatterNoDataOptions
-                {
-                    Text = "Scatter 조회 데이터가 없습니다.",
-                    ShowWhenDataMissing = true,
-                    ShowWhenAllValuesZero = true,
-                    FontSize = 10f,
-                    BadgeWidthRatio = 0.8f
-                },
-                Image = new LightningScatterImageOptions
-                {
-                    Width = 600,
-                    Height = 400,
-                    FileFormat = LightningScatterImageFileFormat.Png,
-                    SaveFolder = saveFolder,
-                    SubDirectoryName = "LightningScatterSample",
-                    UseDateFolder = true,
-                    UseGuidFileName = true
-                }
-            };
+            LightningScatterOptions options = LightningScatterOptions.CreateDefaultBubble();
+            options.XAxis.Title = "시간";
+            options.XAxis.Minimum = 0;
+            options.XAxis.Maximum = 5;
+            options.XAxis.AutoFit = true;
+            options.XAxis.MajorDivCount = 5;
+            options.XAxis.LabelFormat = "0.#";
+            options.YAxis.Title = "측정값";
+            options.YAxis.Minimum = 0;
+            options.YAxis.Maximum = 50;
+            options.YAxis.AutoFit = true;
+            options.YAxis.MajorDivCount = 5;
+            options.YAxis.LabelFormat = "0.#";
+            options.Legend.Position = LightningScatterLegendPosition.TopCenter;
+            options.Legend.ShowCheckboxes = true;
+            options.Tooltip.HitPixelTolerance = 14;
+            options.Tooltip.Format = "{0}\r\nX:{1:0.###}, Y:{2:0.###}\r\n* 클릭할 경우 해당 계측 데이터 차트로 이동합니다.";
+            options.NoData.Text = "Scatter 조회 데이터가 없습니다.";
+            options.NoData.ShowWhenAllValuesZero = true;
+            options.NoData.FontSize = 10f;
+            options.Image.SaveFolder = saveFolder;
+            options.Image.SubDirectoryName = "LightningScatterSample";
+            return options;
         }
 
         private void SaveChartImage()

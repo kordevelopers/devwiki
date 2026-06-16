@@ -60,6 +60,23 @@ LightningScatterOptions options = new LightningScatterOptions
 LightningScatter chart = LightningScatter.Create(panelChartHost, series, options);
 ```
 
+요청한 기본 스타일은 `CreateDefaultBubble()`로 바로 사용할 수 있습니다.
+
+```csharp
+LightningScatterOptions options = LightningScatterOptions.CreateDefaultBubble();
+```
+
+이 기본 옵션은 다음 값을 포함합니다.
+
+- 차트 배경/그래프 배경: 흰색
+- 범례 배경: 흰색
+- 모든 차트 폰트: `맑은 고딕`
+- 줌/팬/마우스 휠 줌: 비활성
+- 마우스 커서 내부 변경: 비활성
+- 시리즈 형태: 라인 없는 버블형 마커
+- 기본 색상: 파스텔 팔레트 자동 적용
+- X/Y 가이드라인: 숨김
+
 ## 4. 여러 차트 생성 패턴
 
 화면에 Scatter 차트를 여러 개 배치해야 할 때도 차트 내부 구조를 직접 작성하지 않아도 됩니다.
@@ -108,6 +125,8 @@ options.XAxis = new LightningScatterAxisOptions
     Maximum = 100,
     MajorDivCount = 5,
     LabelFormat = "0.#",
+    GridLinesVisible = false,
+    MinorGridLinesVisible = false,
     FontSize = 8f
 };
 ```
@@ -115,12 +134,26 @@ options.XAxis = new LightningScatterAxisOptions
 `AutoFit = true`이면 전달된 포인트 기준으로 축 범위를 자동 계산합니다.
 수동 범위를 사용하려면 `AutoFit = false`로 설정하고 `Minimum`, `Maximum`을 지정합니다.
 
+가이드라인은 축별로 제어합니다. `XAxis.GridLinesVisible`은 세로 가이드라인, `YAxis.GridLinesVisible`은 가로 가이드라인에 해당합니다.
+
+```csharp
+options.XAxis.GridLinesVisible = false;
+options.YAxis.GridLinesVisible = false;
+```
+
 ### 범례 위치
 
 ```csharp
 options.Legend.Position = LightningScatterLegendPosition.TopLeft;
 options.Legend.Position = LightningScatterLegendPosition.TopCenter;
 options.Legend.Position = LightningScatterLegendPosition.TopRight;
+```
+
+범례 배경색과 테두리도 옵션으로 조정할 수 있습니다.
+
+```csharp
+options.Legend.BackgroundColor = Color.White;
+options.Legend.BorderColor = Color.FromArgb(220, 220, 220);
 ```
 
 지원 위치:

@@ -73,9 +73,9 @@ namespace LightingChartSamples.Scatter
             Name = string.Empty;
             LegendLabel = string.Empty;
             Points = new List<LightningScatterPoint>();
-            PointColor = Color.FromArgb(76, 132, 210);
-            LineColor = Color.FromArgb(76, 132, 210);
-            PointSize = 8f;
+            PointColor = Color.FromArgb(129, 178, 231);
+            LineColor = Color.FromArgb(129, 178, 231);
+            PointSize = 14f;
             LineWidth = 1.5f;
             ShowLine = false;
             ShowPoints = true;
@@ -123,6 +123,8 @@ namespace LightingChartSamples.Scatter
             LabelColor = Color.FromArgb(95, 95, 95);
             AxisColor = Color.FromArgb(170, 170, 170);
             GridColor = Color.FromArgb(225, 225, 225);
+            GridLinesVisible = false;
+            MinorGridLinesVisible = false;
             FontSize = 8f;
         }
 
@@ -135,6 +137,8 @@ namespace LightingChartSamples.Scatter
         public Color LabelColor { get; set; }
         public Color AxisColor { get; set; }
         public Color GridColor { get; set; }
+        public bool GridLinesVisible { get; set; }
+        public bool MinorGridLinesVisible { get; set; }
         public float FontSize { get; set; }
 
         public LightningScatterAxisOptions Clone()
@@ -148,9 +152,11 @@ namespace LightingChartSamples.Scatter
         public LightningScatterLegendOptions()
         {
             Visible = true;
-            Position = LightningScatterLegendPosition.TopRight;
-            FontSize = 8f;
+            Position = LightningScatterLegendPosition.TopCenter;
+            FontSize = 7.5f;
             TextColor = Color.FromArgb(90, 90, 90);
+            BackgroundColor = Color.White;
+            BorderColor = Color.White;
             ShowCheckboxes = false;
             ShowIcons = true;
         }
@@ -159,12 +165,65 @@ namespace LightingChartSamples.Scatter
         public LightningScatterLegendPosition Position { get; set; }
         public float FontSize { get; set; }
         public Color TextColor { get; set; }
+        public Color BackgroundColor { get; set; }
+        public Color BorderColor { get; set; }
         public bool ShowCheckboxes { get; set; }
         public bool ShowIcons { get; set; }
 
         public LightningScatterLegendOptions Clone()
         {
             return (LightningScatterLegendOptions)MemberwiseClone();
+        }
+    }
+
+    public class LightningScatterStyleOptions
+    {
+        public LightningScatterStyleOptions()
+        {
+            ForceBubbleStyle = true;
+            UsePastelPalette = true;
+            BubbleSize = 14f;
+            BubbleBorderWidth = 1.2f;
+            PastelPalette = LightningScatterOptions.CreateDefaultPastelPalette();
+        }
+
+        public bool ForceBubbleStyle { get; set; }
+        public bool UsePastelPalette { get; set; }
+        public float BubbleSize { get; set; }
+        public float BubbleBorderWidth { get; set; }
+        public Color[] PastelPalette { get; set; }
+
+        public LightningScatterStyleOptions Clone()
+        {
+            return new LightningScatterStyleOptions
+            {
+                ForceBubbleStyle = ForceBubbleStyle,
+                UsePastelPalette = UsePastelPalette,
+                BubbleSize = BubbleSize,
+                BubbleBorderWidth = BubbleBorderWidth,
+                PastelPalette = PastelPalette == null ? LightningScatterOptions.CreateDefaultPastelPalette() : (Color[])PastelPalette.Clone()
+            };
+        }
+    }
+
+    public class LightningScatterInteractionOptions
+    {
+        public LightningScatterInteractionOptions()
+        {
+            ZoomEnabled = false;
+            PanEnabled = false;
+            MouseWheelZoomEnabled = false;
+            AllowInternalMouseCursorChange = false;
+        }
+
+        public bool ZoomEnabled { get; set; }
+        public bool PanEnabled { get; set; }
+        public bool MouseWheelZoomEnabled { get; set; }
+        public bool AllowInternalMouseCursorChange { get; set; }
+
+        public LightningScatterInteractionOptions Clone()
+        {
+            return (LightningScatterInteractionOptions)MemberwiseClone();
         }
     }
 
@@ -253,6 +312,7 @@ namespace LightingChartSamples.Scatter
     {
         public LightningScatterOptions()
         {
+            FontName = LightningScatter.DefaultChartFontName;
             Title = string.Empty;
             ShowTitle = false;
             BackgroundColor = Color.White;
@@ -260,11 +320,14 @@ namespace LightingChartSamples.Scatter
             XAxis = new LightningScatterAxisOptions { Title = "X" };
             YAxis = new LightningScatterAxisOptions { Title = "Y" };
             Legend = new LightningScatterLegendOptions();
+            Style = new LightningScatterStyleOptions();
+            Interaction = new LightningScatterInteractionOptions();
             Tooltip = new LightningScatterTooltipOptions();
             NoData = new LightningScatterNoDataOptions();
             Image = new LightningScatterImageOptions();
         }
 
+        public string FontName { get; set; }
         public string Title { get; set; }
         public bool ShowTitle { get; set; }
         public Color BackgroundColor { get; set; }
@@ -272,14 +335,42 @@ namespace LightingChartSamples.Scatter
         public LightningScatterAxisOptions XAxis { get; set; }
         public LightningScatterAxisOptions YAxis { get; set; }
         public LightningScatterLegendOptions Legend { get; set; }
+        public LightningScatterStyleOptions Style { get; set; }
+        public LightningScatterInteractionOptions Interaction { get; set; }
         public LightningScatterTooltipOptions Tooltip { get; set; }
         public LightningScatterNoDataOptions NoData { get; set; }
         public LightningScatterImageOptions Image { get; set; }
+
+        public static LightningScatterOptions CreateDefault()
+        {
+            return new LightningScatterOptions();
+        }
+
+        public static LightningScatterOptions CreateDefaultBubble()
+        {
+            return new LightningScatterOptions();
+        }
+
+        public static Color[] CreateDefaultPastelPalette()
+        {
+            return new[]
+            {
+                Color.FromArgb(129, 178, 231),
+                Color.FromArgb(248, 180, 180),
+                Color.FromArgb(151, 211, 169),
+                Color.FromArgb(244, 205, 132),
+                Color.FromArgb(190, 170, 230),
+                Color.FromArgb(132, 204, 206),
+                Color.FromArgb(238, 171, 210),
+                Color.FromArgb(180, 205, 145)
+            };
+        }
 
         public LightningScatterOptions Clone()
         {
             return new LightningScatterOptions
             {
+                FontName = FontName,
                 Title = Title,
                 ShowTitle = ShowTitle,
                 BackgroundColor = BackgroundColor,
@@ -287,6 +378,8 @@ namespace LightingChartSamples.Scatter
                 XAxis = XAxis == null ? new LightningScatterAxisOptions() : XAxis.Clone(),
                 YAxis = YAxis == null ? new LightningScatterAxisOptions() : YAxis.Clone(),
                 Legend = Legend == null ? new LightningScatterLegendOptions() : Legend.Clone(),
+                Style = Style == null ? new LightningScatterStyleOptions() : Style.Clone(),
+                Interaction = Interaction == null ? new LightningScatterInteractionOptions() : Interaction.Clone(),
                 Tooltip = Tooltip == null ? new LightningScatterTooltipOptions() : Tooltip.Clone(),
                 NoData = NoData == null ? new LightningScatterNoDataOptions() : NoData.Clone(),
                 Image = Image == null ? new LightningScatterImageOptions() : Image.Clone()
@@ -379,6 +472,7 @@ namespace LightingChartSamples.Scatter
         private Image lastSavedImage;
         private string lastSavedImagePath = string.Empty;
         private string currentToolTipText = string.Empty;
+        private string currentFontName = DefaultChartFontName;
         private bool legendClickAttached;
         private bool isCleared = true;
 
@@ -682,7 +776,12 @@ namespace LightingChartSamples.Scatter
 
         private void ApplyChartOptions(LightningScatterOptions currentOptions)
         {
+            currentFontName = string.IsNullOrWhiteSpace(currentOptions.FontName)
+                ? DefaultChartFontName
+                : currentOptions.FontName.Trim();
             chart.Font = CreateChartFont(9f, FontStyle.Regular);
+            chart.Options.AllowInternalMouseCursorChange = GetInteractionOptions(currentOptions).AllowInternalMouseCursorChange;
+            chart.Options.MouseInteraction = true;
             chart.Background.Color = currentOptions.BackgroundColor;
             chart.Title.Text = currentOptions.Title ?? string.Empty;
             chart.Title.Visible = currentOptions.ShowTitle && !string.IsNullOrWhiteSpace(currentOptions.Title);
@@ -692,12 +791,42 @@ namespace LightingChartSamples.Scatter
             ViewXY view = chart.ViewXY;
             view.GraphBackground.Color = currentOptions.GraphBackgroundColor;
             view.GraphBackground.Style = RectFillStyle.ColorOnly;
-            view.Border.Color = Color.FromArgb(210, 210, 210);
-            view.Margins = new Padding(70, 48, 22, 48);
+            view.Border.Color = currentOptions.BackgroundColor;
+            view.Margins = new Padding(70, 68, 24, 48);
 
+            ApplyInteractionOptions(view, currentOptions.Interaction);
             ApplyAxisOptions(GetXAxis(), currentOptions.XAxis);
             ApplyAxisOptions(GetYAxis(), currentOptions.YAxis);
+            ApplyAxisInteraction(GetXAxis(), currentOptions.Interaction);
+            ApplyAxisInteraction(GetYAxis(), currentOptions.Interaction);
             ApplyLegendOptions(GetLegendBox(), currentOptions.Legend);
+        }
+
+        private void ApplyInteractionOptions(ViewXY view, LightningScatterInteractionOptions interactionOptions)
+        {
+            LightningScatterInteractionOptions effectiveOptions = interactionOptions ?? new LightningScatterInteractionOptions();
+            view.ZoomPanOptions.LeftMouseButtonAction = effectiveOptions.ZoomEnabled
+                ? MouseButtonAction.Zoom
+                : MouseButtonAction.None;
+            view.ZoomPanOptions.RightMouseButtonAction = effectiveOptions.PanEnabled
+                ? MouseButtonAction.Pan
+                : MouseButtonAction.None;
+            view.ZoomPanOptions.MiddleMouseButtonAction = MouseButtonAction.None;
+            view.ZoomPanOptions.MouseWheelZooming = effectiveOptions.ZoomEnabled && effectiveOptions.MouseWheelZoomEnabled
+                ? MouseWheelZooming.HorizontalAndVertical
+                : MouseWheelZooming.Off;
+            view.ZoomPanOptions.RightToLeftZoomAction = effectiveOptions.ZoomEnabled
+                ? RightToLeftZoomActionXY.ZoomOut
+                : RightToLeftZoomActionXY.Off;
+            view.ZoomPanOptions.MultiTouchZoomEnabled = effectiveOptions.ZoomEnabled;
+            view.ZoomPanOptions.MultiTouchPanEnabled = effectiveOptions.PanEnabled;
+        }
+
+        private void ApplyAxisInteraction(AxisXYBase axis, LightningScatterInteractionOptions interactionOptions)
+        {
+            LightningScatterInteractionOptions effectiveOptions = interactionOptions ?? new LightningScatterInteractionOptions();
+            axis.ZoomingEnabled = effectiveOptions.ZoomEnabled;
+            axis.PanningEnabled = effectiveOptions.PanEnabled;
         }
 
         private void ApplyAxisOptions(AxisBase axis, LightningScatterAxisOptions axisOptions)
@@ -708,9 +837,9 @@ namespace LightingChartSamples.Scatter
             axis.LabelsFont = CreateChartFont(effectiveOptions.FontSize, FontStyle.Regular);
             axis.LabelsNumberFormat = effectiveOptions.LabelFormat ?? "0.##";
             axis.MajorDivCount = Math.Max(1, effectiveOptions.MajorDivCount);
-            axis.MajorGrid.Visible = true;
+            axis.MajorGrid.Visible = effectiveOptions.GridLinesVisible;
             axis.MajorGrid.Color = effectiveOptions.GridColor;
-            axis.MinorGrid.Visible = false;
+            axis.MinorGrid.Visible = effectiveOptions.MinorGridLinesVisible;
             axis.AutoDivSpacing = false;
         }
 
@@ -744,9 +873,9 @@ namespace LightingChartSamples.Scatter
             legendBox.ShowCheckboxes = effectiveOptions.ShowCheckboxes;
             legendBox.ShowIcons = effectiveOptions.ShowIcons;
             legendBox.MouseInteraction = true;
-            legendBox.Fill.Color = Color.FromArgb(245, 245, 245);
+            legendBox.Fill.Color = effectiveOptions.BackgroundColor;
             legendBox.Fill.Style = RectFillStyle.ColorOnly;
-            legendBox.BorderColor = Color.FromArgb(190, 190, 190);
+            legendBox.BorderColor = effectiveOptions.BorderColor;
         }
 
         private void ApplySeries(IList<LightningScatterSeries> currentSeries, LightningScatterOptions currentOptions)
@@ -766,19 +895,22 @@ namespace LightingChartSamples.Scatter
             {
                 LightningScatterSeries sourceSeries = currentSeries[i] ?? new LightningScatterSeries();
                 PointLineSeries chartSeries = new PointLineSeries(view, xAxis, yAxis);
+                LightningScatterStyleOptions styleOptions = GetStyleOptions(currentOptions);
+                Color seriesColor = ResolveSeriesColor(sourceSeries, i, styleOptions);
+                bool forceBubbleStyle = styleOptions.ForceBubbleStyle;
                 chartSeries.Title.Text = GetLegendLabel(sourceSeries, i);
                 chartSeries.ShowInLegendBox = true;
-                chartSeries.PointsVisible = sourceSeries.ShowPoints;
-                chartSeries.LineVisible = sourceSeries.ShowLine;
-                chartSeries.LineStyle.Color = sourceSeries.LineColor;
+                chartSeries.PointsVisible = forceBubbleStyle || sourceSeries.ShowPoints;
+                chartSeries.LineVisible = !forceBubbleStyle && sourceSeries.ShowLine;
+                chartSeries.LineStyle.Color = seriesColor;
                 chartSeries.LineStyle.Width = Math.Max(0.5f, sourceSeries.LineWidth);
                 chartSeries.PointStyle.Shape = Shape.Circle;
-                chartSeries.PointStyle.Width = Math.Max(1f, sourceSeries.PointSize);
-                chartSeries.PointStyle.Height = Math.Max(1f, sourceSeries.PointSize);
-                chartSeries.PointStyle.Color1 = sourceSeries.PointColor;
-                chartSeries.PointStyle.Color2 = sourceSeries.PointColor;
-                chartSeries.PointStyle.BorderColor = sourceSeries.LineColor;
-                chartSeries.PointStyle.BorderWidth = 1f;
+                chartSeries.PointStyle.Width = ResolveBubbleSize(sourceSeries, styleOptions);
+                chartSeries.PointStyle.Height = ResolveBubbleSize(sourceSeries, styleOptions);
+                chartSeries.PointStyle.Color1 = seriesColor;
+                chartSeries.PointStyle.Color2 = seriesColor;
+                chartSeries.PointStyle.BorderColor = seriesColor;
+                chartSeries.PointStyle.BorderWidth = Math.Max(0f, styleOptions.BubbleBorderWidth);
                 chartSeries.MouseInteraction = true;
                 chartSeries.CursorTrackEnabled = true;
                 chartSeries.MouseClick += PointSeries_MouseClick;
@@ -990,7 +1122,46 @@ namespace LightingChartSamples.Scatter
 
         private Font CreateChartFont(float size, FontStyle style)
         {
-            return new Font(DefaultChartFontName, Math.Max(1f, size), style);
+            string fontName = string.IsNullOrWhiteSpace(currentFontName) ? DefaultChartFontName : currentFontName;
+            return new Font(fontName, Math.Max(1f, size), style);
+        }
+
+        private LightningScatterStyleOptions GetStyleOptions(LightningScatterOptions currentOptions)
+        {
+            return currentOptions == null || currentOptions.Style == null
+                ? new LightningScatterStyleOptions()
+                : currentOptions.Style;
+        }
+
+        private LightningScatterInteractionOptions GetInteractionOptions(LightningScatterOptions currentOptions)
+        {
+            return currentOptions == null || currentOptions.Interaction == null
+                ? new LightningScatterInteractionOptions()
+                : currentOptions.Interaction;
+        }
+
+        private Color ResolveSeriesColor(LightningScatterSeries sourceSeries, int seriesIndex, LightningScatterStyleOptions styleOptions)
+        {
+            LightningScatterStyleOptions effectiveOptions = styleOptions ?? new LightningScatterStyleOptions();
+            if (effectiveOptions.UsePastelPalette
+                && effectiveOptions.PastelPalette != null
+                && effectiveOptions.PastelPalette.Length > 0)
+            {
+                return effectiveOptions.PastelPalette[Math.Abs(seriesIndex) % effectiveOptions.PastelPalette.Length];
+            }
+
+            return sourceSeries == null ? Color.FromArgb(129, 178, 231) : sourceSeries.PointColor;
+        }
+
+        private float ResolveBubbleSize(LightningScatterSeries sourceSeries, LightningScatterStyleOptions styleOptions)
+        {
+            LightningScatterStyleOptions effectiveOptions = styleOptions ?? new LightningScatterStyleOptions();
+            if (effectiveOptions.ForceBubbleStyle)
+            {
+                return Math.Max(1f, effectiveOptions.BubbleSize);
+            }
+
+            return sourceSeries == null ? Math.Max(1f, effectiveOptions.BubbleSize) : Math.Max(1f, sourceSeries.PointSize);
         }
 
         private LegendBoxPositionXY ConvertLegendPosition(LightningScatterLegendPosition position)
