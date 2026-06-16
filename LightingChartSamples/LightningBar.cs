@@ -101,7 +101,7 @@ namespace LightingChartSamples
     {
         public LightningBarTitleOptions()
         {
-            Text = "Bar Chart Sample";
+            Text = string.Empty;
             Color = Color.FromArgb(90, 90, 90);
             FontSize = 12f;
             MarginTop = 15f;
@@ -265,7 +265,7 @@ namespace LightingChartSamples
             Gap = 8f;
             GroupPaddingRatio = 0.18f;
             HeightMode = LightningBarHeightMode.Manual;
-            FixedHeight = 18f;
+            FixedHeight = 30f;
             ReferenceSeriesCount = 5;
             MinHeight = 1f;
         }
@@ -316,6 +316,7 @@ namespace LightingChartSamples
             BadgeBackColor = Color.FromArgb(255, 249, 196);
             BadgeBackOpacity = 128;
             BadgeBorderColor = Color.FromArgb(240, 206, 84);
+            BadgeFixedWidth = 200f;
         }
 
         public string Text { get; set; }
@@ -329,6 +330,7 @@ namespace LightingChartSamples
         public Color BadgeBackColor { get; set; }
         public int BadgeBackOpacity { get; set; }
         public Color BadgeBorderColor { get; set; }
+        public float BadgeFixedWidth { get; set; }
 
         public bool ShowMessage
         {
@@ -650,6 +652,20 @@ namespace LightingChartSamples
             }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        [Browsable(false)]
+        public Image LastSavedImage
+        {
+            get { return GetLastSavedImage(); }
+        }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        [Browsable(false)]
+        public Bitmap LastSavedBitmap
+        {
+            get { return GetLastSavedBitmap(); }
+        }
+
         [Browsable(false)]
         public bool HasLastSavedImage
         {
@@ -734,9 +750,19 @@ namespace LightingChartSamples
                 categories = new string[0];
                 series = new List<LightningBarSeries>();
                 hasBoundData = false;
+
+                if (lastSavedImage != null)
+                {
+                    lastSavedImage.Dispose();
+                    lastSavedImage = null;
+                }
+
+                lastSavedImagePath = string.Empty;
             }
 
             barHitInfos.Clear();
+            rawDataButtonBounds = RectangleF.Empty;
+            currentToolTipText = string.Empty;
             ExecuteOnUiThread(this, HideSeriesToolTip);
             RefreshSafe();
         }
@@ -832,6 +858,80 @@ namespace LightingChartSamples
         public Bitmap RenderImage()
         {
             return RenderImage(Options.Image);
+        }
+
+        public Bitmap RenderVisibleImage()
+        {
+            int width = Math.Max(1, ClientSize.Width);
+            int height = Math.Max(1, ClientSize.Height);
+            float dpiX = 96f;
+            float dpiY = 96f;
+
+            using (Graphics controlGraphics = CreateGraphics())
+            {
+                dpiX = Math.Max(1f, controlGraphics.DpiX);
+                dpiY = Math.Max(1f, controlGraphics.DpiY);
+            }
+
+            string[] snapshotCategories;
+            LightningBarSeries[] snapshotSeries;
+            LightningBarOptions snapshotOptions;
+            bool snapshotHasBoundData;
+
+            lock (syncRoot)
+            {
+                snapshotCategories = categories.ToArray();
+                snapshotSeries = series.Select(item => item.Clone()).ToArray();
+                snapshotOptions = options.Clone();
+                snapshotHasBoundData = hasBoundData;
+            }
+
+            Bitmap bitmap = new Bitmap(width, height);
+            bitmap.SetResolution(dpiX, dpiY);
+            using (Graphics graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                RenderChart(
+                    graphics,
+                    snapshotCategories,
+                    snapshotSeries,
+                    snapshotOptions,
+                    snapshotHasBoundData,
+                    new Size(width, height),
+                    false);
+            }
+
+            return bitmap;
+        }
+
+        public Bitmap CaptureVisibleImage()
+        {
+            using (Bitmap bitmap = RenderVisibleImage())
+            {
+                StoreSavedImage(string.Empty, bitmap);
+            }
+
+            return GetLastSavedBitmap();
+        }
+
+        public Bitmap SaveImageToMemory()
+        {
+            return SaveImageToMemory(Options.Image);
+        }
+
+        public Bitmap SaveImageToMemory(LightningBarImageOptions imageOptions)
+        {
+            LightningBarImageOptions effectiveOptions = imageOptions == null
+                ? new LightningBarImageOptions()
+                : imageOptions.Clone();
+
+            using (Bitmap bitmap = RenderImage(effectiveOptions))
+            {
+                StoreSavedImage(string.Empty, bitmap);
+            }
+
+            return GetLastSavedBitmap();
         }
 
         public Bitmap RenderImage(LightningBarImageOptions imageOptions)
@@ -966,6 +1066,14 @@ namespace LightingChartSamples
             }
         }
 
+        public Bitmap GetLastSavedBitmap()
+        {
+            lock (syncRoot)
+            {
+                return lastSavedImage == null ? null : CloneImagePreservingResolution(lastSavedImage);
+            }
+        }
+
         public Image LoadLastSavedImage()
         {
             string path;
@@ -1055,16 +1163,6 @@ namespace LightingChartSamples
 
             if (!currentHasBoundData)
             {
-                LightningBarNoDataOptions noDataOptionsWhenNotBound = currentOptions.NoData ?? new LightningBarNoDataOptions();
-                DrawTitle(graphics, currentOptions, renderSize);
-
-                if (noDataOptionsWhenNotBound.ShowWhenDataMissing)
-                {
-                    DrawNoDataMessage(graphics, currentOptions, renderSize);
-                }
-
-                DrawRawDataButton(graphics, currentOptions, renderSize, enableInteraction);
-
                 if (enableInteraction)
                 {
                     barHitInfos.Clear();
@@ -1263,12 +1361,27 @@ namespace LightingChartSamples
                 float maxBadgeWidth = Math.Max(minBadgeWidth, messageRect.Width * 0.82f);
                 float horizontalPadding = Math.Max(24f, messageRect.Width * 0.04f);
                 float verticalPadding = Math.Max(14f, messageRect.Height * 0.045f);
-                float maxTextMeasureWidth = Math.Max(1f, maxBadgeWidth - (horizontalPadding * 2f));
+                float fixedBadgeWidth = Math.Max(0f, noDataOptions.BadgeFixedWidth);
+                float badgeWidth = 0f;
+                float maxTextMeasureWidth;
+
+                if (fixedBadgeWidth > 0f)
+                {
+                    badgeWidth = Math.Min(maxBadgeWidth, Math.Max(minBadgeWidth, fixedBadgeWidth));
+                    maxTextMeasureWidth = Math.Max(1f, badgeWidth - (horizontalPadding * 2f));
+                }
+                else
+                {
+                    maxTextMeasureWidth = Math.Max(1f, maxBadgeWidth - (horizontalPadding * 2f));
+                }
 
                 SizeF textSize = graphics.MeasureString(messageText, messageFont, new SizeF(maxTextMeasureWidth, messageRect.Height), format);
 
-                float badgeWidth = Math.Max(minBadgeWidth, textSize.Width + (horizontalPadding * 2f));
-                badgeWidth = Math.Min(maxBadgeWidth, badgeWidth);
+                if (badgeWidth <= 0f)
+                {
+                    badgeWidth = Math.Max(minBadgeWidth, textSize.Width + (horizontalPadding * 2f));
+                    badgeWidth = Math.Min(maxBadgeWidth, badgeWidth);
+                }
 
                 float minBadgeHeight = Math.Max(44f, messageRect.Height * 0.14f);
                 float maxBadgeHeight = Math.Max(minBadgeHeight, messageRect.Height * 0.62f);
@@ -1561,9 +1674,8 @@ namespace LightingChartSamples
             if (orientation == LightningBarCategoryLabelOrientation.Horizontal)
             {
                 string horizontalText = sourceText
-                    .Replace("\r\n", " ")
-                    .Replace('\r', ' ')
-                    .Replace('\n', ' ')
+                    .Replace("\r\n", "\n")
+                    .Replace('\r', '\n')
                     .Trim();
 
                 return GetLegendTextLines(horizontalText, maxLines);
