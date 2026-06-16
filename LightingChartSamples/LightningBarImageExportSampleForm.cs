@@ -32,14 +32,14 @@ namespace LightingChartSamples
                 AutoSize = true,
                 Location = new Point(14, 16),
                 Text = "Save directory",
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+                Font = new Font("맑은 고딕", 9F, FontStyle.Bold)
             };
 
             txtSaveDirectory = new TextBox
             {
                 Location = new Point(118, 12),
                 Size = new Size(620, 23),
-                Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "LightningBarExcelImages")
+                Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LightningBarExcelImages")
             };
 
             var btnSavePng = new Button
@@ -177,9 +177,9 @@ namespace LightingChartSamples
                 DpiY = 96f,
                 FileFormat = fileFormat,
                 SaveDirectory = txtSaveDirectory.Text,
-                FileName = fileFormat == LightningBarImageFileFormat.Jpeg
-                    ? "bar_chart_excel.jpg"
-                    : "bar_chart_excel.png",
+                SubDirectoryName = string.Empty,
+                UseDateFolder = true,
+                UseGuidFileName = true,
                 JpegQuality = 92L,
                 HideRawDataButtonOnImage = true
             };
@@ -247,6 +247,10 @@ namespace LightingChartSamples
                     Height = 400,
                     DpiX = 96f,
                     DpiY = 96f,
+                    SaveFolder = LightningBarImageSaveFolder.LocalApplicationData,
+                    SubDirectoryName = "LightningBarImageExportSample",
+                    UseDateFolder = true,
+                    UseGuidFileName = true,
                     HideRawDataButtonOnImage = true
                 }
             };

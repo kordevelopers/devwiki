@@ -103,8 +103,10 @@ namespace LightingChartSamples
                     Width = 600,
                     Height = 400,
                     FileFormat = LightningBarImageFileFormat.Png,
-                    SaveDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                    FileName = string.Empty
+                    SaveFolder = LightningBarImageSaveFolder.LocalApplicationData,
+                    SubDirectoryName = "LightningBarSample",
+                    UseDateFolder = true,
+                    UseGuidFileName = true
                 },
                 // Tooltip placeholders:
                 // {0}: series label, {1}: category label, {2}: value, {3}: series index, {4}: category index

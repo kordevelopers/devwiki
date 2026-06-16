@@ -33,7 +33,7 @@ namespace LightingChartSamples
             tabControl = new TabControl
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI", 9F)
+                Font = new Font("맑은 고딕", 9F)
             };
 
             richTextBox = new RichTextBox();
@@ -116,7 +116,7 @@ namespace LightingChartSamples
 
             richTextBox.Dock = DockStyle.Fill;
             richTextBox.BorderStyle = BorderStyle.FixedSingle;
-            richTextBox.Font = new Font("Segoe UI", 10F);
+            richTextBox.Font = new Font("맑은 고딕", 10F);
             richTextBox.BackColor = Color.White;
 
             pictureBox.Dock = DockStyle.Fill;
@@ -218,7 +218,7 @@ namespace LightingChartSamples
                 Dock = DockStyle.Fill,
                 Text = string.Format("Chart {0}: No data", slotNumber),
                 TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = new Font("맑은 고딕", 10F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(120, 128, 140),
                 BackColor = Color.FromArgb(248, 249, 251),
                 BorderStyle = BorderStyle.FixedSingle
@@ -326,11 +326,11 @@ namespace LightingChartSamples
         private void LoadDocumentSample()
         {
             richTextBox.Clear();
-            richTextBox.SelectionFont = new Font("Segoe UI", 15F, FontStyle.Bold);
+            richTextBox.SelectionFont = new Font("맑은 고딕", 15F, FontStyle.Bold);
             richTextBox.SelectionColor = Color.FromArgb(36, 53, 84);
             richTextBox.AppendText("Tabbed layout document area" + Environment.NewLine + Environment.NewLine);
 
-            richTextBox.SelectionFont = new Font("Segoe UI", 10F, FontStyle.Regular);
+            richTextBox.SelectionFont = new Font("맑은 고딕", 10F, FontStyle.Regular);
             richTextBox.SelectionColor = Color.FromArgb(56, 64, 78);
             richTextBox.AppendText("The first tab is split by a movable splitter. ");
             richTextBox.AppendText("The left pane is a RichTextBox and the right pane is a PictureBox.");
@@ -348,8 +348,8 @@ namespace LightingChartSamples
             using (var accentBrush = new SolidBrush(Color.FromArgb(75, 123, 213)))
             using (var secondaryBrush = new SolidBrush(Color.FromArgb(100, 165, 99)))
             using (var pen = new Pen(Color.FromArgb(185, 195, 210), 2f))
-            using (var titleFont = new Font("Segoe UI", 22F, FontStyle.Bold))
-            using (var bodyFont = new Font("Segoe UI", 11F, FontStyle.Regular))
+            using (var titleFont = new Font("맑은 고딕", 22F, FontStyle.Bold))
+            using (var bodyFont = new Font("맑은 고딕", 11F, FontStyle.Regular))
             {
                 graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
                 graphics.FillRectangle(backgroundBrush, 0, 0, width, height);

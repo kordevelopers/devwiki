@@ -60,6 +60,14 @@ namespace LightingChartSamples
         Jpeg
     }
 
+    public enum LightningBarImageSaveFolder
+    {
+        LocalApplicationData,
+        RoamingApplicationData,
+        MyDocuments,
+        Temp
+    }
+
     public enum LightningBarImagePreset
     {
         Default = 0,
@@ -94,7 +102,11 @@ namespace LightingChartSamples
             DpiX = 96f;
             DpiY = 96f;
             FileFormat = LightningBarImageFileFormat.Png;
-            SaveDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            SaveFolder = LightningBarImageSaveFolder.LocalApplicationData;
+            SaveDirectory = string.Empty;
+            SubDirectoryName = "LightningBarImages";
+            UseDateFolder = true;
+            UseGuidFileName = true;
             FileName = string.Empty;
             JpegQuality = 90L;
             OptimizeForExcel = false;
@@ -109,7 +121,11 @@ namespace LightingChartSamples
         public float DpiX { get; set; }
         public float DpiY { get; set; }
         public LightningBarImageFileFormat FileFormat { get; set; }
+        public LightningBarImageSaveFolder SaveFolder { get; set; }
         public string SaveDirectory { get; set; }
+        public string SubDirectoryName { get; set; }
+        public bool UseDateFolder { get; set; }
+        public bool UseGuidFileName { get; set; }
         public string FileName { get; set; }
         public long JpegQuality { get; set; }
         public bool OptimizeForExcel { get; set; }
@@ -462,6 +478,46 @@ namespace LightingChartSamples
         public float Value { get; private set; }
     }
 
+    public class LightningBarLegendClickEventArgs : EventArgs
+    {
+        public LightningBarLegendClickEventArgs(LightningBarSeries series, int seriesIndex, string legendLabel)
+        {
+            Series = series == null ? new LightningBarSeries() : series.Clone();
+            SeriesIndex = seriesIndex;
+            LegendLabel = legendLabel ?? string.Empty;
+        }
+
+        public LightningBarSeries Series { get; private set; }
+        public int SeriesIndex { get; private set; }
+        public string LegendLabel { get; private set; }
+    }
+
+    public class LightningBarImageSavingEventArgs : EventArgs
+    {
+        public LightningBarImageSavingEventArgs(string imagePath, LightningBarImageOptions imageOptions)
+        {
+            ImagePath = imagePath ?? string.Empty;
+            ImageOptions = imageOptions == null ? new LightningBarImageOptions() : imageOptions.Clone();
+        }
+
+        public string ImagePath { get; private set; }
+        public LightningBarImageOptions ImageOptions { get; private set; }
+        public bool IsFileSave { get { return !string.IsNullOrWhiteSpace(ImagePath); } }
+    }
+
+    public class LightningBarImageSavedEventArgs : EventArgs
+    {
+        public LightningBarImageSavedEventArgs(string imagePath, LightningBarImageOptions imageOptions)
+        {
+            ImagePath = imagePath ?? string.Empty;
+            ImageOptions = imageOptions == null ? new LightningBarImageOptions() : imageOptions.Clone();
+        }
+
+        public string ImagePath { get; private set; }
+        public LightningBarImageOptions ImageOptions { get; private set; }
+        public bool IsFileSave { get { return !string.IsNullOrWhiteSpace(ImagePath); } }
+    }
+
     public class LightningBarSeries
     {
         public LightningBarSeries()
@@ -679,12 +735,15 @@ namespace LightingChartSamples
 
     public class LightningBar : Control
     {
+        public const string DefaultChartFontName = "맑은 고딕";
+
         private readonly object syncRoot = new object();
         private string[] categories = new string[0];
         private List<LightningBarSeries> series = new List<LightningBarSeries>();
         private LightningBarOptions options = new LightningBarOptions();
         private readonly ToolTip seriesToolTip = new ToolTip();
         private readonly List<LightningBarHitInfo> barHitInfos = new List<LightningBarHitInfo>();
+        private readonly List<LightningBarLegendHitInfo> legendHitInfos = new List<LightningBarLegendHitInfo>();
         private string currentToolTipText = string.Empty;
         private bool collectBarHits;
         private bool hasBoundData;
@@ -693,12 +752,17 @@ namespace LightingChartSamples
         private string lastSavedImagePath = string.Empty;
 
         public event EventHandler<LightningBarSeriesClickEventArgs> SeriesClicked;
+        public event EventHandler<LightningBarSeriesClickEventArgs> BarClicked;
+        public event EventHandler<LightningBarLegendClickEventArgs> LegendClicked;
+        public event EventHandler<LightningBarImageSavingEventArgs> ImageSaving;
+        public event EventHandler<LightningBarImageSavedEventArgs> ImageSaved;
 
         public LightningBar()
         {
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
             DoubleBuffered = true;
             BackColor = Color.White;
+            Font = new Font(DefaultChartFontName, 9F, FontStyle.Regular);
             Size = new Size(820, 540);
             seriesToolTip.InitialDelay = 150;
             seriesToolTip.ReshowDelay = 100;
@@ -714,6 +778,11 @@ namespace LightingChartSamples
             }
 
             base.Dispose(disposing);
+        }
+
+        protected virtual Font CreateChartFont(float fontSize, FontStyle fontStyle)
+        {
+            return new Font(DefaultChartFontName, Math.Max(1f, fontSize), fontStyle);
         }
 
         [Browsable(false)]
@@ -874,6 +943,7 @@ namespace LightingChartSamples
             }
 
             barHitInfos.Clear();
+            legendHitInfos.Clear();
             rawDataButtonBounds = RectangleF.Empty;
             currentToolTipText = string.Empty;
             ExecuteOnUiThread(this, HideSeriesToolTip);
@@ -1033,12 +1103,16 @@ namespace LightingChartSamples
 
         public Bitmap CaptureVisibleImage()
         {
+            LightningBarImageOptions imageOptions = Options.Image;
+            OnImageSaving(new LightningBarImageSavingEventArgs(string.Empty, imageOptions));
             using (Bitmap bitmap = RenderVisibleImage())
             {
                 StoreSavedImage(string.Empty, bitmap);
             }
 
-            return GetLastSavedBitmap();
+            Bitmap savedBitmap = GetLastSavedBitmap();
+            OnImageSaved(new LightningBarImageSavedEventArgs(string.Empty, imageOptions));
+            return savedBitmap;
         }
 
         public Bitmap SaveImageToMemory()
@@ -1050,12 +1124,15 @@ namespace LightingChartSamples
         {
             LightningBarImageOptions effectiveOptions = CreateEffectiveImageOptions(imageOptions);
 
+            OnImageSaving(new LightningBarImageSavingEventArgs(string.Empty, effectiveOptions));
             using (Bitmap bitmap = RenderImage(effectiveOptions))
             {
                 StoreSavedImage(string.Empty, bitmap);
             }
 
-            return GetLastSavedBitmap();
+            Bitmap savedBitmap = GetLastSavedBitmap();
+            OnImageSaved(new LightningBarImageSavedEventArgs(string.Empty, effectiveOptions));
+            return savedBitmap;
         }
 
         public Bitmap RenderImage(LightningBarImageOptions imageOptions)
@@ -1111,12 +1188,14 @@ namespace LightingChartSamples
             LightningBarImageOptions effectiveOptions = CreateEffectiveImageOptions(imageOptions);
             string fullPath = ResolveImageFilePath(effectiveOptions);
 
+            OnImageSaving(new LightningBarImageSavingEventArgs(fullPath, effectiveOptions));
             using (Bitmap bitmap = RenderImage(effectiveOptions))
             {
                 SaveBitmap(bitmap, fullPath, effectiveOptions);
                 StoreSavedImage(fullPath, bitmap);
             }
 
+            OnImageSaved(new LightningBarImageSavedEventArgs(fullPath, effectiveOptions));
             return fullPath;
         }
 
@@ -1141,12 +1220,14 @@ namespace LightingChartSamples
                 Directory.CreateDirectory(directory);
             }
 
+            OnImageSaving(new LightningBarImageSavingEventArgs(fullPath, effectiveOptions));
             using (Bitmap bitmap = RenderImage(effectiveOptions))
             {
                 SaveBitmap(bitmap, fullPath, effectiveOptions);
                 StoreSavedImage(fullPath, bitmap);
             }
 
+            OnImageSaved(new LightningBarImageSavedEventArgs(fullPath, effectiveOptions));
             return fullPath;
         }
 
@@ -1294,6 +1375,7 @@ namespace LightingChartSamples
             if (enableInteraction)
             {
                 barHitInfos.Clear();
+                legendHitInfos.Clear();
             }
 
             bool hasChartFrame = currentCategories != null
@@ -1348,7 +1430,7 @@ namespace LightingChartSamples
                 return;
             }
 
-            using (var titleFont = new Font(Font.FontFamily, Math.Max(1f, titleOptions.FontSize), titleOptions.FontStyle))
+            using (var titleFont = CreateChartFont(titleOptions.FontSize, titleOptions.FontStyle))
             using (var titleBrush = new SolidBrush(titleOptions.Color))
             using (var format = new StringFormat())
             {
@@ -1399,6 +1481,16 @@ namespace LightingChartSamples
             if (IsRawDataButtonVisible(Options) && rawDataButtonBounds.Contains(e.Location))
             {
                 ShowRawDataPopup();
+                return;
+            }
+
+            LightningBarLegendHitInfo legendHitInfo = FindLegendHit(e.Location);
+            if (legendHitInfo != null)
+            {
+                OnLegendClicked(new LightningBarLegendClickEventArgs(
+                    legendHitInfo.Series,
+                    legendHitInfo.SeriesIndex,
+                    legendHitInfo.LegendLabel));
                 return;
             }
 
@@ -1646,7 +1738,7 @@ namespace LightingChartSamples
             LightningBarCategoryLabelOptions categoryOptions = currentOptions.CategoryLabels ?? new LightningBarCategoryLabelOptions();
             float measuredWidth = 0f;
             int maxLines = Math.Max(1, categoryOptions.MaxLines);
-            using (var labelFont = new Font(Font.FontFamily, Math.Max(1f, categoryOptions.FontSize), FontStyle.Regular))
+            using (var labelFont = CreateChartFont(categoryOptions.FontSize, FontStyle.Regular))
             {
                 for (int i = 0; i < currentCategories.Length; i++)
                 {
@@ -1693,7 +1785,7 @@ namespace LightingChartSamples
 
             using (var gridPen = new Pen(scaleOptions.GridColor, 1f))
             using (var axisPen = new Pen(scaleOptions.AxisColor, 1.4f))
-            using (var labelFont = new Font(Font.FontFamily, scaleOptions.FontSize, FontStyle.Regular))
+            using (var labelFont = CreateChartFont(scaleOptions.FontSize, FontStyle.Regular))
             using (var labelBrush = new SolidBrush(scaleOptions.LabelColor))
             {
                 for (int i = 0; i <= lineCount; i++)
@@ -1821,7 +1913,7 @@ namespace LightingChartSamples
             float maxTextWidth = Math.Max(1f, seriesLabelOptions.MaxWidth);
             int maxLines = Math.Max(1, seriesLabelOptions.MaxLines);
 
-            using (var labelFont = new Font(Font.FontFamily, Math.Max(1f, seriesLabelOptions.FontSize), FontStyle.Regular))
+            using (var labelFont = CreateChartFont(seriesLabelOptions.FontSize, FontStyle.Regular))
             using (var labelBrush = new SolidBrush(seriesLabelOptions.Color))
             using (var format = new StringFormat())
             {
@@ -1844,7 +1936,7 @@ namespace LightingChartSamples
         {
             LightningBarCategoryLabelOptions categoryOptions = currentOptions.CategoryLabels ?? new LightningBarCategoryLabelOptions();
 
-            using (var labelFont = new Font(Font.FontFamily, categoryOptions.FontSize, FontStyle.Regular))
+            using (var labelFont = CreateChartFont(categoryOptions.FontSize, FontStyle.Regular))
             using (var labelBrush = new SolidBrush(categoryOptions.Color))
             using (var rightCenterFormat = new StringFormat(StringFormat.GenericTypographic))
             {
@@ -1918,7 +2010,7 @@ namespace LightingChartSamples
             float markerWidth = Math.Max(1f, legendOptions.MarkerWidth);
             RectangleF plotRect = GetPlotRectangle(graphics, renderSize, currentOptions, currentCategories);
 
-            using (var legendFont = new Font(Font.FontFamily, Math.Max(1f, legendOptions.FontSize), FontStyle.Regular))
+            using (var legendFont = CreateChartFont(legendOptions.FontSize, FontStyle.Regular))
             using (var textBrush = new SolidBrush(legendOptions.TextColor))
             {
                 float totalLegendWidth = 0f;
@@ -1949,12 +2041,31 @@ namespace LightingChartSamples
                     ? plotRect.Bottom + legendOptions.MarginFromChart
                     : Math.Max(0f, plotRect.Top - legendOptions.MarginFromChart - legendOptions.MarkerHeight);
 
-                foreach (LightningBarSeries barSeries in currentSeries)
+                for (int seriesIndex = 0; seriesIndex < currentSeries.Length; seriesIndex++)
                 {
+                    LightningBarSeries barSeries = currentSeries[seriesIndex];
+                    if (barSeries == null)
+                    {
+                        continue;
+                    }
+
                     string legendText = GetLegendLabel(barSeries);
                     SizeF textSize = MeasureLegendText(graphics, legendText, legendFont, currentOptions);
                     float textWidth = Math.Min(maxTextWidth, textSize.Width);
                     DrawLegendItem(graphics, legendFont, textBrush, legendX, legendY, barSeries.FillColor, barSeries.BorderColor, legendText, currentOptions);
+
+                    if (collectBarHits)
+                    {
+                        float itemHeight = Math.Max(legendOptions.MarkerHeight, textSize.Height);
+                        legendHitInfos.Add(new LightningBarLegendHitInfo
+                        {
+                            Bounds = new RectangleF(legendX, legendY - 4f, markerWidth + labelSpacing + textWidth, itemHeight + 8f),
+                            Series = barSeries.Clone(),
+                            SeriesIndex = seriesIndex,
+                            LegendLabel = legendText
+                        });
+                    }
+
                     legendX += markerWidth + labelSpacing + textWidth + sectionSpacing;
                 }
             }
@@ -2129,7 +2240,7 @@ namespace LightingChartSamples
             using (var fillBrush = new SolidBrush(Color.FromArgb(240, 240, 240)))
             using (var borderPen = new Pen(Color.FromArgb(170, 170, 170), 1f))
             using (var textBrush = new SolidBrush(Color.FromArgb(75, 75, 75)))
-            using (var buttonFont = new Font(Font.FontFamily, 8.5f, FontStyle.Regular))
+            using (var buttonFont = CreateChartFont(8.5f, FontStyle.Regular))
             using (var format = new StringFormat())
             {
                 format.Alignment = StringAlignment.Center;
@@ -2240,24 +2351,85 @@ namespace LightingChartSamples
 
         protected virtual string ResolveImageFilePath(LightningBarImageOptions imageOptions)
         {
-            string directory = string.IsNullOrWhiteSpace(imageOptions.SaveDirectory)
-                ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
-                : imageOptions.SaveDirectory;
+            string directory = ResolveImageSaveDirectory(imageOptions);
             directory = Path.GetFullPath(directory);
             Directory.CreateDirectory(directory);
 
             string extension = GetImageFileExtension(imageOptions.FileFormat);
-            string fileName = string.IsNullOrWhiteSpace(imageOptions.FileName)
-                ? string.Format("LightningBar_{0:yyyyMMdd_HHmmssfff}{1}", DateTime.Now, extension)
-                : Path.GetFileName(imageOptions.FileName.Trim());
+            string fileName = imageOptions.UseGuidFileName
+                ? string.Format("{0}{1}", Guid.NewGuid().ToString("N"), extension)
+                : Path.GetFileName((imageOptions.FileName ?? string.Empty).Trim());
 
             if (string.IsNullOrWhiteSpace(fileName))
             {
-                fileName = string.Format("LightningBar_{0:yyyyMMdd_HHmmssfff}{1}", DateTime.Now, extension);
+                fileName = string.Format("{0}{1}", Guid.NewGuid().ToString("N"), extension);
             }
 
             fileName = Path.ChangeExtension(fileName, extension);
             return Path.Combine(directory, fileName);
+        }
+
+        protected virtual string ResolveImageSaveDirectory(LightningBarImageOptions imageOptions)
+        {
+            string baseDirectory = string.IsNullOrWhiteSpace(imageOptions.SaveDirectory)
+                ? ResolveImageSaveFolder(imageOptions.SaveFolder)
+                : imageOptions.SaveDirectory;
+
+            string subDirectoryName = imageOptions.SubDirectoryName ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(subDirectoryName))
+            {
+                baseDirectory = Path.Combine(baseDirectory, SanitizePathSegment(subDirectoryName.Trim()));
+            }
+
+            if (imageOptions.UseDateFolder)
+            {
+                baseDirectory = Path.Combine(baseDirectory, DateTime.Now.ToString("yyyyMMdd"));
+            }
+
+            return baseDirectory;
+        }
+
+        protected virtual string ResolveImageSaveFolder(LightningBarImageSaveFolder saveFolder)
+        {
+            string resolvedPath;
+            switch (saveFolder)
+            {
+                case LightningBarImageSaveFolder.RoamingApplicationData:
+                    resolvedPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                    break;
+                case LightningBarImageSaveFolder.MyDocuments:
+                    resolvedPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                    break;
+                case LightningBarImageSaveFolder.Temp:
+                    resolvedPath = Path.GetTempPath();
+                    break;
+                case LightningBarImageSaveFolder.LocalApplicationData:
+                default:
+                    resolvedPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    break;
+            }
+
+            return string.IsNullOrWhiteSpace(resolvedPath) ? Path.GetTempPath() : resolvedPath;
+        }
+
+        protected virtual string SanitizePathSegment(string pathSegment)
+        {
+            if (string.IsNullOrWhiteSpace(pathSegment))
+            {
+                return string.Empty;
+            }
+
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+            char[] chars = pathSegment.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+            {
+                if (invalidChars.Contains(chars[i]))
+                {
+                    chars[i] = '_';
+                }
+            }
+
+            return new string(chars);
         }
 
         protected virtual string GetImageFileExtension(LightningBarImageFileFormat fileFormat)
@@ -2412,6 +2584,11 @@ namespace LightingChartSamples
             return barHitInfos.FirstOrDefault(item => item.Bounds.Contains(location));
         }
 
+        protected virtual LightningBarLegendHitInfo FindLegendHit(Point location)
+        {
+            return legendHitInfos.FirstOrDefault(item => item.Bounds.Contains(location));
+        }
+
         protected virtual string FormatSeriesToolTip(LightningBarHitInfo hitInfo, LightningBarOptions currentOptions)
         {
             string format = string.IsNullOrWhiteSpace(currentOptions.SeriesTooltipFormat)
@@ -2445,7 +2622,40 @@ namespace LightingChartSamples
 
         protected virtual void OnSeriesClicked(LightningBarSeriesClickEventArgs e)
         {
+            EventHandler<LightningBarSeriesClickEventArgs> barHandler = BarClicked;
+            if (barHandler != null)
+            {
+                barHandler(this, e);
+            }
+
             EventHandler<LightningBarSeriesClickEventArgs> handler = SeriesClicked;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+
+        protected virtual void OnLegendClicked(LightningBarLegendClickEventArgs e)
+        {
+            EventHandler<LightningBarLegendClickEventArgs> handler = LegendClicked;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+
+        protected virtual void OnImageSaving(LightningBarImageSavingEventArgs e)
+        {
+            EventHandler<LightningBarImageSavingEventArgs> handler = ImageSaving;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+
+        protected virtual void OnImageSaved(LightningBarImageSavedEventArgs e)
+        {
+            EventHandler<LightningBarImageSavedEventArgs> handler = ImageSaved;
             if (handler != null)
             {
                 handler(this, e);
@@ -2465,6 +2675,17 @@ namespace LightingChartSamples
             public int SeriesIndex { get; set; }
 
             public float Value { get; set; }
+        }
+
+        protected class LightningBarLegendHitInfo
+        {
+            public RectangleF Bounds { get; set; }
+
+            public LightningBarSeries Series { get; set; }
+
+            public int SeriesIndex { get; set; }
+
+            public string LegendLabel { get; set; }
         }
 
         protected virtual void RefreshSafe()

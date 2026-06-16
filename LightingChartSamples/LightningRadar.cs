@@ -754,7 +754,7 @@ namespace LightingChartSamples
             const float labelSpacing = 8f;
             float sectionSpacing = Math.Max(0f, currentOptions.LegendItemSpacing);
 
-            using (var legendFont = new Font(Font.FontFamily, 9f, FontStyle.Regular))
+            using (var legendFont = new Font("맑은 고딕", 9f, FontStyle.Regular))
             {
                 float totalLegendWidth = 0f;
                 float maxHeight = 0f;

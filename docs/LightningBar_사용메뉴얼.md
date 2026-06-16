@@ -141,6 +141,7 @@ LightningBarOptions options = LightningBarOptions.CreateDefault600x400();
 | 막대 높이 | 수동, `30f` |
 | RawData 버튼 | 숨김 |
 | NoData 박스 | 차트 영역 중앙, 폭 80%, 줄바꿈 허용 |
+| 기본 폰트 | 맑은 고딕 |
 
 ## 5. 차트 제목
 
@@ -398,12 +399,12 @@ options.Tooltip.Format = "Value:{2:0.#} (* 클릭할 경우 해당 계측 데이
 options.Tooltip.Format = "{1}\r\n{0}\r\nValue:{2:0.##}";
 ```
 
-## 13. 시리즈 클릭 이벤트
+## 13. 클릭/저장 이벤트
 
-막대를 클릭하면 `SeriesClicked` 이벤트가 발생합니다.
+막대를 클릭하면 `BarClicked` 이벤트가 발생합니다. 기존 호환성을 위해 `SeriesClicked`도 동일하게 발생합니다.
 
 ```csharp
-chart.SeriesClicked += (sender, e) =>
+chart.BarClicked += (sender, e) =>
 {
     string category = e.CategoryName;
     string seriesName = e.Series.Name;
@@ -417,12 +418,36 @@ chart.SeriesClicked += (sender, e) =>
 상세 차트 화면을 열고 싶을 때:
 
 ```csharp
-chart.SeriesClicked += (sender, e) =>
+chart.BarClicked += (sender, e) =>
 {
     using (var form = new DetailChartForm(e.CategoryName, e.Series.Name))
     {
         form.ShowDialog(this);
     }
+};
+```
+
+범례를 클릭하면 `LegendClicked` 이벤트가 발생합니다.
+
+```csharp
+chart.LegendClicked += (sender, e) =>
+{
+    MessageBox.Show(
+        string.Format("Legend: {0} / SeriesIndex: {1}", e.LegendLabel, e.SeriesIndex));
+};
+```
+
+이미지 저장 전/후에는 `ImageSaving`, `ImageSaved` 이벤트가 발생합니다.
+
+```csharp
+chart.ImageSaving += (sender, e) =>
+{
+    Console.WriteLine("Saving: " + (e.IsFileSave ? e.ImagePath : "memory"));
+};
+
+chart.ImageSaved += (sender, e) =>
+{
+    Console.WriteLine("Saved: " + (e.IsFileSave ? e.ImagePath : "memory"));
 };
 ```
 
@@ -572,7 +597,29 @@ chartB.SetNoDataText("B 설비 데이터가 없습니다.");
 LightningBarImageOptions imageOptions = LightningBarImageOptions.CreateDefault();
 ```
 
-기본값은 `600 x 400`, PNG, 96 DPI, 저장 경로는 My Documents입니다.
+기본값은 `600 x 400`, PNG, 96 DPI입니다. 저장 경로는 권한 문제가 적은 사용자 폴더를 enum으로 선택합니다.
+
+기본 저장 방식:
+
+- `SaveFolder = LightningBarImageSaveFolder.LocalApplicationData`
+- `SubDirectoryName = "LightningBarImages"`
+- `UseDateFolder = true`
+- `UseGuidFileName = true`
+
+기본 파일 경로 예시는 다음 형태입니다.
+
+```text
+%LOCALAPPDATA%\LightningBarImages\yyyyMMdd\{guid}.png
+```
+
+지원 저장 위치:
+
+| enum | 설명 |
+| --- | --- |
+| `LocalApplicationData` | 사용자별 로컬 AppData입니다. 기본값이며 권장합니다. |
+| `RoamingApplicationData` | 사용자별 Roaming AppData입니다. |
+| `MyDocuments` | 사용자 문서 폴더입니다. |
+| `Temp` | 사용자 임시 폴더입니다. |
 
 직접 지정:
 
@@ -584,18 +631,31 @@ LightningBarImageOptions imageOptions = new LightningBarImageOptions
     DpiX = 96f,
     DpiY = 96f,
     FileFormat = LightningBarImageFileFormat.Png,
-    SaveDirectory = @"C:\Temp\ChartImages",
-    FileName = "line_a_status",
+    SaveFolder = LightningBarImageSaveFolder.LocalApplicationData,
+    SubDirectoryName = "EquipmentCharts",
+    UseDateFolder = true,
+    UseGuidFileName = true,
     JpegQuality = 90L
 };
+```
+
+사용자가 직접 입력한 폴더에 저장하려면 `SaveDirectory`를 지정합니다. 이 경우에도 기본적으로 날짜 폴더와 GUID 파일명이 적용됩니다.
+
+```csharp
+imageOptions.SaveDirectory = @"C:\Temp\ChartImages";
+imageOptions.SubDirectoryName = string.Empty;
+imageOptions.UseDateFolder = true;
+imageOptions.UseGuidFileName = true;
 ```
 
 엑셀 첨부용으로 조금 더 크게 저장:
 
 ```csharp
 LightningBarImageOptions imageOptions = LightningBarImageOptions.CreateChartZoom();
-imageOptions.SaveDirectory = @"C:\Temp\ExcelImages";
-imageOptions.FileName = "line_a_status";
+imageOptions.SaveFolder = LightningBarImageSaveFolder.LocalApplicationData;
+imageOptions.SubDirectoryName = "ExcelCharts";
+imageOptions.UseDateFolder = true;
+imageOptions.UseGuidFileName = true;
 ```
 
 `CreateChartZoom()` 기본값:
@@ -628,8 +688,10 @@ string savedPath = chart.SaveImage(new LightningBarImageOptions
     Width = 600,
     Height = 400,
     FileFormat = LightningBarImageFileFormat.Png,
-    SaveDirectory = @"C:\Temp\ChartImages",
-    FileName = "chart_001"
+    SaveFolder = LightningBarImageSaveFolder.LocalApplicationData,
+    SubDirectoryName = "EquipmentCharts",
+    UseDateFolder = true,
+    UseGuidFileName = true
 });
 ```
 
@@ -752,10 +814,10 @@ LightningBar chart = LightningBar.Create(
 chart.Size = new Size(600, 400);
 
 LightningBarImageOptions excelImageOptions = LightningBarImageOptions.CreateChartZoom();
-excelImageOptions.SaveDirectory = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-    "LightningBarExcelImages");
-excelImageOptions.FileName = "equipment_status";
+excelImageOptions.SaveFolder = LightningBarImageSaveFolder.LocalApplicationData;
+excelImageOptions.SubDirectoryName = "LightningBarExcelImages";
+excelImageOptions.UseDateFolder = true;
+excelImageOptions.UseGuidFileName = true;
 excelImageOptions.FileFormat = LightningBarImageFileFormat.Png;
 
 string imagePath = chart.SaveImage(excelImageOptions);
@@ -878,7 +940,10 @@ LightningBarOptions options = new LightningBarOptions
         Width = 600,
         Height = 400,
         FileFormat = LightningBarImageFileFormat.Png,
-        SaveDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
+        SaveFolder = LightningBarImageSaveFolder.LocalApplicationData,
+        SubDirectoryName = "LightningBarImages",
+        UseDateFolder = true,
+        UseGuidFileName = true
     }
 };
 ```

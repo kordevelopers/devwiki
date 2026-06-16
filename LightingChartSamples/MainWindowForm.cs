@@ -145,7 +145,7 @@ namespace LightingChartSamples
                 Name = "btnNewBarChartGuide",
                 Size = new Size(456, 46),
                 TabIndex = 7,
-                Text = "신규 Bar Chart 가이드 열기 (5개 시리즈)",
+                Text = "Bar Chart 기능 샘플 열기 (1개 시리즈/5개 데이터)",
                 UseVisualStyleBackColor = false
             };
 
@@ -163,7 +163,7 @@ namespace LightingChartSamples
             {
                 BackColor = Color.FromArgb(118, 91, 166),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Font = new Font("맑은 고딕", 10F, FontStyle.Bold),
                 ForeColor = Color.White,
                 Location = new Point(32, 480),
                 Name = "btnBarChartImageExportSample",
@@ -188,18 +188,23 @@ namespace LightingChartSamples
         private readonly Panel pnlTop;
         private readonly Panel pnlChartHost;
         private readonly Button btnChangeTitle;
+        private readonly Button btnSaveImage;
+        private readonly ComboBox cboSaveFolder;
+        private readonly Label lblSavedPath;
+        private readonly TextBox txtEventLog;
 
         public NewBarChartGuideForm()
         {
             BackColor = Color.White;
+            Font = new Font("맑은 고딕", 9F, FontStyle.Regular);
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "New Bar Chart Guide";
-            ClientSize = new Size(1100, 690);
+            Text = "Bar Chart Feature Sample";
+            ClientSize = new Size(1100, 760);
 
             pnlTop = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 56,
+                Height = 92,
                 BackColor = Color.White
             };
 
@@ -207,9 +212,37 @@ namespace LightingChartSamples
             {
                 AutoSize = true,
                 Font = new Font("맑은 고딕", 9F),
-                Location = new Point(12, 20),
-                Text = "5개 시리즈 데이터를 폼에서 생성하여 바인딩한 신규 Bar Chart 샘플"
+                Location = new Point(12, 14),
+                Text = "1개 시리즈, 5개 데이터로 Tooltip/막대 클릭/범례 클릭/이미지 저장 이벤트를 확인하는 Bar Chart 샘플"
             };
+
+            var lblSaveFolder = new Label
+            {
+                AutoSize = true,
+                Font = new Font("맑은 고딕", 9F),
+                Location = new Point(12, 51),
+                Text = "저장 위치"
+            };
+
+            cboSaveFolder = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Location = new Point(78, 47),
+                Size = new Size(210, 23)
+            };
+            foreach (LightningBarImageSaveFolder saveFolder in Enum.GetValues(typeof(LightningBarImageSaveFolder)))
+            {
+                cboSaveFolder.Items.Add(saveFolder);
+            }
+            cboSaveFolder.SelectedItem = LightningBarImageSaveFolder.LocalApplicationData;
+
+            btnSaveImage = new Button
+            {
+                Location = new Point(300, 45),
+                Size = new Size(118, 28),
+                Text = "이미지 저장"
+            };
+            btnSaveImage.Click += delegate { SaveChartImage(); };
 
             btnChangeTitle = new Button
             {
@@ -220,8 +253,32 @@ namespace LightingChartSamples
             };
             btnChangeTitle.Click += btnChangeTitle_Click;
 
+            lblSavedPath = new Label
+            {
+                AutoEllipsis = true,
+                Location = new Point(430, 50),
+                Size = new Size(650, 20),
+                Text = "저장 경로: -",
+                ForeColor = Color.FromArgb(80, 80, 80)
+            };
+
             pnlTop.Controls.Add(lblGuide);
+            pnlTop.Controls.Add(lblSaveFolder);
+            pnlTop.Controls.Add(cboSaveFolder);
+            pnlTop.Controls.Add(btnSaveImage);
             pnlTop.Controls.Add(btnChangeTitle);
+            pnlTop.Controls.Add(lblSavedPath);
+
+            txtEventLog = new TextBox
+            {
+                Dock = DockStyle.Bottom,
+                Height = 118,
+                Multiline = true,
+                ReadOnly = true,
+                ScrollBars = ScrollBars.Vertical,
+                BackColor = Color.White,
+                Font = new Font("맑은 고딕", 9F)
+            };
 
             pnlChartHost = new Panel
             {
@@ -230,10 +287,15 @@ namespace LightingChartSamples
             };
 
             Controls.Add(pnlChartHost);
+            Controls.Add(txtEventLog);
             Controls.Add(pnlTop);
 
             barChart = LightningBar.Create(pnlChartHost, CreateCategories(), CreateSeries(), CreateOptions());
-            barChart.SeriesClicked += BarChart_SeriesClicked;
+            barChart.BarClicked += BarChart_BarClicked;
+            barChart.LegendClicked += BarChart_LegendClicked;
+            barChart.ImageSaving += BarChart_ImageSaving;
+            barChart.ImageSaved += BarChart_ImageSaved;
+            Shown += delegate { SaveChartImage(); };
         }
 
         private static LightningBarOptions CreateOptions()
@@ -300,6 +362,11 @@ namespace LightingChartSamples
                     ButtonMode = LightningBarRawDataButtonMode.Hidden,
                     ButtonText = "RawData"
                 },
+                Tooltip = new LightningBarTooltipOptions
+                {
+                    Enabled = true,
+                    Format = "Value:{2:0.#} (* 클릭할 경우 해당 계측 데이터 차트로 가 보입니다.)"
+                },
                 NoData = new LightningBarNoDataOptions
                 {
                     Text = "가이드 샘플 데이터가 없습니다.",
@@ -308,6 +375,19 @@ namespace LightingChartSamples
                     IncludeTitle = false,
                     ShowWhenDataMissing = true,
                     ShowWhenAllValuesZero = true
+                },
+                Image = new LightningBarImageOptions
+                {
+                    Width = 600,
+                    Height = 400,
+                    DpiX = 150f,
+                    DpiY = 150f,
+                    FileFormat = LightningBarImageFileFormat.Png,
+                    SaveFolder = LightningBarImageSaveFolder.LocalApplicationData,
+                    SubDirectoryName = "LightningBarFeatureSample",
+                    UseDateFolder = true,
+                    UseGuidFileName = true,
+                    HideRawDataButtonOnImage = true
                 }
             };
         }
@@ -325,13 +405,75 @@ namespace LightingChartSamples
             };
         }
 
-        private void BarChart_SeriesClicked(object sender, LightningBarSeriesClickEventArgs e)
+        private LightningBarImageOptions CreateImageOptions()
         {
-            MessageBox.Show(this,
-                string.Format("Series: {0}\nCategory: {1}\nValue: {2:0.#}", e.Series.Name, e.CategoryName, e.Value),
-                "선택된 데이터",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            LightningBarImageSaveFolder saveFolder = cboSaveFolder.SelectedItem is LightningBarImageSaveFolder
+                ? (LightningBarImageSaveFolder)cboSaveFolder.SelectedItem
+                : LightningBarImageSaveFolder.LocalApplicationData;
+
+            return new LightningBarImageOptions
+            {
+                Preset = LightningBarImagePreset.Default,
+                Width = 600,
+                Height = 400,
+                DpiX = 150f,
+                DpiY = 150f,
+                FileFormat = LightningBarImageFileFormat.Png,
+                SaveFolder = saveFolder,
+                SubDirectoryName = "LightningBarFeatureSample",
+                UseDateFolder = true,
+                UseGuidFileName = true,
+                HideRawDataButtonOnImage = true
+            };
+        }
+
+        private void SaveChartImage()
+        {
+            try
+            {
+                string imagePath = barChart.SaveImage(CreateImageOptions());
+                lblSavedPath.Text = "저장 경로: " + imagePath;
+            }
+            catch (Exception ex)
+            {
+                AppendEventLog("이미지 저장 실패: " + ex.Message);
+                MessageBox.Show(this, ex.Message, "이미지 저장 실패", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BarChart_BarClicked(object sender, LightningBarSeriesClickEventArgs e)
+        {
+            AppendEventLog(string.Format("BarClicked: Series={0}, Category={1}, Value={2:0.#}", e.Series.Name, e.CategoryName, e.Value));
+        }
+
+        private void BarChart_LegendClicked(object sender, LightningBarLegendClickEventArgs e)
+        {
+            AppendEventLog(string.Format("LegendClicked: Series={0}, Label={1}", e.Series.Name, e.LegendLabel));
+        }
+
+        private void BarChart_ImageSaving(object sender, LightningBarImageSavingEventArgs e)
+        {
+            AppendEventLog("ImageSaving: " + (e.IsFileSave ? e.ImagePath : "memory"));
+        }
+
+        private void BarChart_ImageSaved(object sender, LightningBarImageSavedEventArgs e)
+        {
+            if (e.IsFileSave)
+            {
+                lblSavedPath.Text = "저장 경로: " + e.ImagePath;
+            }
+
+            AppendEventLog("ImageSaved: " + (e.IsFileSave ? e.ImagePath : "memory"));
+        }
+
+        private void AppendEventLog(string message)
+        {
+            if (txtEventLog.IsDisposed)
+            {
+                return;
+            }
+
+            txtEventLog.AppendText(string.Format("[{0:HH:mm:ss}] {1}{2}", DateTime.Now, message, Environment.NewLine));
         }
 
         private void btnChangeTitle_Click(object sender, EventArgs e)
