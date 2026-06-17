@@ -1762,9 +1762,8 @@ namespace LightingChartSamples
             }
 
             float minWidth = Math.Max(0f, layout.MinCategoryLabelReservedWidth);
-            float maxWidth = Math.Max(minWidth, layout.MaxCategoryLabelReservedWidth);
             float requiredWidth = measuredWidth + 18f;
-            return Math.Min(maxWidth, Math.Max(minWidth, requiredWidth));
+            return Math.Max(Math.Max(minWidth, configuredWidth), requiredWidth);
         }
 
         protected virtual float GetMaxValue(string[] currentCategories, LightningBarSeries[] currentSeries, LightningBarOptions currentOptions)
@@ -1957,7 +1956,7 @@ namespace LightingChartSamples
 
                 rightCenterFormat.Alignment = StringAlignment.Far;
                 rightCenterFormat.LineAlignment = StringAlignment.Center;
-                rightCenterFormat.Trimming = StringTrimming.EllipsisCharacter;
+                rightCenterFormat.Trimming = StringTrimming.None;
                 rightCenterFormat.FormatFlags |= StringFormatFlags.NoWrap;
 
                 for (int i = 0; i < currentCategories.Length; i++)
@@ -2016,7 +2015,6 @@ namespace LightingChartSamples
 
             float labelSpacing = Math.Max(0f, legendOptions.ItemSpacing);
             float sectionSpacing = Math.Max(0f, legendOptions.SectionSpacing);
-            float maxTextWidth = Math.Max(1f, legendOptions.LabelMaxWidth);
             float markerWidth = Math.Max(1f, legendOptions.MarkerWidth);
             RectangleF plotRect = GetPlotRectangle(graphics, renderSize, currentOptions, currentCategories);
 
@@ -2027,7 +2025,7 @@ namespace LightingChartSamples
                 foreach (LightningBarSeries barSeries in currentSeries)
                 {
                     SizeF textSize = MeasureLegendText(graphics, GetLegendLabel(barSeries), legendFont, currentOptions);
-                    float textWidth = Math.Min(maxTextWidth, textSize.Width);
+                    float textWidth = Math.Max(1f, textSize.Width);
                     totalLegendWidth += markerWidth + labelSpacing + textWidth + sectionSpacing;
                 }
 
@@ -2061,7 +2059,7 @@ namespace LightingChartSamples
 
                     string legendText = GetLegendLabel(barSeries);
                     SizeF textSize = MeasureLegendText(graphics, legendText, legendFont, currentOptions);
-                    float textWidth = Math.Min(maxTextWidth, textSize.Width);
+                    float textWidth = Math.Max(1f, textSize.Width);
                     DrawLegendItem(graphics, legendFont, textBrush, legendX, legendY, barSeries.FillColor, barSeries.BorderColor, legendText, currentOptions);
 
                     if (collectBarHits)
@@ -2095,17 +2093,17 @@ namespace LightingChartSamples
                 graphics.FillRectangle(fillBrush, markerRect);
                 graphics.DrawRectangle(borderPen, markerRect.X, markerRect.Y, markerRect.Width, markerRect.Height);
 
-                float maxTextWidth = Math.Max(1f, legendOptions.LabelMaxWidth);
                 int maxLines = Math.Max(1, legendOptions.LabelMaxLines);
                 float lineHeight = font.GetHeight(graphics);
-                RectangleF textRect = new RectangleF(x + markerWidth + legendOptions.ItemSpacing, y - 3f, maxTextWidth, (lineHeight * maxLines) + 8f);
+                string[] lines = GetLegendTextLines(text, maxLines);
+                float textWidth = Math.Max(1f, MeasureTextLinesWidth(graphics, lines, font));
+                RectangleF textRect = new RectangleF(x + markerWidth + legendOptions.ItemSpacing, y - 3f, textWidth + 4f, (lineHeight * lines.Length) + 8f);
 
                 format.Alignment = StringAlignment.Near;
                 format.LineAlignment = StringAlignment.Near;
-                format.Trimming = StringTrimming.EllipsisWord;
-                format.FormatFlags = StringFormatFlags.LineLimit;
+                format.Trimming = StringTrimming.None;
+                format.FormatFlags = 0;
 
-                string[] lines = GetLegendTextLines(text, maxLines);
                 for (int i = 0; i < lines.Length; i++)
                 {
                     RectangleF lineRect = new RectangleF(textRect.X, textRect.Y + (lineHeight * i), textRect.Width, lineHeight + 4f);
@@ -2129,51 +2127,34 @@ namespace LightingChartSamples
         protected virtual SizeF MeasureLegendText(Graphics graphics, string text, Font font, LightningBarOptions currentOptions)
         {
             LightningBarLegendOptions legendOptions = currentOptions.Legend ?? new LightningBarLegendOptions();
-            float maxTextWidth = Math.Max(1f, legendOptions.LabelMaxWidth);
             int maxLines = Math.Max(1, legendOptions.LabelMaxLines);
-            float maxTextHeight = (font.GetHeight(graphics) * maxLines) + 8f;
             string[] lines = GetLegendTextLines(text, maxLines);
-
-            if (lines.Length > 1)
-            {
-                float maxWidth = 0f;
-                foreach (string line in lines)
-                {
-                    SizeF lineSize = graphics.MeasureString(line ?? string.Empty, font);
-                    maxWidth = Math.Max(maxWidth, lineSize.Width);
-                }
-
-                return new SizeF(Math.Min(maxTextWidth, maxWidth), maxTextHeight);
-            }
-
-            using (var format = new StringFormat())
-            {
-                format.Alignment = StringAlignment.Near;
-                format.LineAlignment = StringAlignment.Near;
-                format.Trimming = StringTrimming.EllipsisWord;
-                format.FormatFlags = StringFormatFlags.LineLimit;
-                return graphics.MeasureString(text ?? string.Empty, font, new SizeF(maxTextWidth, maxTextHeight), format);
-            }
+            float textWidth = Math.Max(1f, MeasureTextLinesWidth(graphics, lines, font));
+            float textHeight = (font.GetHeight(graphics) * Math.Max(1, lines.Length)) + 8f;
+            return new SizeF(textWidth, textHeight);
         }
 
         protected virtual string[] GetLegendTextLines(string text, int maxLines)
         {
             string normalizedText = (text ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n');
-            string[] lines = normalizedText.Split(new[] { '\n' }, StringSplitOptions.None);
-            int effectiveMaxLines = Math.Max(1, maxLines);
+            return normalizedText.Split(new[] { '\n' }, StringSplitOptions.None);
+        }
 
-            if (lines.Length <= effectiveMaxLines)
+        protected virtual float MeasureTextLinesWidth(Graphics graphics, string[] lines, Font font)
+        {
+            if (graphics == null || font == null || lines == null || lines.Length == 0)
             {
-                return lines;
+                return 1f;
             }
 
-            string[] limitedLines = lines.Take(effectiveMaxLines).ToArray();
-            if (limitedLines.Length > 0 && !string.IsNullOrEmpty(limitedLines[limitedLines.Length - 1]))
+            float maxWidth = 1f;
+            foreach (string line in lines)
             {
-                limitedLines[limitedLines.Length - 1] = limitedLines[limitedLines.Length - 1] + "...";
+                SizeF lineSize = graphics.MeasureString(line ?? string.Empty, font);
+                maxWidth = Math.Max(maxWidth, lineSize.Width);
             }
 
-            return limitedLines;
+            return maxWidth;
         }
 
         protected virtual bool IsRawDataButtonVisible(LightningBarOptions currentOptions)

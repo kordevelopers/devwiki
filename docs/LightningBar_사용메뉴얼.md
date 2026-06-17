@@ -137,10 +137,10 @@ LightningBarOptions options = LightningBarOptions.CreateDefault600x400();
 | 이미지 크기 | `600 x 400` |
 | 차트 제목 | 빈 문자열. 제목을 그리지 않습니다. |
 | 범례 | 상단 중앙 |
-| Y축 라벨 | 최대 3줄 |
+| Y축 라벨 | 전달한 줄바꿈 기준으로 모두 표시 |
 | 막대 높이 | 수동, `30f` |
 | RawData 버튼 | 숨김 |
-| NoData 박스 | 차트 영역 중앙, 폭 80%, 줄바꿈 허용 |
+| NoData 박스 | 차트 영역 중앙, 텍스트 크기 기준 자동 폭 |
 | 기본 폰트 | 맑은 고딕 |
 
 ## 5. 차트 제목
@@ -206,10 +206,10 @@ options.Layout = new LightningBarLayoutOptions
 | `CategoryLabelReservedWidth` | Y축 카테고리 라벨 영역 폭입니다. |
 | `AutoCategoryLabelReservedWidth` | 라벨 길이에 따라 Y축 라벨 영역을 자동 계산합니다. |
 | `MinCategoryLabelReservedWidth` | 자동 계산 시 최소 폭입니다. |
-| `MaxCategoryLabelReservedWidth` | 자동 계산 시 최대 폭입니다. |
+| `MaxCategoryLabelReservedWidth` | 기존 호환용 폭 기준입니다. 실제 라벨이 더 길면 텍스트가 잘리지 않도록 필요한 폭을 우선 확보합니다. |
 | `BottomScaleAreaHeight` | X축 눈금 라벨 영역 높이입니다. |
 
-Y축 라벨이 잘리면 아래 값을 우선 조정합니다.
+Y축 라벨 영역은 `AutoCategoryLabelReservedWidth = true`일 때 실제 텍스트 폭을 측정해 자동 확장됩니다. 이미지 저장 시에도 3줄 라벨의 모든 글자가 보이도록 이 계산을 사용합니다.
 
 ```csharp
 options.Layout.AutoCategoryLabelReservedWidth = true;
@@ -265,9 +265,11 @@ options.Legend.Alignment = LightningBarLegendAlignment.Right;
 options.Legend.Visible = false;
 ```
 
+범례 텍스트는 `...`로 줄이지 않습니다. `Legend.LabelMaxWidth`, `Legend.LabelMaxLines`보다 실제 텍스트가 길거나 줄이 많으면 실제 텍스트를 모두 그리는 쪽을 우선합니다.
+
 ## 8. Y축 카테고리 라벨
 
-Y축 카테고리 라벨은 문자열에 엔터를 넣어 여러 줄로 표시합니다.
+Y축 카테고리 라벨은 문자열에 엔터를 넣어 여러 줄로 표시합니다. 전달한 줄은 `...`로 줄이지 않고 모두 표시합니다.
 
 ```csharp
 string[] categories =
