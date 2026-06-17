@@ -501,13 +501,17 @@ options.NoData = new LightningBarNoDataOptions
     BadgeBackColor = Color.FromArgb(255, 249, 196),
     BadgeBackOpacity = 128,
     BadgeBorderColor = Color.FromArgb(240, 206, 84),
-    BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Percent,
+    BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Auto,
     BadgeWidthRatio = 0.8f,
-    BadgeSingleLine = false
+    BadgeSingleLine = true,
+    BadgeHorizontalPadding = 10f,
+    BadgeVerticalPadding = 4f,
+    BadgeMinWidth = 0f,
+    BadgeMinHeight = 0f
 };
 ```
 
-현재 기본값은 노란색 박스를 차트 영역 중앙에 표시하고, 박스 폭은 차트 영역의 약 `80%`를 사용합니다. 긴 문구는 말줄임이 아니라 줄바꿈으로 표시됩니다.
+현재 기본값은 노란색 박스를 차트 영역 중앙에 표시하고, 텍스트 크기에 맞춰 박스 크기를 최소화합니다. `BadgeSingleLine = true`이면 제목과 메시지 사이의 줄바꿈도 공백으로 바꿔 한 줄로 표시합니다.
 
 차트를 그리지 않고 데이터 없음 메시지만 표시:
 
@@ -564,6 +568,14 @@ options.NoData.BadgeFixedWidth = 260f;
 ```csharp
 options.NoData.BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Percent;
 options.NoData.BadgeWidthRatio = 0.8f;
+```
+
+박스 여백을 직접 지정:
+
+```csharp
+options.NoData.BadgeHorizontalPadding = 8f;
+options.NoData.BadgeVerticalPadding = 3f;
+options.NoData.BadgeSingleLine = true;
 ```
 
 메시지를 코드에서 나중에 바꾸기:
@@ -931,9 +943,11 @@ LightningBarOptions options = new LightningBarOptions
         ShowWhenDataMissing = true,
         ShowWhenAllValuesZero = false,
         DisplayMode = LightningBarNoDataDisplayMode.HideChartAndMessage,
-        BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Percent,
+        BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Auto,
         BadgeWidthRatio = 0.8f,
-        BadgeSingleLine = false
+        BadgeSingleLine = true,
+        BadgeHorizontalPadding = 10f,
+        BadgeVerticalPadding = 4f
     },
     Image = new LightningBarImageOptions
     {

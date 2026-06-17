@@ -37,6 +37,13 @@ namespace LightingChartSamples.Scatter
         Temp
     }
 
+    public enum LightningScatterTextAlignment
+    {
+        Left,
+        Center,
+        Right
+    }
+
     public class LightningScatterPoint
     {
         public LightningScatterPoint()
@@ -255,10 +262,16 @@ namespace LightingChartSamples.Scatter
             ShowWhenAllValuesZero = false;
             FontSize = 11f;
             TextColor = Color.FromArgb(138, 118, 30);
+            TextAlignment = LightningScatterTextAlignment.Center;
             BadgeBackColor = Color.FromArgb(255, 249, 196);
             BadgeBorderColor = Color.FromArgb(240, 206, 84);
             BadgeWidthRatio = 0.8f;
-            BadgeHeight = 58f;
+            BadgeHeight = 0f;
+            BadgeSingleLine = true;
+            BadgeHorizontalPadding = 10f;
+            BadgeVerticalPadding = 4f;
+            BadgeMinWidth = 0f;
+            BadgeMinHeight = 0f;
         }
 
         public string Text { get; set; }
@@ -266,10 +279,16 @@ namespace LightingChartSamples.Scatter
         public bool ShowWhenAllValuesZero { get; set; }
         public float FontSize { get; set; }
         public Color TextColor { get; set; }
+        public LightningScatterTextAlignment TextAlignment { get; set; }
         public Color BadgeBackColor { get; set; }
         public Color BadgeBorderColor { get; set; }
         public float BadgeWidthRatio { get; set; }
         public float BadgeHeight { get; set; }
+        public bool BadgeSingleLine { get; set; }
+        public float BadgeHorizontalPadding { get; set; }
+        public float BadgeVerticalPadding { get; set; }
+        public float BadgeMinWidth { get; set; }
+        public float BadgeMinHeight { get; set; }
 
         public LightningScatterNoDataOptions Clone()
         {
@@ -494,6 +513,7 @@ namespace LightingChartSamples.Scatter
             };
             chart.MouseMove += Chart_MouseMove;
             chart.MouseLeave += delegate { HidePointToolTip(); };
+            chart.Resize += Chart_Resize;
 
             pointToolTip.InitialDelay = 150;
             pointToolTip.ReshowDelay = 100;
@@ -719,6 +739,7 @@ namespace LightingChartSamples.Scatter
                 pointToolTip.Dispose();
                 ClearSavedImage();
                 chart.MouseMove -= Chart_MouseMove;
+                chart.Resize -= Chart_Resize;
                 if (legendClickAttached && chart.ViewXY.LegendBoxes.Count > 0)
                 {
                     chart.ViewXY.LegendBoxes[0].SeriesTitleMouseClick -= LegendBox_SeriesTitleMouseClick;
@@ -1006,23 +1027,86 @@ namespace LightingChartSamples.Scatter
             bool showNoData = (!hasRenderableData && noDataOptions.ShowWhenDataMissing)
                 || (allValuesZero && noDataOptions.ShowWhenAllValuesZero);
 
-            noDataAnnotation.Visible = showNoData && !string.IsNullOrWhiteSpace(noDataOptions.Text);
-            noDataAnnotation.Text = noDataOptions.Text ?? string.Empty;
+            string displayText = GetNoDataDisplayText(noDataOptions.Text, noDataOptions);
+            noDataAnnotation.Visible = showNoData && !string.IsNullOrWhiteSpace(displayText);
+            noDataAnnotation.Text = displayText;
             noDataAnnotation.TextStyle.Font = CreateChartFont(noDataOptions.FontSize, FontStyle.Regular);
             noDataAnnotation.TextStyle.Color = noDataOptions.TextColor;
+            noDataAnnotation.TextStyle.HorizAlign = ConvertTextAlignment(noDataOptions.TextAlignment);
+            noDataAnnotation.TextStyle.MultiLineTextHorizontalAlign = ConvertTextAlignment(noDataOptions.TextAlignment);
+            noDataAnnotation.TextStyle.VerticalAlign = AlignmentVertical.Center;
             noDataAnnotation.Fill.Color = noDataOptions.BadgeBackColor;
             noDataAnnotation.Fill.Style = RectFillStyle.ColorOnly;
             noDataAnnotation.BorderLineStyle.Color = noDataOptions.BadgeBorderColor;
             noDataAnnotation.BorderVisible = true;
             noDataAnnotation.CornerRoundRadius = 8;
-            noDataAnnotation.SizeScreenCoords = new SizeFloatXY(
-                Math.Max(160f, Math.Min(520f, Math.Max(0.1f, Math.Min(1f, noDataOptions.BadgeWidthRatio)) * Math.Max(1, Width))),
-                Math.Max(40f, noDataOptions.BadgeHeight));
-            AxisX xAxis = GetXAxis();
-            AxisY yAxis = GetYAxis();
-            noDataAnnotation.LocationAxisValues = new PointDoubleXY(
-                xAxis.Minimum + ((xAxis.Maximum - xAxis.Minimum) / 2d),
-                yAxis.Minimum + ((yAxis.Maximum - yAxis.Minimum) / 2d));
+            UpdateNoDataAnnotationLayout(noDataOptions, displayText);
+        }
+
+        private void UpdateNoDataAnnotationLayout(LightningScatterNoDataOptions noDataOptions, string displayText)
+        {
+            if (noDataAnnotation == null)
+            {
+                return;
+            }
+
+            LightningScatterNoDataOptions effectiveOptions = noDataOptions ?? new LightningScatterNoDataOptions();
+            int chartWidth = Math.Max(1, chart.ClientSize.Width);
+            int chartHeight = Math.Max(1, chart.ClientSize.Height);
+            float safeRatio = Math.Max(0.1f, Math.Min(1f, effectiveOptions.BadgeWidthRatio));
+            float maxWidth = Math.Max(1f, Math.Min(chartWidth - 8f, chartWidth * safeRatio));
+            float maxHeight = Math.Max(1f, chartHeight - 8f);
+            float horizontalPadding = Math.Max(0f, effectiveOptions.BadgeHorizontalPadding);
+            float verticalPadding = Math.Max(0f, effectiveOptions.BadgeVerticalPadding);
+            Size textSize = MeasureNoDataText(displayText, effectiveOptions);
+            float minWidth = Math.Min(maxWidth, Math.Max(0f, effectiveOptions.BadgeMinWidth));
+            float minHeight = Math.Min(maxHeight, Math.Max(0f, effectiveOptions.BadgeMinHeight));
+            float badgeWidth = Math.Min(maxWidth, Math.Max(minWidth, textSize.Width + (horizontalPadding * 2f)));
+            float preferredHeight = effectiveOptions.BadgeHeight > 0f
+                ? effectiveOptions.BadgeHeight
+                : textSize.Height + (verticalPadding * 2f);
+            float badgeHeight = Math.Min(maxHeight, Math.Max(minHeight, preferredHeight));
+
+            noDataAnnotation.LocationCoordinateSystem = CoordinateSystem.ScreenCoordinates;
+            noDataAnnotation.TargetCoordinateSystem = AnnotationTargetCoordinates.ScreenCoordinates;
+            noDataAnnotation.Sizing = AnnotationXYSizing.ScreenCoordinates;
+            noDataAnnotation.SizeScreenCoords = new SizeFloatXY(badgeWidth, badgeHeight);
+            noDataAnnotation.LocationScreenCoords = new PointFloatXY(chartWidth / 2f, chartHeight / 2f);
+            noDataAnnotation.TargetScreenCoords = new PointFloatXY(chartWidth / 2f, chartHeight / 2f);
+        }
+
+        private string GetNoDataDisplayText(string text, LightningScatterNoDataOptions noDataOptions)
+        {
+            string displayText = text ?? string.Empty;
+            LightningScatterNoDataOptions effectiveOptions = noDataOptions ?? new LightningScatterNoDataOptions();
+            if (!effectiveOptions.BadgeSingleLine)
+            {
+                return displayText;
+            }
+
+            return displayText
+                .Replace("\r\n", " ")
+                .Replace('\r', ' ')
+                .Replace('\n', ' ')
+                .Trim();
+        }
+
+        private Size MeasureNoDataText(string displayText, LightningScatterNoDataOptions noDataOptions)
+        {
+            LightningScatterNoDataOptions effectiveOptions = noDataOptions ?? new LightningScatterNoDataOptions();
+            using (Font measureFont = CreateChartFont(effectiveOptions.FontSize, FontStyle.Regular))
+            {
+                TextFormatFlags flags = TextFormatFlags.NoPadding;
+                if (effectiveOptions.BadgeSingleLine)
+                {
+                    flags |= TextFormatFlags.SingleLine;
+                }
+
+                Size proposedSize = effectiveOptions.BadgeSingleLine
+                    ? new Size(32767, 32767)
+                    : new Size(Math.Max(1, chart.ClientSize.Width), 32767);
+                return TextRenderer.MeasureText(displayText ?? string.Empty, measureFont, proposedSize, flags);
+            }
         }
 
         private bool HasRenderableData(IEnumerable<LightningScatterSeries> currentSeries)
@@ -1092,9 +1176,9 @@ namespace LightingChartSamples.Scatter
             noDataAnnotation = new AnnotationXY(view, GetXAxis(), GetYAxis());
             noDataAnnotation.Visible = false;
             noDataAnnotation.Style = AnnotationStyle.RoundedRectangle;
-            noDataAnnotation.LocationCoordinateSystem = CoordinateSystem.AxisValues;
+            noDataAnnotation.LocationCoordinateSystem = CoordinateSystem.ScreenCoordinates;
             noDataAnnotation.Sizing = AnnotationXYSizing.ScreenCoordinates;
-            noDataAnnotation.TargetCoordinateSystem = AnnotationTargetCoordinates.AxisValues;
+            noDataAnnotation.TargetCoordinateSystem = AnnotationTargetCoordinates.ScreenCoordinates;
             noDataAnnotation.TextStyle.HorizAlign = AlignmentHorizontal.Center;
             noDataAnnotation.TextStyle.MultiLineTextHorizontalAlign = AlignmentHorizontal.Center;
             noDataAnnotation.TextStyle.VerticalAlign = AlignmentVertical.Center;
@@ -1379,6 +1463,40 @@ namespace LightingChartSamples.Scatter
             if (!IsDisposed)
             {
                 pointToolTip.Hide(chart);
+            }
+        }
+
+        private void Chart_Resize(object sender, EventArgs e)
+        {
+            if (IsDisposed || noDataAnnotation == null || !noDataAnnotation.Visible)
+            {
+                return;
+            }
+
+            LightningScatterOptions currentOptions = Options;
+            chart.BeginUpdate();
+            try
+            {
+                LightningScatterNoDataOptions noDataOptions = currentOptions.NoData ?? new LightningScatterNoDataOptions();
+                UpdateNoDataAnnotationLayout(noDataOptions, GetNoDataDisplayText(noDataOptions.Text, noDataOptions));
+            }
+            finally
+            {
+                chart.EndUpdate();
+            }
+        }
+
+        private AlignmentHorizontal ConvertTextAlignment(LightningScatterTextAlignment textAlignment)
+        {
+            switch (textAlignment)
+            {
+                case LightningScatterTextAlignment.Left:
+                    return AlignmentHorizontal.Left;
+                case LightningScatterTextAlignment.Right:
+                    return AlignmentHorizontal.Right;
+                case LightningScatterTextAlignment.Center:
+                default:
+                    return AlignmentHorizontal.Center;
             }
         }
 

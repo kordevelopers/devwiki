@@ -198,15 +198,29 @@ options.NoData = new LightningScatterNoDataOptions
     ShowWhenAllValuesZero = true,
     FontSize = 10f,
     TextColor = Color.Gray,
+    TextAlignment = LightningScatterTextAlignment.Center,
     BadgeBackColor = Color.FromArgb(255, 249, 196),
     BadgeBorderColor = Color.FromArgb(240, 206, 84),
     BadgeWidthRatio = 0.8f,
-    BadgeHeight = 52f
+    BadgeHeight = 0f,
+    BadgeSingleLine = true,
+    BadgeHorizontalPadding = 10f,
+    BadgeVerticalPadding = 4f
 };
 ```
 
 `Clear()`는 조회 전 상태를 의미하므로 데이터 없음 문구도 숨깁니다.
 데이터 조회 결과가 비어 있는 상태를 표시하려면 `SetData()` 또는 `UpdateData()`에 빈 시리즈/빈 포인트를 전달합니다.
+
+NoData 박스는 차트 화면 좌표 기준 중앙에 배치되며, 차트 크기가 변경될 때도 중앙 위치를 다시 계산합니다.
+기본값은 텍스트 크기에 맞춰 박스 크기를 최소화하고, 줄바꿈을 공백으로 바꿔 한 줄로 표시합니다.
+텍스트 정렬은 옵션으로 선택할 수 있습니다.
+
+```csharp
+options.NoData.TextAlignment = LightningScatterTextAlignment.Left;
+options.NoData.TextAlignment = LightningScatterTextAlignment.Center;
+options.NoData.TextAlignment = LightningScatterTextAlignment.Right;
+```
 
 ## 7. 클릭 이벤트
 

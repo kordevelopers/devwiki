@@ -401,10 +401,14 @@ namespace LightingChartSamples
             BadgeBackColor = Color.FromArgb(255, 249, 196);
             BadgeBackOpacity = 128;
             BadgeBorderColor = Color.FromArgb(240, 206, 84);
-            BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Percent;
+            BadgeWidthMode = LightningBarNoDataBadgeWidthMode.Auto;
             BadgeFixedWidth = 200f;
             BadgeWidthRatio = 0.8f;
-            BadgeSingleLine = false;
+            BadgeSingleLine = true;
+            BadgeHorizontalPadding = 10f;
+            BadgeVerticalPadding = 4f;
+            BadgeMinWidth = 0f;
+            BadgeMinHeight = 0f;
         }
 
         public string Text { get; set; }
@@ -422,6 +426,10 @@ namespace LightingChartSamples
         public float BadgeFixedWidth { get; set; }
         public float BadgeWidthRatio { get; set; }
         public bool BadgeSingleLine { get; set; }
+        public float BadgeHorizontalPadding { get; set; }
+        public float BadgeVerticalPadding { get; set; }
+        public float BadgeMinWidth { get; set; }
+        public float BadgeMinHeight { get; set; }
 
         public bool ShowMessage
         {
@@ -1585,10 +1593,10 @@ namespace LightingChartSamples
                     format.FormatFlags |= StringFormatFlags.NoWrap;
                 }
 
-                float minBadgeWidth = Math.Max(120f, messageRect.Width * 0.28f);
-                float maxBadgeWidth = Math.Max(minBadgeWidth, messageRect.Width * 0.82f);
-                float horizontalPadding = Math.Max(24f, messageRect.Width * 0.04f);
-                float verticalPadding = Math.Max(14f, messageRect.Height * 0.045f);
+                float maxBadgeWidth = Math.Max(1f, messageRect.Width * 0.98f);
+                float minBadgeWidth = Math.Min(maxBadgeWidth, Math.Max(0f, noDataOptions.BadgeMinWidth));
+                float horizontalPadding = Math.Max(0f, noDataOptions.BadgeHorizontalPadding);
+                float verticalPadding = Math.Max(0f, noDataOptions.BadgeVerticalPadding);
                 float fixedBadgeWidth = Math.Max(0f, noDataOptions.BadgeFixedWidth);
                 bool useFixedBadgeWidth = noDataOptions.BadgeWidthMode == LightningBarNoDataBadgeWidthMode.Fixed && fixedBadgeWidth > 0f;
                 bool usePercentBadgeWidth = noDataOptions.BadgeWidthMode == LightningBarNoDataBadgeWidthMode.Percent;
@@ -1611,7 +1619,9 @@ namespace LightingChartSamples
                     maxTextMeasureWidth = Math.Max(1f, maxBadgeWidth - (horizontalPadding * 2f));
                 }
 
-                SizeF textSize = graphics.MeasureString(messageText, messageFont, new SizeF(maxTextMeasureWidth, messageRect.Height), format);
+                SizeF textSize = noDataOptions.BadgeSingleLine
+                    ? graphics.MeasureString(messageText, messageFont)
+                    : graphics.MeasureString(messageText, messageFont, new SizeF(maxTextMeasureWidth, messageRect.Height), format);
 
                 if (badgeWidth <= 0f)
                 {
@@ -1619,8 +1629,8 @@ namespace LightingChartSamples
                     badgeWidth = Math.Min(maxBadgeWidth, badgeWidth);
                 }
 
-                float minBadgeHeight = Math.Max(44f, messageRect.Height * 0.14f);
-                float maxBadgeHeight = Math.Max(minBadgeHeight, messageRect.Height * 0.62f);
+                float minBadgeHeight = Math.Max(0f, noDataOptions.BadgeMinHeight);
+                float maxBadgeHeight = Math.Max(1f, messageRect.Height * 0.98f);
                 float badgeHeight = Math.Max(minBadgeHeight, textSize.Height + (verticalPadding * 2f));
                 badgeHeight = Math.Min(maxBadgeHeight, badgeHeight);
 
@@ -2334,6 +2344,10 @@ namespace LightingChartSamples
             {
                 renderOptions.NoData.FontSize = ScaleValue(renderOptions.NoData.FontSize, scale, 1f);
                 renderOptions.NoData.BadgeFixedWidth = ScaleValue(renderOptions.NoData.BadgeFixedWidth, scale, 1f);
+                renderOptions.NoData.BadgeHorizontalPadding = ScaleValue(renderOptions.NoData.BadgeHorizontalPadding, scale, 0f);
+                renderOptions.NoData.BadgeVerticalPadding = ScaleValue(renderOptions.NoData.BadgeVerticalPadding, scale, 0f);
+                renderOptions.NoData.BadgeMinWidth = ScaleValue(renderOptions.NoData.BadgeMinWidth, scale, 0f);
+                renderOptions.NoData.BadgeMinHeight = ScaleValue(renderOptions.NoData.BadgeMinHeight, scale, 0f);
             }
 
             if (renderOptions.Layout != null)
