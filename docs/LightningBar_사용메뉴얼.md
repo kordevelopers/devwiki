@@ -140,7 +140,7 @@ LightningBarOptions options = LightningBarOptions.CreateDefault600x400();
 | Y축 라벨 | 전달한 줄바꿈 기준으로 모두 표시 |
 | 막대 높이 | 수동, `30f` |
 | RawData 버튼 | 숨김 |
-| NoData 박스 | 차트 영역 중앙, 텍스트 크기 기준 자동 폭 |
+| NoData 박스 | 차트 컨트롤 전체 영역 중앙, 텍스트 크기 기준 자동 폭 |
 | 기본 폰트 | 맑은 고딕 |
 
 ## 5. 차트 제목
@@ -217,7 +217,44 @@ options.Layout.MaxCategoryLabelReservedWidth = 180f;
 options.Layout.CategoryLabelReservedWidth = 140f;
 ```
 
-## 7. 범례
+## 7. 차트 영역 외곽선 표시
+
+`ChartAreaOutline`은 차트가 실제로 차지하는 영역을 확인하기 위한 디버그성 표시 옵션입니다. 기본값은 `None`이라 기존 화면에는 외곽선이나 배경색이 표시되지 않습니다.
+
+```csharp
+options.ChartAreaOutline = new LightningBarChartAreaOutlineOptions
+{
+    Mode = LightningBarChartAreaOutlineMode.None,
+    BorderWidth = 1f,
+    BorderColor = Color.FromArgb(90, 120, 170),
+    BackColor = Color.Transparent,
+    BackOpacity = 0
+};
+```
+
+플롯 영역만 확인:
+
+```csharp
+options.ChartAreaOutline.Mode = LightningBarChartAreaOutlineMode.PlotArea;
+options.ChartAreaOutline.BorderWidth = 2f;
+options.ChartAreaOutline.BorderColor = Color.Red;
+options.ChartAreaOutline.BackColor = Color.Yellow;
+options.ChartAreaOutline.BackOpacity = 32;
+```
+
+차트 컨트롤 전체 영역 확인:
+
+```csharp
+options.ChartAreaOutline.Mode = LightningBarChartAreaOutlineMode.ControlBounds;
+```
+
+| 값 | 설명 |
+| --- | --- |
+| `None` | 외곽선과 배경을 표시하지 않습니다. 기본값입니다. |
+| `PlotArea` | 막대와 축이 그려지는 플롯 영역 기준으로 표시합니다. |
+| `ControlBounds` | `LightningBar` 컨트롤 전체 크기 기준으로 표시합니다. |
+
+## 8. 범례
 
 범례는 상단/하단 위치와 좌측/중앙/우측 정렬을 지원합니다.
 
@@ -267,7 +304,7 @@ options.Legend.Visible = false;
 
 범례 텍스트는 `...`로 줄이지 않습니다. `Legend.LabelMaxWidth`, `Legend.LabelMaxLines`보다 실제 텍스트가 길거나 줄이 많으면 실제 텍스트를 모두 그리는 쪽을 우선합니다.
 
-## 8. Y축 카테고리 라벨
+## 9. Y축 카테고리 라벨
 
 Y축 카테고리 라벨은 문자열에 엔터를 넣어 여러 줄로 표시합니다. 전달한 줄은 `...`로 줄이지 않고 모두 표시합니다.
 
@@ -292,7 +329,7 @@ options.Layout.MinCategoryLabelReservedWidth = 110f;
 options.Layout.MaxCategoryLabelReservedWidth = 180f;
 ```
 
-## 9. X축 눈금과 값 범위
+## 10. X축 눈금과 값 범위
 
 기본 최대값은 `100`입니다.
 
@@ -317,7 +354,7 @@ options.Scale.AxisColor = Color.FromArgb(170, 170, 170);
 options.Scale.GridColor = Color.FromArgb(225, 225, 225);
 ```
 
-## 10. 막대 높이와 간격
+## 11. 막대 높이와 간격
 
 막대 높이는 자동/수동 모드를 지원합니다.
 
@@ -357,7 +394,7 @@ options.Bars.HeightMode = LightningBarHeightMode.Manual;
 options.Bars.FixedHeight = 30f;
 ```
 
-## 11. 시리즈 라벨
+## 12. 시리즈 라벨
 
 막대 끝에 값 라벨을 표시할지 결정합니다.
 
@@ -376,7 +413,7 @@ options.SeriesLabels.MaxLines = 3;
 
 막대 끝 글씨를 보이지 않게 하려면 `Enabled = false`로 둡니다.
 
-## 12. Tooltip
+## 13. Tooltip
 
 막대 위에 마우스를 올리면 Tooltip을 표시할 수 있습니다.
 
@@ -401,7 +438,7 @@ options.Tooltip.Format = "Value:{2:0.#} (* 클릭할 경우 해당 계측 데이
 options.Tooltip.Format = "{1}\r\n{0}\r\nValue:{2:0.##}";
 ```
 
-## 13. 클릭/저장 이벤트
+## 14. 클릭/저장 이벤트
 
 막대를 클릭하면 `BarClicked` 이벤트가 발생합니다. 기존 호환성을 위해 `SeriesClicked`도 동일하게 발생합니다.
 
@@ -453,7 +490,7 @@ chart.ImageSaved += (sender, e) =>
 };
 ```
 
-## 14. RawData 버튼
+## 15. RawData 버튼
 
 RawData 버튼은 기본값이 숨김입니다.
 
@@ -478,7 +515,7 @@ options.RawData.MarginRight = 10f;
 imageOptions.HideRawDataButtonOnImage = true;
 ```
 
-## 15. 데이터 없음 표시
+## 16. 데이터 없음 표시
 
 데이터 없음 상태는 두 가지로 나눠서 처리할 수 있습니다.
 
@@ -513,7 +550,7 @@ options.NoData = new LightningBarNoDataOptions
 };
 ```
 
-현재 기본값은 노란색 박스를 차트 영역 중앙에 표시하고, 텍스트 크기에 맞춰 박스 크기를 최소화합니다. `BadgeSingleLine = true`이면 제목과 메시지 사이의 줄바꿈도 공백으로 바꿔 한 줄로 표시합니다.
+현재 기본값은 노란색 박스를 차트 컨트롤 전체 영역 중앙에 표시하고, 텍스트 크기에 맞춰 박스 크기를 최소화합니다. `BadgeSingleLine = true`이면 제목과 메시지 사이의 줄바꿈도 공백으로 바꿔 한 줄로 표시합니다.
 
 차트를 그리지 않고 데이터 없음 메시지만 표시:
 
@@ -603,7 +640,7 @@ chartA.SetNoDataText("A 설비 데이터가 없습니다.");
 chartB.SetNoDataText("B 설비 데이터가 없습니다.");
 ```
 
-## 16. 이미지 저장 옵션
+## 17. 이미지 저장 옵션
 
 이미지 옵션 기본값:
 
@@ -692,7 +729,7 @@ imageOptions.DpiX = 150f;
 imageOptions.DpiY = 150f;
 ```
 
-## 17. 이미지 저장과 이미지 객체 사용
+## 18. 이미지 저장과 이미지 객체 사용
 
 파일로 저장:
 
@@ -812,7 +849,7 @@ string path = LightningBar.SaveImage(
     imageOptions: imageOptions);
 ```
 
-## 18. 엑셀 출력용 권장 패턴
+## 19. 엑셀 출력용 권장 패턴
 
 화면에서는 600x400으로 표시하고, 엑셀에는 더 큰 이미지로 저장하는 예시입니다.
 
@@ -842,7 +879,7 @@ using (Image image = chart.GetLastSavedImage())
 }
 ```
 
-## 19. 기존 호환 속성
+## 20. 기존 호환 속성
 
 기존 코드와의 호환을 위해 `LightningBarOptions`에는 단축 속성이 남아 있습니다.
 
@@ -872,7 +909,7 @@ using (Image image = chart.GetLastSavedImage())
 
 신규 화면에서는 그룹 옵션을 사용하는 것을 권장합니다.
 
-## 20. 전체 옵션 예제
+## 21. 전체 옵션 예제
 
 ```csharp
 LightningBarOptions options = new LightningBarOptions
@@ -896,6 +933,14 @@ LightningBarOptions options = new LightningBarOptions
         MinCategoryLabelReservedWidth = 78f,
         MaxCategoryLabelReservedWidth = 150f,
         BottomScaleAreaHeight = 30f
+    },
+    ChartAreaOutline = new LightningBarChartAreaOutlineOptions
+    {
+        Mode = LightningBarChartAreaOutlineMode.None,
+        BorderWidth = 1f,
+        BorderColor = Color.FromArgb(90, 120, 170),
+        BackColor = Color.Transparent,
+        BackOpacity = 0
     },
     Legend = new LightningBarLegendOptions
     {

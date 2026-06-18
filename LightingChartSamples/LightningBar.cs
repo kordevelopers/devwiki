@@ -89,6 +89,13 @@ namespace LightingChartSamples
         Percent
     }
 
+    public enum LightningBarChartAreaOutlineMode
+    {
+        None,
+        PlotArea,
+        ControlBounds
+    }
+
     public class LightningBarImageOptions
     {
         public const int DefaultWidth = 600;
@@ -227,6 +234,29 @@ namespace LightingChartSamples
         public LightningBarLayoutOptions Clone()
         {
             return (LightningBarLayoutOptions)MemberwiseClone();
+        }
+    }
+
+    public class LightningBarChartAreaOutlineOptions
+    {
+        public LightningBarChartAreaOutlineOptions()
+        {
+            Mode = LightningBarChartAreaOutlineMode.None;
+            BorderWidth = 1f;
+            BorderColor = Color.FromArgb(90, 120, 170);
+            BackColor = Color.Transparent;
+            BackOpacity = 0;
+        }
+
+        public LightningBarChartAreaOutlineMode Mode { get; set; }
+        public float BorderWidth { get; set; }
+        public Color BorderColor { get; set; }
+        public Color BackColor { get; set; }
+        public int BackOpacity { get; set; }
+
+        public LightningBarChartAreaOutlineOptions Clone()
+        {
+            return (LightningBarChartAreaOutlineOptions)MemberwiseClone();
         }
     }
 
@@ -568,6 +598,7 @@ namespace LightingChartSamples
         {
             TitleOptions = new LightningBarTitleOptions();
             Layout = new LightningBarLayoutOptions();
+            ChartAreaOutline = new LightningBarChartAreaOutlineOptions();
             Legend = new LightningBarLegendOptions();
             CategoryLabels = new LightningBarCategoryLabelOptions();
             Scale = new LightningBarScaleOptions();
@@ -587,6 +618,7 @@ namespace LightingChartSamples
 
         public LightningBarTitleOptions TitleOptions { get; set; }
         public LightningBarLayoutOptions Layout { get; set; }
+        public LightningBarChartAreaOutlineOptions ChartAreaOutline { get; set; }
         public LightningBarLegendOptions Legend { get; set; }
         public LightningBarCategoryLabelOptions CategoryLabels { get; set; }
         public LightningBarScaleOptions Scale { get; set; }
@@ -661,6 +693,7 @@ namespace LightingChartSamples
             LightningBarOptions clone = (LightningBarOptions)MemberwiseClone();
             clone.TitleOptions = TitleOptions == null ? new LightningBarTitleOptions() : TitleOptions.Clone();
             clone.Layout = Layout == null ? new LightningBarLayoutOptions() : Layout.Clone();
+            clone.ChartAreaOutline = ChartAreaOutline == null ? new LightningBarChartAreaOutlineOptions() : ChartAreaOutline.Clone();
             clone.Legend = Legend == null ? new LightningBarLegendOptions() : Legend.Clone();
             clone.CategoryLabels = CategoryLabels == null ? new LightningBarCategoryLabelOptions() : CategoryLabels.Clone();
             clone.Scale = Scale == null ? new LightningBarScaleOptions() : Scale.Clone();
@@ -692,6 +725,11 @@ namespace LightingChartSamples
             if (Layout == null)
             {
                 Layout = new LightningBarLayoutOptions();
+            }
+
+            if (ChartAreaOutline == null)
+            {
+                ChartAreaOutline = new LightningBarChartAreaOutlineOptions();
             }
 
             if (Legend == null)
@@ -1367,6 +1405,7 @@ namespace LightingChartSamples
             bool enableInteraction)
         {
             graphics.Clear(currentOptions.BackgroundColor);
+            DrawChartAreaOutlineBackground(graphics, currentOptions, renderSize, currentCategories);
 
             if (!currentHasBoundData)
             {
@@ -1376,6 +1415,7 @@ namespace LightingChartSamples
                     rawDataButtonBounds = RectangleF.Empty;
                 }
 
+                DrawChartAreaOutlineBorder(graphics, currentOptions, renderSize, currentCategories);
                 return;
             }
 
@@ -1415,6 +1455,7 @@ namespace LightingChartSamples
             }
 
             bool showNoDataMessage = isNoDataState;
+            DrawChartAreaOutlineBorder(graphics, currentOptions, renderSize, currentCategories);
 
             if (showNoDataMessage)
             {
@@ -1545,6 +1586,85 @@ namespace LightingChartSamples
             return currentSeries.Any(item => item != null && item.Values != null && item.Values.Length > 0);
         }
 
+        protected virtual void DrawChartAreaOutlineBackground(Graphics graphics, LightningBarOptions currentOptions, Size renderSize, string[] currentCategories)
+        {
+            LightningBarChartAreaOutlineOptions outlineOptions = currentOptions.ChartAreaOutline ?? new LightningBarChartAreaOutlineOptions();
+            if (outlineOptions.Mode == LightningBarChartAreaOutlineMode.None)
+            {
+                return;
+            }
+
+            int opacity = Math.Max(0, Math.Min(255, outlineOptions.BackOpacity));
+            if (opacity <= 0)
+            {
+                return;
+            }
+
+            RectangleF outlineRect = GetChartAreaOutlineRectangle(graphics, currentOptions, renderSize, currentCategories);
+            if (outlineRect.Width <= 0f || outlineRect.Height <= 0f)
+            {
+                return;
+            }
+
+            using (var backBrush = new SolidBrush(Color.FromArgb(opacity, outlineOptions.BackColor)))
+            {
+                graphics.FillRectangle(backBrush, outlineRect);
+            }
+        }
+
+        protected virtual void DrawChartAreaOutlineBorder(Graphics graphics, LightningBarOptions currentOptions, Size renderSize, string[] currentCategories)
+        {
+            LightningBarChartAreaOutlineOptions outlineOptions = currentOptions.ChartAreaOutline ?? new LightningBarChartAreaOutlineOptions();
+            if (outlineOptions.Mode == LightningBarChartAreaOutlineMode.None)
+            {
+                return;
+            }
+
+            float borderWidth = Math.Max(0f, outlineOptions.BorderWidth);
+            if (borderWidth <= 0f)
+            {
+                return;
+            }
+
+            RectangleF outlineRect = GetChartAreaOutlineRectangle(graphics, currentOptions, renderSize, currentCategories);
+            if (outlineRect.Width <= 0f || outlineRect.Height <= 0f)
+            {
+                return;
+            }
+
+            float halfWidth = borderWidth / 2f;
+            RectangleF borderRect = RectangleF.Inflate(outlineRect, -halfWidth, -halfWidth);
+            if (borderRect.Width <= 0f || borderRect.Height <= 0f)
+            {
+                return;
+            }
+
+            using (var borderPen = new Pen(outlineOptions.BorderColor, borderWidth))
+            {
+                graphics.DrawRectangle(borderPen, borderRect.X, borderRect.Y, borderRect.Width, borderRect.Height);
+            }
+        }
+
+        protected virtual RectangleF GetChartAreaOutlineRectangle(Graphics graphics, LightningBarOptions currentOptions, Size renderSize, string[] currentCategories)
+        {
+            if (renderSize.Width <= 0 || renderSize.Height <= 0)
+            {
+                return RectangleF.Empty;
+            }
+
+            LightningBarChartAreaOutlineOptions outlineOptions = currentOptions.ChartAreaOutline ?? new LightningBarChartAreaOutlineOptions();
+            switch (outlineOptions.Mode)
+            {
+                case LightningBarChartAreaOutlineMode.PlotArea:
+                    return GetPlotRectangle(graphics, renderSize, currentOptions, currentCategories);
+                case LightningBarChartAreaOutlineMode.ControlBounds:
+                    return new RectangleF(0f, 0f, renderSize.Width, renderSize.Height);
+                case LightningBarChartAreaOutlineMode.None:
+                default:
+                    return RectangleF.Empty;
+            }
+        }
+
         protected virtual void DrawNoDataMessage(Graphics graphics, LightningBarOptions currentOptions, Size renderSize)
         {
             LightningBarNoDataOptions noDataOptions = currentOptions.NoData ?? new LightningBarNoDataOptions();
@@ -1553,10 +1673,10 @@ namespace LightingChartSamples
                 return;
             }
 
-            RectangleF messageRect = GetPlotRectangle(renderSize, currentOptions);
+            RectangleF messageRect = new RectangleF(0f, 0f, renderSize.Width, renderSize.Height);
             if (messageRect.Width <= 1f || messageRect.Height <= 1f)
             {
-                messageRect = new RectangleF(0f, 0f, renderSize.Width, renderSize.Height);
+                return;
             }
 
             string fontName = string.IsNullOrWhiteSpace(noDataOptions.FontName) ? "맑은 고딕" : noDataOptions.FontName;
