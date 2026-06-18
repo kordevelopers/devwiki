@@ -518,6 +518,41 @@ namespace LightingChartSamples
         public float Value { get; set; }
         public object UserData { get; set; }
 
+        public static LightningBarDataPoint[] FromValues(IEnumerable<float> values)
+        {
+            return FromValues<object>(values, null);
+        }
+
+        public static LightningBarDataPoint[] FromValues<TUserData>(IEnumerable<float> values, IEnumerable<TUserData> userDataItems)
+        {
+            float[] valueArray = values == null ? new float[0] : values.ToArray();
+            TUserData[] userDataArray = userDataItems == null ? new TUserData[0] : userDataItems.ToArray();
+            LightningBarDataPoint[] dataPoints = new LightningBarDataPoint[valueArray.Length];
+
+            for (int i = 0; i < valueArray.Length; i++)
+            {
+                object userData = i < userDataArray.Length ? (object)userDataArray[i] : null;
+                dataPoints[i] = new LightningBarDataPoint(valueArray[i], userData);
+            }
+
+            return dataPoints;
+        }
+
+        public static LightningBarDataPoint[] FromValues(IEnumerable<float> values, Func<int, float, object> userDataFactory)
+        {
+            float[] valueArray = values == null ? new float[0] : values.ToArray();
+            LightningBarDataPoint[] dataPoints = new LightningBarDataPoint[valueArray.Length];
+
+            for (int i = 0; i < valueArray.Length; i++)
+            {
+                float value = valueArray[i];
+                object userData = userDataFactory == null ? null : userDataFactory(i, value);
+                dataPoints[i] = new LightningBarDataPoint(value, userData);
+            }
+
+            return dataPoints;
+        }
+
         public LightningBarDataPoint Clone()
         {
             return (LightningBarDataPoint)MemberwiseClone();

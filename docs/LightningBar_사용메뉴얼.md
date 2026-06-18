@@ -91,6 +91,62 @@ new LightningBarSeries
 };
 ```
 
+이미 `float[]` 값 배열이 있고 같은 순서의 검색조건 배열이 있으면 헬퍼를 사용합니다.
+
+```csharp
+float[] values = rows
+    .Select(row => Convert.ToSingle(row["VALUE"]))
+    .ToArray();
+
+new LightningBarSeries
+{
+    Name = "설비 A",
+    LegendLabel = "설비 A 표시명",
+    DataPoints = LightningBarDataPoint.FromValues(values, rows),
+    FillColor = Color.SteelBlue,
+    BorderColor = Color.Navy
+};
+```
+
+`DataTable.Select()` 결과를 그대로 검색조건으로 보관할 수도 있습니다.
+
+```csharp
+DataRow[] rows = table.Select("EQUIPMENT_ID = 'EQ-A'");
+float[] values = rows
+    .Select(row => Convert.ToSingle(row["VALUE"]))
+    .ToArray();
+
+LightningBarSeries series = new LightningBarSeries
+{
+    Name = "설비 A",
+    DataPoints = LightningBarDataPoint.FromValues(values, rows)
+};
+
+chart.BarClicked += (sender, e) =>
+{
+    DataRow row = e.UserData as DataRow;
+    if (row == null)
+    {
+        return;
+    }
+
+    string equipmentId = Convert.ToString(row["EQUIPMENT_ID"]);
+    string metricCode = Convert.ToString(row["METRIC_CODE"]);
+    string lotId = Convert.ToString(row["LOT_ID"]);
+};
+```
+
+별도 검색조건 객체로 바꾸고 싶으면 인덱스 기반 팩토리를 사용합니다.
+
+```csharp
+DataPoints = LightningBarDataPoint.FromValues(values, (index, value) => new SearchCondition
+{
+    EquipmentId = Convert.ToString(rows[index]["EQUIPMENT_ID"]),
+    MetricCode = Convert.ToString(rows[index]["METRIC_CODE"]),
+    LotId = Convert.ToString(rows[index]["LOT_ID"])
+});
+```
+
 주요 속성:
 
 | 속성 | 설명 |
