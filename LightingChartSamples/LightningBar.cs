@@ -523,6 +523,11 @@ namespace LightingChartSamples
             return FromValues<object>(values, null);
         }
 
+        public static LightningBarDataPoint[] FromValues(System.Collections.IEnumerable values)
+        {
+            return FromValues(values, null as System.Collections.IEnumerable);
+        }
+
         public static LightningBarDataPoint[] FromValues<TUserData>(IEnumerable<float> values, IEnumerable<TUserData> userDataItems)
         {
             float[] valueArray = values == null ? new float[0] : values.ToArray();
@@ -538,9 +543,39 @@ namespace LightingChartSamples
             return dataPoints;
         }
 
+        public static LightningBarDataPoint[] FromValues(System.Collections.IEnumerable values, System.Collections.IEnumerable userDataItems)
+        {
+            object[] valueArray = values == null ? new object[0] : values.Cast<object>().ToArray();
+            object[] userDataArray = userDataItems == null ? new object[0] : userDataItems.Cast<object>().ToArray();
+            LightningBarDataPoint[] dataPoints = new LightningBarDataPoint[valueArray.Length];
+
+            for (int i = 0; i < valueArray.Length; i++)
+            {
+                object userData = i < userDataArray.Length ? userDataArray[i] : null;
+                dataPoints[i] = new LightningBarDataPoint(ConvertToSingleValue(valueArray[i]), userData);
+            }
+
+            return dataPoints;
+        }
+
         public static LightningBarDataPoint[] FromValues(IEnumerable<float> values, System.Collections.IEnumerable userDataItems)
         {
             return FromValues(values, userDataItems == null ? null : userDataItems.Cast<object>());
+        }
+
+        public static LightningBarDataPoint[] FromValues(System.Collections.IEnumerable values, Func<int, float, object> userDataFactory)
+        {
+            object[] valueArray = values == null ? new object[0] : values.Cast<object>().ToArray();
+            LightningBarDataPoint[] dataPoints = new LightningBarDataPoint[valueArray.Length];
+
+            for (int i = 0; i < valueArray.Length; i++)
+            {
+                float value = ConvertToSingleValue(valueArray[i]);
+                object userData = userDataFactory == null ? null : userDataFactory(i, value);
+                dataPoints[i] = new LightningBarDataPoint(value, userData);
+            }
+
+            return dataPoints;
         }
 
         public static LightningBarDataPoint[] FromValues(IEnumerable<float> values, Func<int, float, object> userDataFactory)
@@ -556,6 +591,16 @@ namespace LightingChartSamples
             }
 
             return dataPoints;
+        }
+
+        private static float ConvertToSingleValue(object value)
+        {
+            if (value == null || Convert.IsDBNull(value))
+            {
+                return 0f;
+            }
+
+            return Convert.ToSingle(value);
         }
 
         public LightningBarDataPoint Clone()

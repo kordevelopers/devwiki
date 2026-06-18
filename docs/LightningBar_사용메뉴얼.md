@@ -150,6 +150,27 @@ LightningBarSeries series = new LightningBarSeries
 };
 ```
 
+`AsEnumerable().Select()` 결과를 그대로 넘길 수도 있습니다. `VALUE` 컬럼이 `decimal`, `double`, `int`, `object`로 조회되어도 내부에서 `float`로 변환합니다.
+
+```csharp
+var values = table.AsEnumerable()
+    .Select(row => row["VALUE"]);
+
+var searchItems = table.AsEnumerable()
+    .Select(row => new SearchCondition
+    {
+        EquipmentId = Convert.ToString(row["EQUIPMENT_ID"]),
+        MetricCode = Convert.ToString(row["METRIC_CODE"]),
+        LotId = Convert.ToString(row["LOT_ID"])
+    });
+
+LightningBarSeries series = new LightningBarSeries
+{
+    Name = "설비 A",
+    DataPoints = LightningBarDataPoint.FromValues(values, searchItems)
+};
+```
+
 별도 검색조건 객체로 바꾸고 싶으면 인덱스 기반 팩토리를 사용합니다.
 
 ```csharp
