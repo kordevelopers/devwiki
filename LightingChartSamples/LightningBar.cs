@@ -538,6 +538,11 @@ namespace LightingChartSamples
             return dataPoints;
         }
 
+        public static LightningBarDataPoint[] FromValues(IEnumerable<float> values, System.Collections.IEnumerable userDataItems)
+        {
+            return FromValues(values, userDataItems == null ? null : userDataItems.Cast<object>());
+        }
+
         public static LightningBarDataPoint[] FromValues(IEnumerable<float> values, Func<int, float, object> userDataFactory)
         {
             float[] valueArray = values == null ? new float[0] : values.ToArray();

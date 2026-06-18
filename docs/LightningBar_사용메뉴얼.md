@@ -136,6 +136,20 @@ chart.BarClicked += (sender, e) =>
 };
 ```
 
+`DataTable.Rows`를 직접 넘겨야 하면 그대로 넘길 수 있습니다. 이 경우 `values` 배열과 `table.Rows`의 순서가 같아야 합니다.
+
+```csharp
+float[] values = table.AsEnumerable()
+    .Select(row => Convert.ToSingle(row["VALUE"]))
+    .ToArray();
+
+LightningBarSeries series = new LightningBarSeries
+{
+    Name = "설비 A",
+    DataPoints = LightningBarDataPoint.FromValues(values, table.Rows)
+};
+```
+
 별도 검색조건 객체로 바꾸고 싶으면 인덱스 기반 팩토리를 사용합니다.
 
 ```csharp
