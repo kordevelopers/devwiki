@@ -114,6 +114,39 @@ LightningBarSeries series = new LightningBarSeries
 };
 ```
 
+값 컬럼이 이미 정해져 있는 `DataTable`은 값 배열을 별도로 만들지 않아도 됩니다. 예를 들어 `MEAN_VALUE` 컬럼을 막대 값으로 쓰고, 같은 row의 나머지 컬럼을 클릭 시 RawData로 사용하려면 다음처럼 작성합니다.
+
+```csharp
+DataRow[] rows = d.AsEnumerable().ToArray();
+
+string[] categories = rows
+    .Select(row => Convert.ToString(row["CATEGORY_NAME"]))
+    .ToArray();
+
+LightningBarSeries series = new LightningBarSeries
+{
+    Name = "MEAN",
+    LegendLabel = "MEAN_VALUE",
+    ValueSource = rows,
+    ValueColumnName = "MEAN_VALUE"
+};
+
+LightningBar chart = LightningBar.Create(parentPanel, categories, new[] { series }, options);
+
+chart.BarClicked += (sender, e) =>
+{
+    DataRow row = e.RawData as DataRow;
+    if (row == null)
+    {
+        return;
+    }
+
+    float meanValue = Convert.ToSingle(row["MEAN_VALUE"]);
+    string equipmentId = Convert.ToString(row["EQUIPMENT_ID"]);
+    string lotId = Convert.ToString(row["LOT_ID"]);
+};
+```
+
 클릭 시 선택한 막대의 원본 행을 받을 수 있습니다.
 
 ```csharp

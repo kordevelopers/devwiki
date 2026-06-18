@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using LightingChartSamples.Scatter;
@@ -218,6 +219,12 @@ namespace LightingChartSamples
 
     public class NewBarChartGuideForm : Form
     {
+        private const string ColumnCategory = "CATEGORY";
+        private const string ColumnValue = "VALUE";
+        private const string ColumnEquipmentId = "EQUIPMENT_ID";
+        private const string ColumnMetricCode = "METRIC_CODE";
+        private const string ColumnLotId = "LOT_ID";
+
         private readonly LightningBar barChart;
         private readonly Panel pnlTop;
         private readonly Panel pnlChartHost;
@@ -435,8 +442,40 @@ namespace LightingChartSamples
         {
             return new[]
             {
-                new LightningBarSeries { Name = "Series 1", LegendLabel = "Series 1", Values = new[] { 82f, 74f, 88f, 69f, 90f }, FillColor = Color.FromArgb(165, 255, 196, 214), BorderColor = Color.FromArgb(230, 225, 104, 150) }
+                new LightningBarSeries
+                {
+                    Name = "Series 1",
+                    LegendLabel = "Series 1",
+                    ValueSource = CreateRawDataTable("EQ-FEATURE", new[] { 82f, 74f, 88f, 69f, 90f }),
+                    ValueColumnName = ColumnValue,
+                    FillColor = Color.FromArgb(165, 255, 196, 214),
+                    BorderColor = Color.FromArgb(230, 225, 104, 150)
+                }
             };
+        }
+
+        private static DataTable CreateRawDataTable(string equipmentId, float[] values)
+        {
+            DataTable table = new DataTable();
+            table.Columns.Add(ColumnCategory, typeof(string));
+            table.Columns.Add(ColumnValue, typeof(float));
+            table.Columns.Add(ColumnEquipmentId, typeof(string));
+            table.Columns.Add(ColumnMetricCode, typeof(string));
+            table.Columns.Add(ColumnLotId, typeof(string));
+
+            string[] categories = new List<string>(CreateCategories()).ToArray();
+            for (int i = 0; i < values.Length; i++)
+            {
+                DataRow row = table.NewRow();
+                row[ColumnCategory] = i < categories.Length ? categories[i] : string.Empty;
+                row[ColumnValue] = values[i];
+                row[ColumnEquipmentId] = equipmentId;
+                row[ColumnMetricCode] = string.Format("FEATURE-{0:00}", i + 1);
+                row[ColumnLotId] = string.Format("{0}-LOT-{1:000}", equipmentId, i + 1);
+                table.Rows.Add(row);
+            }
+
+            return table;
         }
 
         private LightningBarImageOptions CreateImageOptions()
@@ -477,7 +516,22 @@ namespace LightingChartSamples
 
         private void BarChart_BarClicked(object sender, LightningBarSeriesClickEventArgs e)
         {
-            AppendEventLog(string.Format("BarClicked: Series={0}, Category={1}, Value={2:0.#}", e.Series.Name, e.CategoryName, e.Value));
+            DataRow rawData = e.RawData as DataRow;
+            string rawDataText = rawData == null
+                ? "RawData=-"
+                : string.Format(
+                    "RawData={0}/{1}/{2}",
+                    rawData[ColumnEquipmentId],
+                    rawData[ColumnMetricCode],
+                    rawData[ColumnLotId]);
+
+            AppendEventLog(string.Format(
+                "BarClicked: Series={0}, Category={1}, Value={2:0.#}, {3}, SeriesRawDataRows={4}",
+                e.Series.Name,
+                e.CategoryName,
+                e.Value,
+                rawDataText,
+                e.SeriesRawData.Length));
         }
 
         private void BarChart_LegendClicked(object sender, LightningBarLegendClickEventArgs e)

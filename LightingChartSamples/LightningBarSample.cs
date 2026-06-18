@@ -1,12 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace LightingChartSamples
 {
     public partial class LightningBarSample : Form
     {
+        private const string ColumnCategory = "CATEGORY";
+        private const string ColumnValue = "VALUE";
+        private const string ColumnEquipmentId = "EQUIPMENT_ID";
+        private const string ColumnMetricCode = "METRIC_CODE";
+        private const string ColumnLotId = "LOT_ID";
+
         private readonly LightningBar barChart;
 
         public LightningBarSample()
@@ -135,7 +143,8 @@ namespace LightingChartSamples
                 {
                     Name = "설비 A",
                     LegendLabel = "Series A\nCurrent value\nTarget line",
-                    Values = new[] { 88f, 82f, 91f, 79f, 95f },
+                    ValueSource = CreateRawDataTable("EQ-A", new[] { 88f, 82f, 91f, 79f, 95f }),
+                    ValueColumnName = ColumnValue,
                     FillColor = Color.FromArgb(170, 255, 196, 214),
                     BorderColor = Color.FromArgb(230, 225, 104, 150)
                 },
@@ -143,19 +152,59 @@ namespace LightingChartSamples
                 {
                     Name = "설비 B",
                     LegendLabel = "Series B\nPrevious value\nBaseline",
-                    Values = new[] { 76f, 73f, 86f, 70f, 84f },
+                    ValueSource = CreateRawDataTable("EQ-B", new[] { 76f, 73f, 86f, 70f, 84f }),
+                    ValueColumnName = ColumnValue,
                     FillColor = Color.FromArgb(160, 186, 235, 255),
                     BorderColor = Color.FromArgb(230, 74, 166, 224)
                 }
             };
         }
 
+        private static DataTable CreateRawDataTable(string equipmentId, float[] values)
+        {
+            DataTable table = new DataTable();
+            table.Columns.Add(ColumnCategory, typeof(string));
+            table.Columns.Add(ColumnValue, typeof(float));
+            table.Columns.Add(ColumnEquipmentId, typeof(string));
+            table.Columns.Add(ColumnMetricCode, typeof(string));
+            table.Columns.Add(ColumnLotId, typeof(string));
+
+            string[] categories = CreateCategories().ToArray();
+            for (int i = 0; i < values.Length; i++)
+            {
+                DataRow row = table.NewRow();
+                row[ColumnCategory] = i < categories.Length ? categories[i] : string.Empty;
+                row[ColumnValue] = values[i];
+                row[ColumnEquipmentId] = equipmentId;
+                row[ColumnMetricCode] = string.Format("METRIC-{0:00}", i + 1);
+                row[ColumnLotId] = string.Format("{0}-LOT-{1:000}", equipmentId, i + 1);
+                table.Rows.Add(row);
+            }
+
+            return table;
+        }
+
         private void BarChart_SeriesClicked(object sender, LightningBarSeriesClickEventArgs e)
         {
             // 여기에서 상세 계측 데이터 폼을 열거나, 다른 화면 이동 이벤트를 실행하면 됩니다.
             // 예: using (var form = new DetailChartForm(e.CategoryName, e.Series.Name)) { form.ShowDialog(this); }
+            DataRow rawData = e.RawData as DataRow;
+            string rawDataText = rawData == null
+                ? string.Empty
+                : string.Format(
+                    "\nRawData: Equipment={0}, Metric={1}, Lot={2}",
+                    rawData[ColumnEquipmentId],
+                    rawData[ColumnMetricCode],
+                    rawData[ColumnLotId]);
+
             MessageBox.Show(this,
-                string.Format("Series: {0}\nCategory: {1}\nValue: {2:0.#}", e.Series.Name, e.CategoryName, e.Value),
+                string.Format(
+                    "Series: {0}\nCategory: {1}\nValue: {2:0.#}{3}\nSeriesRawDataRows: {4}",
+                    e.Series.Name,
+                    e.CategoryName,
+                    e.Value,
+                    rawDataText,
+                    e.SeriesRawData.Length),
                 "Bar Series Clicked",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);

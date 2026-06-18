@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -8,6 +9,11 @@ namespace LightingChartSamples
 {
     public class LightningBarImageExportSampleForm : Form
     {
+        private const string ColumnCategory = "CATEGORY";
+        private const string ColumnValue = "VALUE";
+        private const string ColumnEquipmentId = "EQUIPMENT_ID";
+        private const string ColumnMetricCode = "METRIC_CODE";
+
         private readonly LightningBar barChart;
         private readonly PictureBox picturePreview;
         private readonly TextBox txtSaveDirectory;
@@ -276,7 +282,8 @@ namespace LightingChartSamples
                 {
                     Name = "Current",
                     LegendLabel = "Current\nResult",
-                    Values = new[] { 88f, 82f, 91f, 79f, 95f },
+                    ValueSource = CreateRawDataTable("EQ-EXPORT-CURRENT", new[] { 88f, 82f, 91f, 79f, 95f }),
+                    ValueColumnName = ColumnValue,
                     FillColor = Color.FromArgb(175, 76, 132, 210),
                     BorderColor = Color.FromArgb(76, 132, 210)
                 },
@@ -284,11 +291,34 @@ namespace LightingChartSamples
                 {
                     Name = "Target",
                     LegendLabel = "Target\nLine",
-                    Values = new[] { 90f, 85f, 90f, 82f, 93f },
+                    ValueSource = CreateRawDataTable("EQ-EXPORT-TARGET", new[] { 90f, 85f, 90f, 82f, 93f }),
+                    ValueColumnName = ColumnValue,
                     FillColor = Color.FromArgb(155, 86, 166, 112),
                     BorderColor = Color.FromArgb(86, 166, 112)
                 }
             };
+        }
+
+        private static DataTable CreateRawDataTable(string equipmentId, float[] values)
+        {
+            DataTable table = new DataTable();
+            table.Columns.Add(ColumnCategory, typeof(string));
+            table.Columns.Add(ColumnValue, typeof(float));
+            table.Columns.Add(ColumnEquipmentId, typeof(string));
+            table.Columns.Add(ColumnMetricCode, typeof(string));
+
+            string[] categories = new List<string>(CreateCategories()).ToArray();
+            for (int i = 0; i < values.Length; i++)
+            {
+                DataRow row = table.NewRow();
+                row[ColumnCategory] = i < categories.Length ? categories[i] : string.Empty;
+                row[ColumnValue] = values[i];
+                row[ColumnEquipmentId] = equipmentId;
+                row[ColumnMetricCode] = string.Format("EXPORT-{0:00}", i + 1);
+                table.Rows.Add(row);
+            }
+
+            return table;
         }
     }
 }

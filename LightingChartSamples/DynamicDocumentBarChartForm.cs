@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
@@ -10,6 +11,11 @@ namespace LightingChartSamples
 {
     public class DynamicDocumentBarChartForm : Form
     {
+        private const string ColumnCategory = "CATEGORY";
+        private const string ColumnValue = "VALUE";
+        private const string ColumnChartTitle = "CHART_TITLE";
+        private const string ColumnMetricCode = "METRIC_CODE";
+
         private const int TopSectionHeight = 400;
         private const int ChartColumnCount = 2;
         private const int MinimumChartRowCount = 3;
@@ -391,12 +397,35 @@ namespace LightingChartSamples
                     {
                         Name = "현재",
                         LegendLabel = "1234567890\nABCDEFGHIJ\nKLMNOPQRST",
-                        Values = values,
+                        ValueSource = CreateRawDataTable(title, categories, values),
+                        ValueColumnName = ColumnValue,
                         FillColor = Color.FromArgb(175, color),
                         BorderColor = color
                     }
                 }
             };
+        }
+
+        private static DataTable CreateRawDataTable(string chartTitle, IEnumerable<string> categories, float[] values)
+        {
+            DataTable table = new DataTable();
+            table.Columns.Add(ColumnCategory, typeof(string));
+            table.Columns.Add(ColumnValue, typeof(float));
+            table.Columns.Add(ColumnChartTitle, typeof(string));
+            table.Columns.Add(ColumnMetricCode, typeof(string));
+
+            string[] categoryArray = categories == null ? new string[0] : categories.ToArray();
+            for (int i = 0; i < values.Length; i++)
+            {
+                DataRow row = table.NewRow();
+                row[ColumnCategory] = i < categoryArray.Length ? categoryArray[i] : string.Empty;
+                row[ColumnValue] = values[i];
+                row[ColumnChartTitle] = chartTitle ?? string.Empty;
+                row[ColumnMetricCode] = string.Format("LAYOUT-{0:00}", i + 1);
+                table.Rows.Add(row);
+            }
+
+            return table;
         }
 
         private static LightningBarNoDataDisplayMode ResolveNoDataDisplayMode(string title)
