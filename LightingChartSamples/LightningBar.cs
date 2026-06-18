@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -517,6 +518,7 @@ namespace LightingChartSamples
 
         public float Value { get; set; }
         public object UserData { get; set; }
+        public object RawData { get { return UserData; } set { UserData = value; } }
 
         public static LightningBarDataPoint[] FromValues(IEnumerable<float> values)
         {
@@ -593,6 +595,29 @@ namespace LightingChartSamples
             return dataPoints;
         }
 
+        public static LightningBarDataPoint[] FromDataTable(DataTable table, string valueColumnName)
+        {
+            return FromDataSource(table, valueColumnName);
+        }
+
+        public static LightningBarDataPoint[] FromDataSource(object valueSource, string valueColumnName)
+        {
+            ValidateValueColumnName(valueColumnName);
+
+            object[] items = GetDataSourceItems(valueSource).ToArray();
+            LightningBarDataPoint[] dataPoints = new LightningBarDataPoint[items.Length];
+
+            for (int i = 0; i < items.Length; i++)
+            {
+                object item = items[i];
+                dataPoints[i] = new LightningBarDataPoint(
+                    GetValueFromDataItem(item, valueColumnName),
+                    GetRawDataFromDataItem(item));
+            }
+
+            return dataPoints;
+        }
+
         private static float ConvertToSingleValue(object value)
         {
             if (value == null || Convert.IsDBNull(value))
@@ -601,6 +626,98 @@ namespace LightingChartSamples
             }
 
             return Convert.ToSingle(value);
+        }
+
+        private static IEnumerable<object> GetDataSourceItems(object valueSource)
+        {
+            if (valueSource == null)
+            {
+                return Enumerable.Empty<object>();
+            }
+
+            DataTable table = valueSource as DataTable;
+            if (table != null)
+            {
+                return table.Rows.Cast<DataRow>().Cast<object>();
+            }
+
+            DataView view = valueSource as DataView;
+            if (view != null)
+            {
+                return view.Cast<DataRowView>().Cast<object>();
+            }
+
+            DataRowCollection rows = valueSource as DataRowCollection;
+            if (rows != null)
+            {
+                return rows.Cast<DataRow>().Cast<object>();
+            }
+
+            System.Collections.IEnumerable enumerable = valueSource as System.Collections.IEnumerable;
+            if (enumerable != null && !(valueSource is string))
+            {
+                return enumerable.Cast<object>();
+            }
+
+            return new[] { valueSource };
+        }
+
+        private static float GetValueFromDataItem(object item, string valueColumnName)
+        {
+            if (item == null)
+            {
+                return 0f;
+            }
+
+            DataRow row = item as DataRow;
+            if (row != null)
+            {
+                if (!row.Table.Columns.Contains(valueColumnName))
+                {
+                    throw new ArgumentException(string.Format("ValueColumnName '{0}' 컬럼을 찾을 수 없습니다.", valueColumnName), "valueColumnName");
+                }
+
+                return ConvertToSingleValue(row[valueColumnName]);
+            }
+
+            DataRowView rowView = item as DataRowView;
+            if (rowView != null)
+            {
+                return ConvertToSingleValue(rowView[valueColumnName]);
+            }
+
+            System.Collections.IDictionary dictionary = item as System.Collections.IDictionary;
+            if (dictionary != null)
+            {
+                if (!dictionary.Contains(valueColumnName))
+                {
+                    throw new ArgumentException(string.Format("ValueColumnName '{0}' 키를 찾을 수 없습니다.", valueColumnName), "valueColumnName");
+                }
+
+                return ConvertToSingleValue(dictionary[valueColumnName]);
+            }
+
+            PropertyDescriptor property = TypeDescriptor.GetProperties(item).Find(valueColumnName, true);
+            if (property == null)
+            {
+                throw new ArgumentException(string.Format("ValueColumnName '{0}' 속성을 찾을 수 없습니다.", valueColumnName), "valueColumnName");
+            }
+
+            return ConvertToSingleValue(property.GetValue(item));
+        }
+
+        private static object GetRawDataFromDataItem(object item)
+        {
+            DataRowView rowView = item as DataRowView;
+            return rowView == null ? item : rowView.Row;
+        }
+
+        private static void ValidateValueColumnName(string valueColumnName)
+        {
+            if (string.IsNullOrWhiteSpace(valueColumnName))
+            {
+                throw new ArgumentException("ValueSource를 사용할 때는 ValueColumnName을 지정해야 합니다.", "valueColumnName");
+            }
         }
 
         public LightningBarDataPoint Clone()
@@ -617,6 +734,11 @@ namespace LightingChartSamples
         }
 
         public LightningBarSeriesClickEventArgs(string categoryName, int categoryIndex, LightningBarSeries series, int seriesIndex, float value, LightningBarDataPoint dataPoint)
+            : this(categoryName, categoryIndex, series, seriesIndex, value, dataPoint, null)
+        {
+        }
+
+        public LightningBarSeriesClickEventArgs(string categoryName, int categoryIndex, LightningBarSeries series, int seriesIndex, float value, LightningBarDataPoint dataPoint, IEnumerable<object> seriesRawData)
         {
             CategoryName = categoryName;
             CategoryIndex = categoryIndex;
@@ -625,6 +747,8 @@ namespace LightingChartSamples
             Value = value;
             DataPoint = dataPoint == null ? new LightningBarDataPoint(value) : dataPoint.Clone();
             UserData = DataPoint.UserData;
+            RawData = DataPoint.RawData;
+            SeriesRawData = seriesRawData == null ? new object[0] : seriesRawData.ToArray();
         }
 
         public string CategoryName { get; private set; }
@@ -634,6 +758,8 @@ namespace LightingChartSamples
         public float Value { get; private set; }
         public LightningBarDataPoint DataPoint { get; private set; }
         public object UserData { get; private set; }
+        public object RawData { get; private set; }
+        public object[] SeriesRawData { get; private set; }
     }
 
     public class LightningBarLegendClickEventArgs : EventArgs
@@ -683,6 +809,7 @@ namespace LightingChartSamples
             Name = string.Empty;
             Values = new float[0];
             DataPoints = new LightningBarDataPoint[0];
+            ValueColumnName = string.Empty;
             FillColor = Color.FromArgb(180, 74, 166, 224);
             BorderColor = Color.FromArgb(230, 54, 130, 188);
         }
@@ -694,6 +821,14 @@ namespace LightingChartSamples
         public float[] Values { get; set; }
 
         public LightningBarDataPoint[] DataPoints { get; set; }
+
+        public object ValueSource { get; set; }
+
+        public string ValueColumnName { get; set; }
+
+        public object DataSource { get { return ValueSource; } set { ValueSource = value; } }
+
+        public string ValueMember { get { return ValueColumnName; } set { ValueColumnName = value; } }
 
         public Color FillColor { get; set; }
 
@@ -709,6 +844,8 @@ namespace LightingChartSamples
                 DataPoints = DataPoints == null
                     ? new LightningBarDataPoint[0]
                     : DataPoints.Select(item => item == null ? new LightningBarDataPoint() : item.Clone()).ToArray(),
+                ValueSource = ValueSource,
+                ValueColumnName = ValueColumnName,
                 FillColor = FillColor,
                 BorderColor = BorderColor
             };
@@ -1681,7 +1818,8 @@ namespace LightingChartSamples
                 hitInfo.Series.Clone(),
                 hitInfo.SeriesIndex,
                 hitInfo.Value,
-                hitInfo.DataPoint));
+                hitInfo.DataPoint,
+                hitInfo.SeriesRawData));
         }
 
         protected virtual void DrawBarChart(Graphics graphics, string[] currentCategories, LightningBarSeries[] currentSeries, LightningBarOptions currentOptions, Size renderSize)
@@ -1763,6 +1901,28 @@ namespace LightingChartSamples
         {
             LightningBarDataPoint dataPoint = GetSeriesDataPoint(barSeries, categoryIndex);
             return dataPoint == null ? new LightningBarDataPoint(value) : dataPoint.Clone();
+        }
+
+        protected virtual object[] GetSeriesRawData(LightningBarSeries barSeries)
+        {
+            if (barSeries == null || barSeries.DataPoints == null || barSeries.DataPoints.Length == 0)
+            {
+                return new object[0];
+            }
+
+            object[] rawDataItems = barSeries.DataPoints
+                .Select(item => item == null ? null : item.RawData)
+                .ToArray();
+
+            return rawDataItems.Any(item => item != null) ? rawDataItems : new object[0];
+        }
+
+        protected virtual LightningBarSeries CreateEventSeries(LightningBarSeries barSeries, object[] seriesRawData)
+        {
+            LightningBarSeries eventSeries = barSeries == null ? new LightningBarSeries() : barSeries.Clone();
+            object[] safeSeriesRawData = seriesRawData ?? new object[0];
+            eventSeries.ValueSource = safeSeriesRawData.Length == 0 ? null : safeSeriesRawData;
+            return eventSeries;
         }
 
         protected virtual void DrawChartAreaOutlineBackground(Graphics graphics, LightningBarOptions currentOptions, Size renderSize, string[] currentCategories)
@@ -2186,15 +2346,17 @@ namespace LightingChartSamples
 
                     if (collectBarHits)
                     {
+                        object[] seriesRawData = GetSeriesRawData(barSeries);
                         barHitInfos.Add(new LightningBarHitInfo
                         {
                             Bounds = barRect,
                             CategoryName = currentCategories[categoryIndex],
                             CategoryIndex = categoryIndex,
-                            Series = barSeries.Clone(),
+                            Series = CreateEventSeries(barSeries, seriesRawData),
                             SeriesIndex = seriesIndex,
                             Value = value,
-                            DataPoint = CreateHitDataPoint(barSeries, categoryIndex, value)
+                            DataPoint = CreateHitDataPoint(barSeries, categoryIndex, value),
+                            SeriesRawData = seriesRawData
                         });
                     }
                 }
@@ -2967,6 +3129,8 @@ namespace LightingChartSamples
             public float Value { get; set; }
 
             public LightningBarDataPoint DataPoint { get; set; }
+
+            public object[] SeriesRawData { get; set; }
         }
 
         protected class LightningBarLegendHitInfo
@@ -3001,25 +3165,24 @@ namespace LightingChartSamples
                     continue;
                 }
 
+                if (barSeries.ValueSource != null)
+                {
+                    LightningBarDataPoint[] sourceDataPoints = LightningBarDataPoint.FromDataSource(barSeries.ValueSource, barSeries.ValueColumnName);
+                    if (sourceDataPoints.Length == 0)
+                    {
+                        barSeries.DataPoints = new LightningBarDataPoint[0];
+                        barSeries.Values = new float[0];
+                        continue;
+                    }
+
+                    NormalizeDataPoints(barSeries, sourceDataPoints, targetCount, new float[0]);
+                    continue;
+                }
+
                 LightningBarDataPoint[] dataPoints = barSeries.DataPoints ?? new LightningBarDataPoint[0];
                 if (dataPoints.Length > 0)
                 {
-                    LightningBarDataPoint[] normalizedPoints = new LightningBarDataPoint[targetCount];
-                    float[] fallbackValues = barSeries.Values ?? new float[0];
-                    for (int i = 0; i < targetCount; i++)
-                    {
-                        if (i < dataPoints.Length && dataPoints[i] != null)
-                        {
-                            normalizedPoints[i] = dataPoints[i].Clone();
-                            continue;
-                        }
-
-                        float fallbackValue = i < fallbackValues.Length ? fallbackValues[i] : 0f;
-                        normalizedPoints[i] = new LightningBarDataPoint(fallbackValue);
-                    }
-
-                    barSeries.DataPoints = normalizedPoints;
-                    barSeries.Values = normalizedPoints.Select(item => item.Value).ToArray();
+                    NormalizeDataPoints(barSeries, dataPoints, targetCount, barSeries.Values ?? new float[0]);
                     continue;
                 }
 
@@ -3033,6 +3196,26 @@ namespace LightingChartSamples
                 Array.Copy(values, normalized, Math.Min(values.Length, targetCount));
                 barSeries.Values = normalized;
             }
+        }
+
+        protected virtual void NormalizeDataPoints(LightningBarSeries barSeries, LightningBarDataPoint[] dataPoints, int targetCount, float[] fallbackValues)
+        {
+            LightningBarDataPoint[] normalizedPoints = new LightningBarDataPoint[targetCount];
+            float[] safeFallbackValues = fallbackValues ?? new float[0];
+            for (int i = 0; i < targetCount; i++)
+            {
+                if (i < dataPoints.Length && dataPoints[i] != null)
+                {
+                    normalizedPoints[i] = dataPoints[i].Clone();
+                    continue;
+                }
+
+                float fallbackValue = i < safeFallbackValues.Length ? safeFallbackValues[i] : 0f;
+                normalizedPoints[i] = new LightningBarDataPoint(fallbackValue);
+            }
+
+            barSeries.DataPoints = normalizedPoints;
+            barSeries.Values = normalizedPoints.Select(item => item.Value).ToArray();
         }
 
         protected virtual void ExecuteOnUiThread(Control control, Action action)

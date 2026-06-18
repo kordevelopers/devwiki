@@ -73,7 +73,65 @@ new LightningBarSeries
 };
 ```
 
-값과 조회용 원본 데이터를 함께 넘겨야 하면 `DataPoints`를 사용합니다. `DataPoints`가 있으면 `DataPoint.Value` 값으로 막대를 그리고, 클릭 이벤트에서 동일한 `DataPoint`와 `UserData`를 받을 수 있습니다.
+값과 조회용 원본 데이터를 함께 써야 하면 `ValueSource`와 `ValueColumnName`을 사용하는 것이 가장 간단합니다. `ValueSource`에는 `DataTable`, `DataRow[]`, `DataTable.Rows`, `table.AsEnumerable().Where(...)` 결과를 넣고, `ValueColumnName`에는 막대 값으로 사용할 컬럼명을 넣습니다.
+
+```csharp
+LightningBarSeries series = new LightningBarSeries
+{
+    Name = "설비 A",
+    LegendLabel = "설비 A 표시명",
+    ValueSource = table,
+    ValueColumnName = "VALUE",
+    FillColor = Color.SteelBlue,
+    BorderColor = Color.Navy
+};
+```
+
+조건으로 필터링한 행만 차트에 표시하려면:
+
+```csharp
+DataRow[] rows = table.Select("EQUIPMENT_ID = 'EQ-A'");
+
+LightningBarSeries series = new LightningBarSeries
+{
+    Name = "설비 A",
+    ValueSource = rows,
+    ValueColumnName = "VALUE"
+};
+```
+
+`AsEnumerable()` 흐름을 그대로 사용해도 됩니다.
+
+```csharp
+var rows = table.AsEnumerable()
+    .Where(row => Convert.ToString(row["EQUIPMENT_ID"]) == "EQ-A");
+
+LightningBarSeries series = new LightningBarSeries
+{
+    Name = "설비 A",
+    ValueSource = rows,
+    ValueColumnName = "VALUE"
+};
+```
+
+클릭 시 선택한 막대의 원본 행을 받을 수 있습니다.
+
+```csharp
+chart.BarClicked += (sender, e) =>
+{
+    DataRow row = e.RawData as DataRow;
+    if (row == null)
+    {
+        return;
+    }
+
+    string equipmentId = Convert.ToString(row["EQUIPMENT_ID"]);
+    string metricCode = Convert.ToString(row["METRIC_CODE"]);
+    string lotId = Convert.ToString(row["LOT_ID"]);
+};
+```
+
+값과 조회용 원본 데이터를 더 세밀하게 직접 묶어야 하면 `DataPoints`를 사용합니다. `DataPoints`가 있으면 `DataPoint.Value` 값으로 막대를 그리고, 클릭 이벤트에서 동일한 `DataPoint`와 `RawData/UserData`를 받을 수 있습니다.
 
 ```csharp
 new LightningBarSeries
@@ -124,7 +182,7 @@ LightningBarSeries series = new LightningBarSeries
 
 chart.BarClicked += (sender, e) =>
 {
-    DataRow row = e.UserData as DataRow;
+    DataRow row = e.RawData as DataRow;
     if (row == null)
     {
         return;
@@ -189,6 +247,9 @@ DataPoints = LightningBarDataPoint.FromValues(values, (index, value) => new Sear
 | `Name` | 시리즈 이름. 범례/툴팁/클릭 이벤트에서 사용됩니다. |
 | `LegendLabel` | 범례에 표시할 별도 문자열입니다. 비어 있으면 `Name`을 사용합니다. |
 | `Values` | 카테고리별 값 배열입니다. |
+| `ValueSource` | 값 컬럼과 RawData를 함께 가진 데이터 소스입니다. `DataTable`, `DataRow[]`, `DataRowCollection`, `IEnumerable<DataRow>` 등을 사용할 수 있습니다. |
+| `ValueColumnName` | `ValueSource`에서 막대 값으로 사용할 컬럼명입니다. |
+| `DataSource` / `ValueMember` | `ValueSource` / `ValueColumnName`의 별칭입니다. |
 | `DataPoints` | 카테고리별 값과 사용자 데이터를 함께 넘기는 배열입니다. 값은 `DataPoint.Value`를 사용하고, 클릭 시 `e.DataPoint`, `e.UserData`로 받을 수 있습니다. |
 | `FillColor` | 막대 내부 색상입니다. |
 | `BorderColor` | 막대 테두리 색상입니다. |
@@ -565,16 +626,28 @@ chart.BarClicked += (sender, e) =>
 };
 ```
 
-`DataPoints`를 사용한 경우 클릭한 막대의 원본 데이터를 함께 받을 수 있습니다.
+`ValueSource` 또는 `DataPoints`를 사용한 경우 클릭한 막대의 원본 데이터를 함께 받을 수 있습니다.
 
 ```csharp
 chart.BarClicked += (sender, e) =>
 {
     LightningBarDataPoint point = e.DataPoint;
-    object userData = e.UserData;
+    object rawData = e.RawData;
 
-    // 예: userData에 EquipmentId, MetricCode, LotId 등을 넣어두고 상세 조회 조건으로 사용합니다.
-    OpenDetailChart(userData, e.CategoryName, e.Series.Name, e.Value);
+    // 예: rawData가 DataRow이면 컬럼 값을 상세 조회 조건으로 사용합니다.
+    OpenDetailChart(rawData, e.CategoryName, e.Series.Name, e.Value);
+};
+```
+
+선택한 시리즈의 RawData만 확인하려면 `SeriesRawData`를 사용합니다. 이벤트의 `e.Series.ValueSource`도 원본 전체 테이블이 아니라 선택한 시리즈의 RawData 목록으로 제한됩니다.
+
+```csharp
+chart.BarClicked += (sender, e) =>
+{
+    foreach (DataRow row in e.SeriesRawData.OfType<DataRow>())
+    {
+        string equipmentId = Convert.ToString(row["EQUIPMENT_ID"]);
+    }
 };
 ```
 
