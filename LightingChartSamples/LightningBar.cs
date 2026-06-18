@@ -498,15 +498,48 @@ namespace LightingChartSamples
         }
     }
 
+    public class LightningBarDataPoint
+    {
+        public LightningBarDataPoint()
+        {
+        }
+
+        public LightningBarDataPoint(float value)
+            : this(value, null)
+        {
+        }
+
+        public LightningBarDataPoint(float value, object userData)
+        {
+            Value = value;
+            UserData = userData;
+        }
+
+        public float Value { get; set; }
+        public object UserData { get; set; }
+
+        public LightningBarDataPoint Clone()
+        {
+            return (LightningBarDataPoint)MemberwiseClone();
+        }
+    }
+
     public class LightningBarSeriesClickEventArgs : EventArgs
     {
         public LightningBarSeriesClickEventArgs(string categoryName, int categoryIndex, LightningBarSeries series, int seriesIndex, float value)
+            : this(categoryName, categoryIndex, series, seriesIndex, value, null)
+        {
+        }
+
+        public LightningBarSeriesClickEventArgs(string categoryName, int categoryIndex, LightningBarSeries series, int seriesIndex, float value, LightningBarDataPoint dataPoint)
         {
             CategoryName = categoryName;
             CategoryIndex = categoryIndex;
             Series = series;
             SeriesIndex = seriesIndex;
             Value = value;
+            DataPoint = dataPoint == null ? new LightningBarDataPoint(value) : dataPoint.Clone();
+            UserData = DataPoint.UserData;
         }
 
         public string CategoryName { get; private set; }
@@ -514,6 +547,8 @@ namespace LightingChartSamples
         public LightningBarSeries Series { get; private set; }
         public int SeriesIndex { get; private set; }
         public float Value { get; private set; }
+        public LightningBarDataPoint DataPoint { get; private set; }
+        public object UserData { get; private set; }
     }
 
     public class LightningBarLegendClickEventArgs : EventArgs
@@ -562,6 +597,7 @@ namespace LightingChartSamples
         {
             Name = string.Empty;
             Values = new float[0];
+            DataPoints = new LightningBarDataPoint[0];
             FillColor = Color.FromArgb(180, 74, 166, 224);
             BorderColor = Color.FromArgb(230, 54, 130, 188);
         }
@@ -571,6 +607,8 @@ namespace LightingChartSamples
         public string LegendLabel { get; set; }
 
         public float[] Values { get; set; }
+
+        public LightningBarDataPoint[] DataPoints { get; set; }
 
         public Color FillColor { get; set; }
 
@@ -583,6 +621,9 @@ namespace LightingChartSamples
                 Name = Name,
                 LegendLabel = LegendLabel,
                 Values = Values == null ? new float[0] : Values.ToArray(),
+                DataPoints = DataPoints == null
+                    ? new LightningBarDataPoint[0]
+                    : DataPoints.Select(item => item == null ? new LightningBarDataPoint() : item.Clone()).ToArray(),
                 FillColor = FillColor,
                 BorderColor = BorderColor
             };
@@ -1554,7 +1595,8 @@ namespace LightingChartSamples
                 hitInfo.CategoryIndex,
                 hitInfo.Series.Clone(),
                 hitInfo.SeriesIndex,
-                hitInfo.Value));
+                hitInfo.Value,
+                hitInfo.DataPoint));
         }
 
         protected virtual void DrawBarChart(Graphics graphics, string[] currentCategories, LightningBarSeries[] currentSeries, LightningBarOptions currentOptions, Size renderSize)
@@ -1583,7 +1625,59 @@ namespace LightingChartSamples
                 return false;
             }
 
-            return currentSeries.Any(item => item != null && item.Values != null && item.Values.Length > 0);
+            return currentSeries.Any(item => GetSeriesValueCount(item) > 0);
+        }
+
+        protected virtual int GetSeriesValueCount(LightningBarSeries barSeries)
+        {
+            if (barSeries == null)
+            {
+                return 0;
+            }
+
+            if (barSeries.DataPoints != null && barSeries.DataPoints.Length > 0)
+            {
+                return barSeries.DataPoints.Length;
+            }
+
+            return barSeries.Values == null ? 0 : barSeries.Values.Length;
+        }
+
+        protected virtual float GetSeriesValue(LightningBarSeries barSeries, int categoryIndex)
+        {
+            if (barSeries == null || categoryIndex < 0)
+            {
+                return 0f;
+            }
+
+            LightningBarDataPoint dataPoint = GetSeriesDataPoint(barSeries, categoryIndex);
+            if (dataPoint != null)
+            {
+                return dataPoint.Value;
+            }
+
+            if (barSeries.Values != null && categoryIndex < barSeries.Values.Length)
+            {
+                return barSeries.Values[categoryIndex];
+            }
+
+            return 0f;
+        }
+
+        protected virtual LightningBarDataPoint GetSeriesDataPoint(LightningBarSeries barSeries, int categoryIndex)
+        {
+            if (barSeries == null || categoryIndex < 0 || barSeries.DataPoints == null || categoryIndex >= barSeries.DataPoints.Length)
+            {
+                return null;
+            }
+
+            return barSeries.DataPoints[categoryIndex];
+        }
+
+        protected virtual LightningBarDataPoint CreateHitDataPoint(LightningBarSeries barSeries, int categoryIndex, float value)
+        {
+            LightningBarDataPoint dataPoint = GetSeriesDataPoint(barSeries, categoryIndex);
+            return dataPoint == null ? new LightningBarDataPoint(value) : dataPoint.Clone();
         }
 
         protected virtual void DrawChartAreaOutlineBackground(Graphics graphics, LightningBarOptions currentOptions, Size renderSize, string[] currentCategories)
@@ -1803,15 +1897,15 @@ namespace LightingChartSamples
             for (int seriesIndex = 0; seriesIndex < currentSeries.Length; seriesIndex++)
             {
                 LightningBarSeries barSeries = currentSeries[seriesIndex];
-                if (barSeries == null || barSeries.Values == null)
+                if (barSeries == null)
                 {
                     continue;
                 }
 
-                int valueCount = Math.Min(categoryCount, barSeries.Values.Length);
+                int valueCount = Math.Min(categoryCount, GetSeriesValueCount(barSeries));
                 for (int valueIndex = 0; valueIndex < valueCount; valueIndex++)
                 {
-                    if (Math.Abs(barSeries.Values[valueIndex]) > 0.000001f)
+                    if (Math.Abs(GetSeriesValue(barSeries, valueIndex)) > 0.000001f)
                     {
                         return false;
                     }
@@ -1892,14 +1986,14 @@ namespace LightingChartSamples
             for (int i = 0; i < currentSeries.Length; i++)
             {
                 LightningBarSeries barSeries = currentSeries[i];
-                if (barSeries == null || barSeries.Values == null)
+                if (barSeries == null)
                 {
                     continue;
                 }
 
-                for (int j = 0; j < Math.Min(currentCategories.Length, barSeries.Values.Length); j++)
+                for (int j = 0; j < Math.Min(currentCategories.Length, GetSeriesValueCount(barSeries)); j++)
                 {
-                    valueFromData = Math.Max(valueFromData, barSeries.Values[j]);
+                    valueFromData = Math.Max(valueFromData, GetSeriesValue(barSeries, j));
                 }
             }
 
@@ -1988,11 +2082,7 @@ namespace LightingChartSamples
                         continue;
                     }
 
-                    float value = 0f;
-                    if (barSeries.Values != null && categoryIndex < barSeries.Values.Length)
-                    {
-                        value = Math.Max(0f, barSeries.Values[categoryIndex]);
-                    }
+                    float value = Math.Max(0f, GetSeriesValue(barSeries, categoryIndex));
 
                     float ratio = maxValue <= 0f ? 0f : Math.Min(1f, value / maxValue);
                     float barWidth = plotRect.Width * ratio;
@@ -2018,7 +2108,8 @@ namespace LightingChartSamples
                             CategoryIndex = categoryIndex,
                             Series = barSeries.Clone(),
                             SeriesIndex = seriesIndex,
-                            Value = value
+                            Value = value,
+                            DataPoint = CreateHitDataPoint(barSeries, categoryIndex, value)
                         });
                     }
                 }
@@ -2650,9 +2741,7 @@ namespace LightingChartSamples
                 builder.AppendLine(seriesLabel);
                 for (int categoryIndex = 0; categoryIndex < currentCategories.Length; categoryIndex++)
                 {
-                    float value = (barSeries.Values != null && categoryIndex < barSeries.Values.Length)
-                        ? barSeries.Values[categoryIndex]
-                        : 0f;
+                    float value = GetSeriesValue(barSeries, categoryIndex);
                     builder.Append("  - ");
                     builder.Append(currentCategories[categoryIndex] ?? string.Empty);
                     builder.Append(": ");
@@ -2718,7 +2807,8 @@ namespace LightingChartSamples
                     hitInfo.CategoryName,
                     hitInfo.Value,
                     hitInfo.SeriesIndex,
-                    hitInfo.CategoryIndex);
+                    hitInfo.CategoryIndex,
+                    hitInfo.DataPoint == null ? null : hitInfo.DataPoint.UserData);
             }
             catch (FormatException)
             {
@@ -2790,6 +2880,8 @@ namespace LightingChartSamples
             public int SeriesIndex { get; set; }
 
             public float Value { get; set; }
+
+            public LightningBarDataPoint DataPoint { get; set; }
         }
 
         protected class LightningBarLegendHitInfo
@@ -2821,6 +2913,28 @@ namespace LightingChartSamples
             {
                 if (barSeries == null)
                 {
+                    continue;
+                }
+
+                LightningBarDataPoint[] dataPoints = barSeries.DataPoints ?? new LightningBarDataPoint[0];
+                if (dataPoints.Length > 0)
+                {
+                    LightningBarDataPoint[] normalizedPoints = new LightningBarDataPoint[targetCount];
+                    float[] fallbackValues = barSeries.Values ?? new float[0];
+                    for (int i = 0; i < targetCount; i++)
+                    {
+                        if (i < dataPoints.Length && dataPoints[i] != null)
+                        {
+                            normalizedPoints[i] = dataPoints[i].Clone();
+                            continue;
+                        }
+
+                        float fallbackValue = i < fallbackValues.Length ? fallbackValues[i] : 0f;
+                        normalizedPoints[i] = new LightningBarDataPoint(fallbackValue);
+                    }
+
+                    barSeries.DataPoints = normalizedPoints;
+                    barSeries.Values = normalizedPoints.Select(item => item.Value).ToArray();
                     continue;
                 }
 

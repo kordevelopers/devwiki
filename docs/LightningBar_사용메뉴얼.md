@@ -73,6 +73,24 @@ new LightningBarSeries
 };
 ```
 
+값과 조회용 원본 데이터를 함께 넘겨야 하면 `DataPoints`를 사용합니다. `DataPoints`가 있으면 `DataPoint.Value` 값으로 막대를 그리고, 클릭 이벤트에서 동일한 `DataPoint`와 `UserData`를 받을 수 있습니다.
+
+```csharp
+new LightningBarSeries
+{
+    Name = "설비 A",
+    LegendLabel = "설비 A 표시명",
+    DataPoints = new[]
+    {
+        new LightningBarDataPoint(80f, new { EquipmentId = "EQ-A", MetricCode = "Q", LotId = "L001" }),
+        new LightningBarDataPoint(65f, new { EquipmentId = "EQ-A", MetricCode = "P", LotId = "L002" }),
+        new LightningBarDataPoint(90f, new { EquipmentId = "EQ-A", MetricCode = "S", LotId = "L003" })
+    },
+    FillColor = Color.SteelBlue,
+    BorderColor = Color.Navy
+};
+```
+
 주요 속성:
 
 | 속성 | 설명 |
@@ -80,6 +98,7 @@ new LightningBarSeries
 | `Name` | 시리즈 이름. 범례/툴팁/클릭 이벤트에서 사용됩니다. |
 | `LegendLabel` | 범례에 표시할 별도 문자열입니다. 비어 있으면 `Name`을 사용합니다. |
 | `Values` | 카테고리별 값 배열입니다. |
+| `DataPoints` | 카테고리별 값과 사용자 데이터를 함께 넘기는 배열입니다. 값은 `DataPoint.Value`를 사용하고, 클릭 시 `e.DataPoint`, `e.UserData`로 받을 수 있습니다. |
 | `FillColor` | 막대 내부 색상입니다. |
 | `BorderColor` | 막대 테두리 색상입니다. |
 
@@ -431,6 +450,7 @@ options.Tooltip.Format = "Value:{2:0.#} (* 클릭할 경우 해당 계측 데이
 | `{2}` | 값 |
 | `{3}` | 시리즈 인덱스 |
 | `{4}` | 카테고리 인덱스 |
+| `{5}` | `LightningBarDataPoint.UserData` |
 
 예시:
 
@@ -451,6 +471,19 @@ chart.BarClicked += (sender, e) =>
 
     MessageBox.Show(
         string.Format("{0} / {1} / {2:0.##}", category, seriesName, value));
+};
+```
+
+`DataPoints`를 사용한 경우 클릭한 막대의 원본 데이터를 함께 받을 수 있습니다.
+
+```csharp
+chart.BarClicked += (sender, e) =>
+{
+    LightningBarDataPoint point = e.DataPoint;
+    object userData = e.UserData;
+
+    // 예: userData에 EquipmentId, MetricCode, LotId 등을 넣어두고 상세 조회 조건으로 사용합니다.
+    OpenDetailChart(userData, e.CategoryName, e.Series.Name, e.Value);
 };
 ```
 
