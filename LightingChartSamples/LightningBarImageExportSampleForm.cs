@@ -284,8 +284,8 @@ namespace LightingChartSamples
                     LegendLabel = "Current\nResult",
                     ValueSource = CreateRawDataTable("EQ-EXPORT-CURRENT", new[] { 88f, 82f, 91f, 79f, 95f }),
                     ValueColumnName = ColumnValue,
-                    FillColor = Color.FromArgb(175, 76, 132, 210),
-                    BorderColor = Color.FromArgb(76, 132, 210)
+                    FillColor = Color.FromArgb(175, 255, 196, 214),
+                    BorderColor = Color.FromArgb(225, 104, 150)
                 },
                 new LightningBarSeries
                 {

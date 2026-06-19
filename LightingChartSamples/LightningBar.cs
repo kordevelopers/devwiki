@@ -810,8 +810,8 @@ namespace LightingChartSamples
             Values = new float[0];
             DataPoints = new LightningBarDataPoint[0];
             ValueColumnName = string.Empty;
-            FillColor = Color.FromArgb(180, 74, 166, 224);
-            BorderColor = Color.FromArgb(230, 54, 130, 188);
+            FillColor = Color.FromArgb(180, 255, 196, 214);
+            BorderColor = Color.FromArgb(230, 225, 104, 150);
         }
 
         public string Name { get; set; }

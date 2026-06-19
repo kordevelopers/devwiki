@@ -376,7 +376,7 @@ namespace LightingChartSamples
 
             return new[]
             {
-                CreateChartData("생산 지표", categories, Color.FromArgb(76, 132, 210), new[] { 88f, 82f, 91f, 79f, 95f }),
+                CreateChartData("생산 지표", categories, Color.FromArgb(225, 104, 150), new[] { 88f, 82f, 91f, 79f, 95f }),
                 CreateChartData("운영 지표", categories, Color.FromArgb(86, 166, 112), new[] { 76f, 90f, 84f, 72f, 88f }),
                 CreateChartData("품질 지표", categories, Color.FromArgb(229, 148, 65), new[] { 92f, 74f, 89f, 85f, 81f }),
                 CreateChartData("무데이터(기존 모드)", categories, Color.FromArgb(148, 160, 178), new[] { 0f, 0f, 0f, 0f, 0f }),
