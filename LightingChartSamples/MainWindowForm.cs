@@ -17,6 +17,7 @@ namespace LightingChartSamples
             AddNewBarChartGuideButton();
             AddBarChartImageExportSampleButton();
             AddLightningScatterSampleButton();
+            AddPcaScatterSampleButton();
         }
 
         private void btnTextDocument_Click(object sender, EventArgs e)
@@ -91,6 +92,14 @@ namespace LightingChartSamples
         private void btnLightningScatterSample_Click(object sender, EventArgs e)
         {
             using (var form = new LightningScatterSampleForm())
+            {
+                form.ShowDialog(this);
+            }
+        }
+
+        private void btnPcaScatterSample_Click(object sender, EventArgs e)
+        {
+            using (var form = new PcaScatterSampleForm())
             {
                 form.ShowDialog(this);
             }
@@ -214,6 +223,30 @@ namespace LightingChartSamples
             btnClose.Location = new Point(392, 597);
             btnClose.TabIndex = 10;
             ClientSize = new Size(520, 646);
+        }
+
+        private void AddPcaScatterSampleButton()
+        {
+            var button = new Button
+            {
+                BackColor = Color.FromArgb(92, 111, 186),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("맑은 고딕", 10F, FontStyle.Bold),
+                ForeColor = Color.White,
+                Location = new Point(32, 596),
+                Name = "btnPcaScatterSample",
+                Size = new Size(456, 46),
+                TabIndex = 10,
+                Text = "PCA Scatter 샘플 열기 (Fail/Pass/Insufficient)",
+                UseVisualStyleBackColor = false
+            };
+
+            button.Click += btnPcaScatterSample_Click;
+            pnlContainer.Controls.Add(button);
+
+            btnClose.Location = new Point(392, 655);
+            btnClose.TabIndex = 11;
+            ClientSize = new Size(520, 704);
         }
     }
 

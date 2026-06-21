@@ -491,6 +491,7 @@ namespace LightingChartSamples.Scatter
         private Image lastSavedImage;
         private string lastSavedImagePath = string.Empty;
         private string currentToolTipText = string.Empty;
+        private Color currentToolTipMarkerColor = Color.Empty;
         private string currentFontName = DefaultChartFontName;
         private bool legendClickAttached;
         private bool isCleared = true;
@@ -518,6 +519,9 @@ namespace LightingChartSamples.Scatter
             pointToolTip.InitialDelay = 150;
             pointToolTip.ReshowDelay = 100;
             pointToolTip.AutoPopDelay = 5000;
+            pointToolTip.OwnerDraw = true;
+            pointToolTip.Popup += PointToolTip_Popup;
+            pointToolTip.Draw += PointToolTip_Draw;
 
             Controls.Add(chart);
             InitializeChart();
@@ -740,6 +744,8 @@ namespace LightingChartSamples.Scatter
                 ClearSavedImage();
                 chart.MouseMove -= Chart_MouseMove;
                 chart.Resize -= Chart_Resize;
+                pointToolTip.Popup -= PointToolTip_Popup;
+                pointToolTip.Draw -= PointToolTip_Draw;
                 if (legendClickAttached && chart.ViewXY.LegendBoxes.Count > 0)
                 {
                     chart.ViewXY.LegendBoxes[0].SeriesTitleMouseClick -= LegendBox_SeriesTitleMouseClick;
@@ -801,9 +807,13 @@ namespace LightingChartSamples.Scatter
                 ? DefaultChartFontName
                 : currentOptions.FontName.Trim();
             chart.Font = CreateChartFont(9f, FontStyle.Regular);
+            chart.ColorTheme = ColorTheme.LightGray;
             chart.Options.AllowInternalMouseCursorChange = GetInteractionOptions(currentOptions).AllowInternalMouseCursorChange;
             chart.Options.MouseInteraction = true;
+            chart.BackColor = currentOptions.BackgroundColor;
             chart.Background.Color = currentOptions.BackgroundColor;
+            chart.Background.GradientColor = currentOptions.BackgroundColor;
+            chart.Background.Style = RectFillStyle.ColorOnly;
             chart.Title.Text = currentOptions.Title ?? string.Empty;
             chart.Title.Visible = currentOptions.ShowTitle && !string.IsNullOrWhiteSpace(currentOptions.Title);
             chart.Title.Font = CreateChartFont(12f, FontStyle.Bold);
@@ -811,6 +821,7 @@ namespace LightingChartSamples.Scatter
 
             ViewXY view = chart.ViewXY;
             view.GraphBackground.Color = currentOptions.GraphBackgroundColor;
+            view.GraphBackground.GradientColor = currentOptions.GraphBackgroundColor;
             view.GraphBackground.Style = RectFillStyle.ColorOnly;
             view.Border.Color = currentOptions.BackgroundColor;
             view.Margins = new Padding(70, 68, 24, 48);
@@ -894,6 +905,9 @@ namespace LightingChartSamples.Scatter
             legendBox.ShowCheckboxes = effectiveOptions.ShowCheckboxes;
             legendBox.ShowIcons = effectiveOptions.ShowIcons;
             legendBox.MouseInteraction = true;
+            legendBox.MoveByMouse = false;
+            legendBox.MoveFromSeriesTitle = false;
+            legendBox.AllowMouseResize = false;
             legendBox.Fill.Color = effectiveOptions.BackgroundColor;
             legendBox.Fill.Style = RectFillStyle.ColorOnly;
             legendBox.BorderColor = effectiveOptions.BorderColor;
@@ -1346,7 +1360,18 @@ namespace LightingChartSamples.Scatter
             }
 
             currentToolTipText = text;
+            currentToolTipMarkerColor = ResolveToolTipMarkerColor(bestBinding);
             pointToolTip.Show(text, chart, e.X + 14, e.Y + 14);
+        }
+
+        private Color ResolveToolTipMarkerColor(ScatterSeriesBinding binding)
+        {
+            if (binding != null && binding.ChartSeries != null)
+            {
+                return binding.ChartSeries.PointStyle.Color1;
+            }
+
+            return Color.Empty;
         }
 
         private bool TrySolveNearestPoint(Point location, int tolerance, out NearestPointHit bestHit, out ScatterSeriesBinding bestBinding)
@@ -1460,10 +1485,53 @@ namespace LightingChartSamples.Scatter
         private void HidePointToolTip()
         {
             currentToolTipText = string.Empty;
+            currentToolTipMarkerColor = Color.Empty;
             if (!IsDisposed)
             {
                 pointToolTip.Hide(chart);
             }
+        }
+
+        private void PointToolTip_Popup(object sender, PopupEventArgs e)
+        {
+            if (currentToolTipMarkerColor == Color.Empty)
+            {
+                return;
+            }
+
+            e.ToolTipSize = new Size(e.ToolTipSize.Width + 20, Math.Max(22, e.ToolTipSize.Height));
+        }
+
+        private void PointToolTip_Draw(object sender, DrawToolTipEventArgs e)
+        {
+            e.DrawBackground();
+            e.DrawBorder();
+
+            if (currentToolTipMarkerColor == Color.Empty)
+            {
+                e.DrawText();
+                return;
+            }
+
+            const int markerDiameter = 10;
+            int markerLeft = e.Bounds.Left + 6;
+            int markerTop = e.Bounds.Top + ((e.Bounds.Height - markerDiameter) / 2);
+            Rectangle markerRect = new Rectangle(markerLeft, markerTop, markerDiameter, markerDiameter);
+            using (SolidBrush markerBrush = new SolidBrush(currentToolTipMarkerColor))
+            using (Pen markerBorder = new Pen(Color.FromArgb(120, 120, 120), 1f))
+            {
+                e.Graphics.FillEllipse(markerBrush, markerRect);
+                e.Graphics.DrawEllipse(markerBorder, markerRect);
+            }
+
+            Rectangle textRect = new Rectangle(markerRect.Right + 6, e.Bounds.Top + 2, e.Bounds.Width - markerRect.Right - 10, e.Bounds.Height - 4);
+            TextRenderer.DrawText(
+                e.Graphics,
+                e.ToolTipText ?? string.Empty,
+                e.Font ?? SystemFonts.DefaultFont,
+                textRect,
+                SystemColors.InfoText,
+                TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.NoPrefix);
         }
 
         private void Chart_Resize(object sender, EventArgs e)

@@ -112,6 +112,9 @@
     <Compile Include="MainWindowForm.Designer.cs">
       <DependentUpon>MainWindowForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Scatter\PcaScatterSampleForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="TabbedLayoutSampleForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -177,6 +180,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="..\docs\PCA_Scatter_개발_분석_설계_개선_로그.md">
+      <Link>docs\PCA_Scatter_개발_분석_설계_개선_로그.md</Link>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
