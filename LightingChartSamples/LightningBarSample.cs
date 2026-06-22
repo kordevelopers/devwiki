@@ -154,8 +154,8 @@ namespace LightingChartSamples
                     LegendLabel = "Series B\nPrevious value\nBaseline",
                     ValueSource = CreateRawDataTable("EQ-B", new[] { 76f, 73f, 86f, 70f, 84f }),
                     ValueColumnName = ColumnValue,
-                    FillColor = Color.FromArgb(160, 186, 235, 255),
-                    BorderColor = Color.FromArgb(230, 74, 166, 224)
+                    FillColor = Color.FromArgb(150, 255, 214, 226),
+                    BorderColor = Color.FromArgb(230, 232, 126, 166)
                 }
             };
         }

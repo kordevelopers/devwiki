@@ -80,6 +80,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -88,6 +89,7 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
@@ -115,6 +117,13 @@
     <Compile Include="Scatter\PcaScatterSampleForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Scatter\ActDataJsonParser.cs" />
+    <Compile Include="Scatter\ActDataRepository.cs" />
+    <Compile Include="Scatter\PcaAnalysisPipeline.cs" />
+    <Compile Include="Scatter\ScatterMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scatter\ScatterSampleData.cs" />
     <Compile Include="TabbedLayoutSampleForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -182,6 +191,9 @@
     <None Include="App.config" />
     <None Include="..\docs\PCA_Scatter_개발_분석_설계_개선_로그.md">
       <Link>docs\PCA_Scatter_개발_분석_설계_개선_로그.md</Link>
+    </None>
+    <None Include="..\docs\PCA_Scatter_KNN_회의_요구사항.md">
+      <Link>docs\PCA_Scatter_KNN_회의_요구사항.md</Link>
     </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

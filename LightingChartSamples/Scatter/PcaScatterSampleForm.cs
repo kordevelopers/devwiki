@@ -81,7 +81,12 @@ namespace LightingChartSamples.Scatter
             scatterChart.PointClicked += ScatterChart_PointClicked;
         }
 
-        #region Data Generation & PCA Binding
+        #region Legacy Demo PCA - Not Used by ScatterMain
+
+        // 중요: 이 영역은 기존 2변수 데모 전용 구현이다.
+        // 현재 시작 Form인 ScatterMain에서는 호출하지 않는다.
+        // 약 80개 특징, StandardScaler, 상수 컬럼 제거, KNN 요구사항을 충족하지 않으므로
+        // 운영용 PCA 알고리즘으로 재사용하면 안 된다.
 
         private void BtnRegenerate_Click(object sender, EventArgs e)
         {
@@ -134,14 +139,18 @@ namespace LightingChartSamples.Scatter
                 return;
             }
 
+            // 두 입력 변수 RawX/RawY를 평균 중심화한다.
+            // 표준편차로 나누지 않으므로 StandardScaler 정규화는 아니다.
             var meanX = samples.Average(item => item.RawX);
             var meanY = samples.Average(item => item.RawY);
             var denominator = Math.Max(1, samples.Count - 1);
 
+            // 2x2 표본 공분산 행렬의 세 독립 성분을 계산한다.
             var covXX = samples.Sum(item => (item.RawX - meanX) * (item.RawX - meanX)) / denominator;
             var covXY = samples.Sum(item => (item.RawX - meanX) * (item.RawY - meanY)) / denominator;
             var covYY = samples.Sum(item => (item.RawY - meanY) * (item.RawY - meanY)) / denominator;
 
+            // 2x2 행렬의 특성방정식을 직접 풀어 가장 큰 고유값과 주축을 구한다.
             var trace = covXX + covYY;
             var determinant = (covXX * covYY) - (covXY * covXY);
             var root = Math.Sqrt(Math.Max(0d, (trace * trace * 0.25d) - determinant));
@@ -152,18 +161,22 @@ namespace LightingChartSamples.Scatter
 
             foreach (var sample in samples)
             {
+                // 평균 중심화된 원본 값을 두 고유벡터에 내적하여 PC1/PC2에 투영한다.
                 var centeredX = sample.RawX - meanX;
                 var centeredY = sample.RawY - meanY;
                 sample.Pca1Raw = (centeredX * eigenVector1.Item1) + (centeredY * eigenVector1.Item2);
                 sample.Pca2Raw = (centeredX * eigenVector2.Item1) + (centeredY * eigenVector2.Item2);
             }
 
+            // 데모 화면의 1~100 고정 축에 맞추기 위한 Min-Max 변환이다.
+            // 실제 PCA 좌표를 보존하지 않으므로 신규 요구사항에서는 사용하지 않는다.
             ScalePcaRange(samples, item => item.Pca1Raw, (item, value) => item.Pca1 = value);
             ScalePcaRange(samples, item => item.Pca2Raw, (item, value) => item.Pca2 = value);
         }
 
         private static Tuple<double, double> SolveEigenVector(double covXX, double covXY, double covYY, double eigenValue)
         {
+            // (공분산 행렬 - 고유값 I)v = 0을 만족하는 2차원 고유벡터를 구성한다.
             var vx = covXY;
             var vy = eigenValue - covXX;
 
@@ -180,6 +193,8 @@ namespace LightingChartSamples.Scatter
             }
 
             var norm = Math.Sqrt((vx * vx) + (vy * vy));
+            // 투영 크기가 축 길이에 의존하지 않도록 단위벡터로 정규화한다.
+            // 이것도 데이터의 StandardScaler 정규화와는 다른 연산이다.
             return Tuple.Create(vx / norm, vy / norm);
         }
 

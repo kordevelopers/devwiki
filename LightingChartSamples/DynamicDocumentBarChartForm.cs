@@ -543,7 +543,7 @@ namespace LightingChartSamples
 
             using (Graphics graphics = Graphics.FromImage(bitmap))
             using (var background = new SolidBrush(Color.FromArgb(246, 248, 251)))
-            using (var blue = new SolidBrush(Color.FromArgb(76, 132, 210)))
+            using (var pink = new SolidBrush(Color.FromArgb(255, 196, 214)))
             using (var green = new SolidBrush(Color.FromArgb(86, 166, 112)))
             using (var orange = new SolidBrush(Color.FromArgb(229, 148, 65)))
             using (var border = new Pen(Color.FromArgb(190, 198, 210), 2F))
@@ -554,7 +554,7 @@ namespace LightingChartSamples
                 graphics.FillRectangle(background, 0, 0, width, height);
                 graphics.DrawRectangle(border, 25, 25, width - 50, height - 50);
                 graphics.DrawString("업무 현황 미리보기", titleFont, Brushes.DimGray, 55, 55);
-                graphics.FillRectangle(blue, 70, 150, 190, 230);
+                graphics.FillRectangle(pink, 70, 150, 190, 230);
                 graphics.FillRectangle(green, 300, 210, 190, 170);
                 graphics.FillRectangle(orange, 530, 265, 190, 115);
                 graphics.DrawString("품질", bodyFont, Brushes.White, 140, 392);
