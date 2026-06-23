@@ -114,16 +114,20 @@
     <Compile Include="MainWindowForm.Designer.cs">
       <DependentUpon>MainWindowForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Scatter\PcaScatterSampleForm.cs">
+    <Compile Include="Scatter\Samples\PcaScatterSampleForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Scatter\ActDataJsonParser.cs" />
-    <Compile Include="Scatter\ActDataRepository.cs" />
-    <Compile Include="Scatter\PcaAnalysisPipeline.cs" />
-    <Compile Include="Scatter\ScatterMain.cs">
+    <Compile Include="Scatter\PcaScatter\ActDataJsonParser.cs" />
+    <Compile Include="Scatter\PcaScatter\ActDataRepository.cs" />
+    <Compile Include="Scatter\PcaScatter\PcaAnalysisPipeline.cs" />
+    <Compile Include="Scatter\PcaScatter\PcaScatterChart.cs" />
+    <Compile Include="Scatter\PcaScatter\PcaScatterDataSource.cs" />
+    <Compile Include="Scatter\PcaScatter\PcaScatterOptions.cs" />
+    <Compile Include="Scatter\PcaScatter\PcaScatterSeriesBuilder.cs" />
+    <Compile Include="Scatter\Samples\ScatterMain.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Scatter\ScatterSampleData.cs" />
+    <Compile Include="Scatter\PcaScatter\ScatterSampleData.cs" />
     <Compile Include="TabbedLayoutSampleForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -150,10 +154,10 @@
     <Compile Include="LightningRadarSample.Designer.cs">
       <DependentUpon>LightningRadarSample.cs</DependentUpon>
     </Compile>
-    <Compile Include="Scatter\LightningScatter.cs">
+    <Compile Include="Scatter\Common\LightningScatter.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="Scatter\LightningScatterSampleForm.cs">
+    <Compile Include="Scatter\Samples\LightningScatterSampleForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Program.cs" />
@@ -194,6 +198,9 @@
     </None>
     <None Include="..\docs\PCA_Scatter_KNN_회의_요구사항.md">
       <Link>docs\PCA_Scatter_KNN_회의_요구사항.md</Link>
+    </None>
+    <None Include="..\docs\PCA_Scatter_공통API_사용가이드.md">
+      <Link>docs\PCA_Scatter_공통API_사용가이드.md</Link>
     </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
