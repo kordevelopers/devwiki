@@ -15,8 +15,12 @@ namespace LightingChartSamples.Scatter
             IList<ScatterSampleData> samples = analysisResult == null || analysisResult.ScatterData == null
                 ? new List<ScatterSampleData>()
                 : analysisResult.ScatterData.Where(item => item != null).ToList();
+            ScatterSampleData highlightedSample = ResolveHighlightedSample(samples, options);
+            IList<ScatterSampleData> regularSamples = highlightedSample == null
+                ? samples
+                : samples.Where(item => !object.ReferenceEquals(item, highlightedSample)).ToList();
 
-            Dictionary<string, List<ScatterSampleData>> groups = samples
+            Dictionary<string, List<ScatterSampleData>> groups = regularSamples
                 .GroupBy(item => ResolveSeriesName(item, options), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
@@ -40,7 +44,44 @@ namespace LightingChartSamples.Scatter
                 });
             }
 
+            if (highlightedSample != null)
+            {
+                string highlightName = highlightedSample.DraftNo.Trim();
+                result.Add(new LightningScatterSeries
+                {
+                    Name = highlightName,
+                    LegendLabel = highlightName,
+                    LineColor = options.HighlightColor,
+                    PointColor = options.HighlightColor,
+                    PointSize = Math.Max(1f, options.HighlightPointSize),
+                    ShowLine = false,
+                    ShowPoints = true,
+                    Points = new List<LightningScatterPoint>
+                    {
+                        new LightningScatterPoint(
+                            highlightedSample.X1,
+                            highlightedSample.X2,
+                            highlightedSample)
+                    }
+                });
+            }
+
             return result;
+        }
+
+        private static ScatterSampleData ResolveHighlightedSample(
+            IEnumerable<ScatterSampleData> samples,
+            PcaScatterSeriesOptions options)
+        {
+            if (string.IsNullOrWhiteSpace(options.HighlightDraftNo))
+            {
+                return null;
+            }
+
+            string draftNo = options.HighlightDraftNo.Trim();
+            return (samples ?? Enumerable.Empty<ScatterSampleData>()).FirstOrDefault(item =>
+                item != null
+                && string.Equals(item.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
         }
 
         private static string ResolveSeriesName(ScatterSampleData sample, PcaScatterSeriesOptions options)

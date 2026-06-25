@@ -43,6 +43,7 @@ namespace LightingChartSamples.Scatter
         public bool EigenValuesDescending { get; set; }
         public bool AllScoresFinite { get; set; }
         public bool KnnResultValid { get; set; }
+        public bool SharedScalerInstance { get; set; }
         public string Message { get; set; }
     }
 
@@ -125,6 +126,20 @@ namespace LightingChartSamples.Scatter
         }
 
         /// <summary>
+        /// Oracle Exadata의 CONV_EXPER_CTN JSON 배열을 개별 실험 행으로 펼쳐 분석한다.
+        /// 전체 데이터가 하나의 스냅샷으로 표준화되며 PCA와 KNN이 같은 결과를 사용한다.
+        /// </summary>
+        public PcaAnalysisResult AnalyzeConvExperimentDocuments(
+            IEnumerable<string> convExperimentDocuments)
+        {
+            var parser = new ActDataJsonParser();
+            IList<string> experimentRows = parser.ExpandDocuments(
+                convExperimentDocuments,
+                "CONV_EXPER_CTN");
+            return Analyze(experimentRows);
+        }
+
+        /// <summary>
         /// 전체 분석 순서를 한 곳에서 보장한다.
         /// JSON 추출 -> 저분산 제거 -> StandardScaler -> PCA -> KNN -> 검증 순서다.
         /// PCA와 KNN은 같은 StandardizedMatrix를 공유하므로 특징 순서가 달라질 수 없다.
@@ -139,7 +154,8 @@ namespace LightingChartSamples.Scatter
                 standardized,
                 options.ComponentCount,
                 options.MaxIterations,
-                options.ConvergenceTolerance);
+                options.ConvergenceTolerance,
+                scaler);
             double[][] scores = pca.Transform(standardized);
 
             var scatterData = new List<ScatterSampleData>(rows.Count);
@@ -158,9 +174,11 @@ namespace LightingChartSamples.Scatter
 
             var knn = new KnnSimilarityService(
                 rows.Select(row => row.DraftNo).ToArray(),
-                standardized);
+                standardized,
+                scaler);
             PcaVerificationReport verification = PcaAlgorithmVerifier.Verify(
                 standardized,
+                scaler,
                 pca,
                 knn,
                 rows[0].DraftNo,
@@ -449,24 +467,46 @@ namespace LightingChartSamples.Scatter
 
     public sealed class PcaProjectionModel
     {
-        private PcaProjectionModel(double[][] components, double[] eigenValues, double[] ratios, int[] iterations)
+        private PcaProjectionModel(
+            double[][] components,
+            double[] eigenValues,
+            double[] ratios,
+            int[] iterations,
+            StandardScalerModel scaler)
         {
             Components = components;
             EigenValues = eigenValues;
             ExplainedVarianceRatios = ratios;
             Iterations = iterations;
+            Scaler = scaler;
         }
 
         public double[][] Components { get; private set; }
         public double[] EigenValues { get; private set; }
         public double[] ExplainedVarianceRatios { get; private set; }
         public int[] Iterations { get; private set; }
+        public StandardScalerModel Scaler { get; private set; }
 
         public static PcaProjectionModel Fit(
             double[][] standardizedMatrix,
             int componentCount,
             int maxIterations,
             double tolerance)
+        {
+            return Fit(
+                standardizedMatrix,
+                componentCount,
+                maxIterations,
+                tolerance,
+                null);
+        }
+
+        public static PcaProjectionModel Fit(
+            double[][] standardizedMatrix,
+            int componentCount,
+            int maxIterations,
+            double tolerance,
+            StandardScalerModel scaler)
         {
             if (standardizedMatrix == null || standardizedMatrix.Length < 3)
             {
@@ -501,7 +541,8 @@ namespace LightingChartSamples.Scatter
                 components.ToArray(),
                 eigenValues.ToArray(),
                 ratios,
-                iterations.ToArray());
+                iterations.ToArray(),
+                scaler);
         }
 
         public double[][] Transform(double[][] standardizedMatrix)
@@ -700,6 +741,14 @@ namespace LightingChartSamples.Scatter
         private readonly Dictionary<string, int> indexByDraftNo;
 
         public KnnSimilarityService(string[] draftNos, double[][] standardizedMatrix)
+            : this(draftNos, standardizedMatrix, null)
+        {
+        }
+
+        public KnnSimilarityService(
+            string[] draftNos,
+            double[][] standardizedMatrix,
+            StandardScalerModel scaler)
         {
             if (draftNos == null || standardizedMatrix == null || draftNos.Length != standardizedMatrix.Length)
             {
@@ -708,6 +757,7 @@ namespace LightingChartSamples.Scatter
 
             this.draftNos = (string[])draftNos.Clone();
             this.standardizedMatrix = standardizedMatrix.Select(row => (double[])row.Clone()).ToArray();
+            Scaler = scaler;
             indexByDraftNo = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             for (int index = 0; index < this.draftNos.Length; index++)
             {
@@ -717,6 +767,8 @@ namespace LightingChartSamples.Scatter
                 }
             }
         }
+
+        public StandardScalerModel Scaler { get; private set; }
 
         public IList<KnnNeighbor> FindNearest(string draftNo, int count)
         {
@@ -781,6 +833,7 @@ namespace LightingChartSamples.Scatter
     {
         public static PcaVerificationReport Verify(
             double[][] standardized,
+            StandardScalerModel scaler,
             PcaProjectionModel pca,
             KnnSimilarityService knn,
             string firstDraftNo,
@@ -818,13 +871,19 @@ namespace LightingChartSamples.Scatter
                 && neighbors.All(item => !string.Equals(item.DraftNo, firstDraftNo, StringComparison.OrdinalIgnoreCase))
                 && neighbors.Select(item => item.Distance).SequenceEqual(
                     neighbors.Select(item => item.Distance).OrderBy(value => value));
+            bool sharedScaler = scaler != null
+                && object.ReferenceEquals(scaler, pca.Scaler)
+                && object.ReferenceEquals(scaler, knn.Scaler)
+                && scaler.FeatureNames != null
+                && scaler.FeatureNames.Length == columnCount;
 
             bool valid = maxMean <= 1e-8d
                 && maxStandardDeviationError <= 1e-8d
                 && componentDot <= 1e-6d
                 && eigenValuesDescending
                 && allScoresFinite
-                && knnValid;
+                && knnValid
+                && sharedScaler;
             return new PcaVerificationReport
             {
                 IsValid = valid,
@@ -834,9 +893,10 @@ namespace LightingChartSamples.Scatter
                 EigenValuesDescending = eigenValuesDescending,
                 AllScoresFinite = allScoresFinite,
                 KnnResultValid = knnValid,
+                SharedScalerInstance = sharedScaler,
                 Message = valid
-                    ? "StandardScaler, PCA orthogonality, finite scores and KNN ordering verified."
-                    : "One or more StandardScaler/PCA/KNN invariants failed."
+                    ? "Shared StandardScaler, PCA orthogonality, finite scores and KNN ordering verified."
+                    : "One or more StandardScaler/PCA/KNN invariants failed, including shared scaler verification."
             };
         }
     }

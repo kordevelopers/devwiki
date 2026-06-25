@@ -454,3 +454,58 @@ Vector[1]
 - 잘못된 JSON의 인덱스 포함 오류 메시지: 통과
 - 파싱 후 StandardScaler/PCA/KNN 전체 검증: 통과
 - 실제 회사 DB 접속: 연결 문자열이 제공되지 않아 미검증
+
+## 19. Oracle Exadata CONV_EXPER_CTN 연동
+
+### 19.1 운영 조회 기준
+
+- 대상 테이블: `TASADM.PCCB_INFER_RSLT_INF`
+- 판정 테이블: `TASDEV.PCCB_JUDGE_RSLT_INF`
+- JSON 컬럼: `CONV_EXPER_CTN`
+- 조회 기간: `M.CHG_TM > SYSDATE - 10`
+- JOIN: `M.DRAFT_NO = J.DRAFT_NO AND M.PARAM_TYP = J.PARAM_TYP`
+- `J.ENGR_RSLT_VAL IS NOT NULL`인 행만 사용한다.
+- DB 행 하나를 PCA 실험 한 건으로 사용한다.
+- 식별자는 `M.DRAFT_NO`, 모집단은 `M.PARAM_TYP`, Y 라벨은 `LABEL_Y`를 사용한다.
+- `CONV_EXPER_CTN` 배열에는 해당 행의 실험 객체가 한 건 들어 있다.
+- 시작 시 샘플 데이터는 생성하지 않는다.
+- 지원 PARAM_TYP는 `RESPONSE`, `DEFECT`, `EPM`, `PROBE`이며 현재 UI에는
+  `RESPONSE`, `DEFECT`만 표시한다.
+
+### 19.2 Draft_NO 검색과 좌표계 일관성
+
+1. 새로고침 정책에 따라 Exadata를 조회하거나 정상 메모리 스냅샷을 사용한다.
+2. 선택된 `PARAM_TYP`의 행만 PCA 모집단으로 필터링한다.
+3. 모집단에서 입력한 `DRAFT_NO`를 먼저 검색한다.
+4. Draft가 없으면 PCA를 실행하지 않고 기존 차트와 스냅샷을 유지한다.
+5. JSON에서 `PUB_NO`, `_VERSION_NM`과 문자열을 제외하고 숫자 특징만 추출한다.
+6. 단일 `StandardScalerModel`로 모집단 전체를 한 번 표준화한다.
+7. 같은 scaler 객체와 표준화 행렬로 PCA 좌표와 KNN 거리를 생성한다.
+8. 검색 결과에는 원본 JSON, 평탄화 값, 숫자 특징, 표준화 벡터와 X1/X2를 보관한다.
+
+따라서 선택한 `Draft_NO`의 좌표와 전체 데이터의 좌표는 같은 PCA 좌표계에 있고,
+KNN 거리도 그 분석에서 생성된 같은 표준화 특징 공간을 사용한다.
+
+### 19.3 데이터 무결성 처리
+
+- 대상 Draft의 NULL, 빈 JSON 또는 빈 배열은 `실험 데이터가 없습니다`로 처리한다.
+- 다른 행의 실험 데이터가 없으면 PCA 모집단에서 제외하고 누락 건수를 표시한다.
+- 잘못된 JSON은 `CONV_EXPER_CTN[index]`를 포함한 오류로 처리한다.
+- JSON 배열에 객체가 두 건 이상이면 데이터 구조 오류로 처리한다.
+- 같은 `PARAM_TYP`에서 중복된 `DRAFT_NO`는 오류로 처리한다.
+- 전체 조회와 분석이 성공한 경우에만 기존 차트 결과를 교체한다.
+- `AlwaysReload`는 조회마다 DB를 호출하고 `PreferMemorySnapshot`은 정상 스냅샷을
+  우선 사용한다.
+- 실제 Exadata 접속은 운영 연결 문자열과 ODP.NET provider가 필요하므로 개발
+  저장소에서는 빌드 및 JSON 분석 경로까지만 검증한다.
+
+### 19.4 시연 데이터와 조회 포인트 강조
+
+- `가상 데이터` 버튼은 Exadata 연결 없이 RESPONSE/DEFECT 시연 데이터를 생성한다.
+- 가상 데이터도 운영과 동일한 행 모델, JSON 파서, StandardScaler, PCA, KNN을 사용한다.
+- 기본 가상 데이터는 RESPONSE 30건, DEFECT 30건, 각 실험당 수치 특징 80개다.
+- 가상 데이터 로드 후 `메모리 데이터 우선`을 활성화하여 DB 없이 Draft 검색이 가능하다.
+- 조회한 Draft 포인트는 일반 `LABEL_Y` 시리즈에서 제거한다.
+- 조회 포인트는 검정색 마커의 단일 시리즈로 표시한다.
+- 강조 시리즈 이름과 범례에는 조회한 `DRAFT_NO`를 표시한다.
+- 강조 포인트를 포함한 전체 포인트 수는 PCA 결과 행 수와 같아야 한다.

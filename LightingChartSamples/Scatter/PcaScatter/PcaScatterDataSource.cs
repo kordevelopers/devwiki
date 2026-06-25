@@ -8,6 +8,7 @@ namespace LightingChartSamples.Scatter
     {
         JsonSamples,
         ActDataJsonDocuments,
+        ConvExperimentJsonDocuments,
         AnalysisResult
     }
 
@@ -21,7 +22,7 @@ namespace LightingChartSamples.Scatter
             Kind = kind;
             this.documents = documents == null
                 ? new List<string>()
-                : documents.Where(item => !string.IsNullOrWhiteSpace(item)).Select(item => item.Trim()).ToList();
+                : documents.ToList();
             this.analysisResult = analysisResult;
         }
 
@@ -42,6 +43,15 @@ namespace LightingChartSamples.Scatter
             return FromActDataJson(new[] { actDataDocument });
         }
 
+        public static PcaScatterDataSource FromConvExperimentJson(
+            IEnumerable<string> convExperimentDocuments)
+        {
+            return new PcaScatterDataSource(
+                PcaScatterDataSourceKind.ConvExperimentJsonDocuments,
+                convExperimentDocuments,
+                null);
+        }
+
         public static PcaScatterDataSource FromAnalysisResult(PcaAnalysisResult analysisResult)
         {
             if (analysisResult == null)
@@ -52,7 +62,7 @@ namespace LightingChartSamples.Scatter
             return new PcaScatterDataSource(PcaScatterDataSourceKind.AnalysisResult, null, analysisResult);
         }
 
-        internal PcaAnalysisResult Analyze(PcaScatterAnalysisOptions analysisOptions)
+        public PcaAnalysisResult Analyze(PcaScatterAnalysisOptions analysisOptions)
         {
             if (Kind == PcaScatterDataSourceKind.AnalysisResult)
             {
@@ -66,7 +76,60 @@ namespace LightingChartSamples.Scatter
                 return pipeline.AnalyzeActDataDocuments(documents);
             }
 
+            if (Kind == PcaScatterDataSourceKind.ConvExperimentJsonDocuments)
+            {
+                return pipeline.AnalyzeConvExperimentDocuments(documents);
+            }
+
             return pipeline.Analyze(documents);
+        }
+    }
+
+    public sealed class PcaScatterExadataOptions
+    {
+        public PcaScatterExadataOptions()
+        {
+            ConnectionStringName = "PcaExadataDatabase";
+            Query = new ConvExperimentQueryOptions().QueryText;
+            JsonColumnName = "CONV_EXPER_CTN";
+            CommandTimeoutSeconds = 120;
+            ParameterType = PcaParameterType.Response;
+        }
+
+        public string ConnectionStringName { get; set; }
+        public string Query { get; set; }
+        public string JsonColumnName { get; set; }
+        public int CommandTimeoutSeconds { get; set; }
+        public PcaParameterType ParameterType { get; set; }
+
+        public static PcaScatterExadataOptions CreateDefault()
+        {
+            ConvExperimentQueryOptions configured = ConvExperimentQueryOptions.FromConfiguration();
+            return new PcaScatterExadataOptions
+            {
+                ConnectionStringName = configured.ConnectionStringName,
+                Query = configured.QueryText,
+                JsonColumnName = configured.JsonColumnName,
+                CommandTimeoutSeconds = configured.CommandTimeoutSeconds,
+                ParameterType = PcaParameterType.Response
+            };
+        }
+
+        public ConvExperimentQueryOptions ToQueryOptions()
+        {
+            return new ConvExperimentQueryOptions
+            {
+                ConnectionStringName = string.IsNullOrWhiteSpace(ConnectionStringName)
+                    ? "PcaExadataDatabase"
+                    : ConnectionStringName.Trim(),
+                QueryText = string.IsNullOrWhiteSpace(Query)
+                    ? new ConvExperimentQueryOptions().QueryText
+                    : Query.Trim(),
+                JsonColumnName = string.IsNullOrWhiteSpace(JsonColumnName)
+                    ? "CONV_EXPER_CTN"
+                    : JsonColumnName.Trim(),
+                CommandTimeoutSeconds = Math.Max(1, CommandTimeoutSeconds)
+            };
         }
     }
 

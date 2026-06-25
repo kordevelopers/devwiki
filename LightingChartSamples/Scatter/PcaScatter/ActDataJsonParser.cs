@@ -28,17 +28,33 @@ namespace LightingChartSamples.Scatter
 
         public IList<string> ExpandDocuments(IEnumerable<string> actDataDocuments)
         {
-            string[] source = actDataDocuments == null
+            return ExpandDocuments(actDataDocuments, "ACT_DATA");
+        }
+
+        public IList<string> ExpandDocuments(IEnumerable<string> jsonDocuments, string sourceName)
+        {
+            string resolvedSourceName = string.IsNullOrWhiteSpace(sourceName)
+                ? "JSON_DATA"
+                : sourceName.Trim();
+            string[] source = jsonDocuments == null
                 ? new string[0]
-                : actDataDocuments.Where(value => !string.IsNullOrWhiteSpace(value)).ToArray();
+                : jsonDocuments.ToArray();
             if (source.Length == 0)
             {
-                throw new ArgumentException("ACT_DATA JSON 문자열이 없습니다.", "actDataDocuments");
+                throw new ArgumentException(
+                    resolvedSourceName + " JSON 문자열이 없습니다.",
+                    "jsonDocuments");
             }
 
             var normalizedRows = new List<string>();
             for (int documentIndex = 0; documentIndex < source.Length; documentIndex++)
             {
+                if (string.IsNullOrWhiteSpace(source[documentIndex]))
+                {
+                    throw new FormatException(
+                        string.Format("{0}[{1}] JSON 문자열이 비어 있습니다.", resolvedSourceName, documentIndex));
+                }
+
                 object root;
                 try
                 {
@@ -47,16 +63,27 @@ namespace LightingChartSamples.Scatter
                 catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
                 {
                     throw new FormatException(
-                        string.Format("ACT_DATA[{0}] JSON 파싱에 실패했습니다: {1}", documentIndex, ex.Message),
+                        string.Format(
+                            "{0}[{1}] JSON 파싱에 실패했습니다: {2}",
+                            resolvedSourceName,
+                            documentIndex,
+                            ex.Message),
                         ex);
                 }
 
                 int beforeCount = normalizedRows.Count;
-                CollectExperimentRows(root, normalizedRows, "ACT_DATA[" + documentIndex + "]", 0);
+                CollectExperimentRows(
+                    root,
+                    normalizedRows,
+                    resolvedSourceName + "[" + documentIndex + "]",
+                    0);
                 if (normalizedRows.Count == beforeCount)
                 {
                     throw new FormatException(
-                        string.Format("ACT_DATA[{0}]에서 Draft_NO를 가진 실험 객체를 찾지 못했습니다.", documentIndex));
+                        string.Format(
+                            "{0}[{1}]에서 Draft_NO를 가진 실험 객체를 찾지 못했습니다.",
+                            resolvedSourceName,
+                            documentIndex));
                 }
             }
 

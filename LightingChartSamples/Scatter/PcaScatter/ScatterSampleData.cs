@@ -19,10 +19,15 @@ namespace LightingChartSamples.Scatter
         public double X2 { get; set; }
         public string AiResultValue { get; set; }
         public double? Distance { get; set; }
+        public string ParameterType { get; set; }
+        public string TooltipText { get; set; }
+        public object UserData { get; set; }
 
         public override string ToString()
         {
-            return DraftNo ?? string.Empty;
+            return string.IsNullOrWhiteSpace(TooltipText)
+                ? DraftNo ?? string.Empty
+                : TooltipText;
         }
     }
 

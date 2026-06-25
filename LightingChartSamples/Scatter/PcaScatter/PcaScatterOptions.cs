@@ -52,6 +52,8 @@ namespace LightingChartSamples.Scatter
             PassColor = Color.FromArgb(151, 211, 169);
             ReviewColor = Color.FromArgb(238, 171, 210);
             DefaultColor = Color.FromArgb(129, 178, 231);
+            HighlightColor = Color.Black;
+            HighlightPointSize = 19f;
             SeriesOrder = new[] { PassResultName, ReviewResultName };
             SeriesColors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
             PastelPalette = LightningScatterOptions.CreateDefaultPastelPalette();
@@ -65,6 +67,9 @@ namespace LightingChartSamples.Scatter
         public Color PassColor { get; set; }
         public Color ReviewColor { get; set; }
         public Color DefaultColor { get; set; }
+        public string HighlightDraftNo { get; set; }
+        public Color HighlightColor { get; set; }
+        public float HighlightPointSize { get; set; }
         public string[] SeriesOrder { get; set; }
         public IDictionary<string, Color> SeriesColors { get; set; }
         public Color[] PastelPalette { get; set; }
@@ -83,6 +88,9 @@ namespace LightingChartSamples.Scatter
                 PassColor = PassColor,
                 ReviewColor = ReviewColor,
                 DefaultColor = DefaultColor,
+                HighlightDraftNo = HighlightDraftNo,
+                HighlightColor = HighlightColor,
+                HighlightPointSize = HighlightPointSize,
                 SeriesOrder = SeriesOrder == null ? new string[0] : SeriesOrder.ToArray(),
                 SeriesColors = SeriesColors == null
                     ? new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)

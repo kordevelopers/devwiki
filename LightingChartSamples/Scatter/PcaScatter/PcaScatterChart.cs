@@ -186,6 +186,39 @@ namespace LightingChartSamples.Scatter
             }
         }
 
+        public void BindFromExadata(PcaScatterExadataOptions exadataOptions)
+        {
+            BindFromExadata(exadataOptions, options);
+        }
+
+        public void BindFromExadata(
+            PcaScatterExadataOptions exadataOptions,
+            PcaScatterOptions newOptions)
+        {
+            PcaScatterExadataOptions effectiveOptions =
+                exadataOptions ?? PcaScatterExadataOptions.CreateDefault();
+            PcaScatterOptions nextOptions =
+                newOptions == null ? PcaScatterOptions.CreateDefault() : newOptions.Clone();
+
+            try
+            {
+                var repository = new ConvExperimentRepository(effectiveOptions.ToQueryOptions());
+                IList<PcaExadataSourceRow> rows = repository.LoadAll();
+                var snapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
+                var service = new PcaExadataService(repository);
+                PcaExadataAnalysisResult result = service.AnalyzeSnapshot(
+                    snapshot,
+                    effectiveOptions.ParameterType,
+                    nextOptions.Analysis);
+                Bind(result.AnalysisResult, nextOptions);
+            }
+            catch (Exception ex)
+            {
+                OnAnalysisFailed(new PcaScatterAnalysisFailedEventArgs(ex));
+                throw;
+            }
+        }
+
         public IList<KnnNeighbor> FindNearest(string draftNo)
         {
             return FindNearest(draftNo, options.Analysis.NeighborCount);
