@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Web.Script.Serialization;
 
 namespace LightingChartSamples.Scatter
 {
@@ -60,11 +59,6 @@ namespace LightingChartSamples.Scatter
         /// </summary>
         public IList<string> CreateDefaultJsonSamples()
         {
-            var serializer = new JavaScriptSerializer
-            {
-                MaxJsonLength = int.MaxValue,
-                RecursionLimit = 128
-            };
             var result = new List<string>(DefaultSampleCount);
 
             for (int sampleIndex = 0; sampleIndex < DefaultSampleCount; sampleIndex++)
@@ -111,7 +105,7 @@ namespace LightingChartSamples.Scatter
                 // 모든 행에서 값이 같으므로 분산 기준 필터에서 반드시 제거되어야 한다.
                 row["CONST_ZERO"] = 0d;
                 row["CONST_ONE"] = 1d;
-                result.Add(serializer.Serialize(row));
+                result.Add(PcaJsonUtility.SerializeObject(row));
             }
 
             return result;

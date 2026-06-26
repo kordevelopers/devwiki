@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Web.Script.Serialization;
 
 namespace LightingChartSamples.Scatter
 {
@@ -212,17 +211,12 @@ namespace LightingChartSamples.Scatter
                 throw new ArgumentException("PCA requires at least three JSON samples.", "jsonSamples");
             }
 
-            var serializer = new JavaScriptSerializer
-            {
-                MaxJsonLength = int.MaxValue,
-                RecursionLimit = 128
-            };
             var rows = new List<PcaSourceRow>(source.Length);
             var draftNos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (int index = 0; index < source.Length; index++)
             {
-                object deserialized = serializer.DeserializeObject(source[index]);
+                object deserialized = PcaJsonUtility.DeserializeObject(source[index]);
                 var dictionary = deserialized as IDictionary<string, object>;
                 if (dictionary == null)
                 {

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Web.Script.Serialization;
 
 namespace LightingChartSamples.Scatter
 {
@@ -35,12 +34,6 @@ namespace LightingChartSamples.Scatter
             int count,
             double typeOffset)
         {
-            var serializer = new JavaScriptSerializer
-            {
-                MaxJsonLength = int.MaxValue,
-                RecursionLimit = 128
-            };
-
             for (int rowIndex = 0; rowIndex < count; rowIndex++)
             {
                 string draftNo = string.Format(
@@ -74,7 +67,7 @@ namespace LightingChartSamples.Scatter
                         featureNumber)] = Math.Round(value, 6);
                 }
 
-                string json = serializer.Serialize(new[] { experiment });
+                string json = PcaJsonUtility.SerializeObject(new[] { experiment });
                 rows.Add(new PcaExadataSourceRow(
                     rows.Count,
                     draftNo,

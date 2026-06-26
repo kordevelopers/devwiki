@@ -5,7 +5,6 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 
 namespace LightingChartSamples.Scatter
 {
@@ -213,17 +212,6 @@ namespace LightingChartSamples.Scatter
 
     internal sealed class ConvExperimentRowParser
     {
-        private readonly JavaScriptSerializer serializer;
-
-        public ConvExperimentRowParser()
-        {
-            serializer = new JavaScriptSerializer
-            {
-                MaxJsonLength = int.MaxValue,
-                RecursionLimit = 256
-            };
-        }
-
         public bool TryParse(PcaExadataSourceRow source, out ParsedPcaExperiment experiment)
         {
             experiment = null;
@@ -235,10 +223,10 @@ namespace LightingChartSamples.Scatter
             object root;
             try
             {
-                root = serializer.DeserializeObject(
+                root = PcaJsonUtility.DeserializeObject(
                     source.RawConvExperimentJson.Trim().TrimStart('\uFEFF'));
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+            catch (Exception ex) when (PcaJsonUtility.IsJsonException(ex))
             {
                 throw new FormatException(
                     string.Format(
@@ -720,11 +708,6 @@ namespace LightingChartSamples.Scatter
                     "PCA 분석에는 실험 데이터가 있는 행이 최소 3건 필요합니다.");
             }
 
-            var serializer = new JavaScriptSerializer
-            {
-                MaxJsonLength = int.MaxValue,
-                RecursionLimit = 128
-            };
             IList<string> normalizedRows = parsed.Select(item =>
             {
                 var row = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
@@ -737,7 +720,7 @@ namespace LightingChartSamples.Scatter
                     row[feature.Key] = feature.Value;
                 }
 
-                return serializer.Serialize(row);
+                return PcaJsonUtility.SerializeObject(row);
             }).ToList();
 
             PcaAnalysisOptions pipelineOptions =

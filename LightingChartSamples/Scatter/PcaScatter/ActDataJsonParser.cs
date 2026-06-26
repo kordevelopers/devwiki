@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web.Script.Serialization;
 
 namespace LightingChartSamples.Scatter
 {
@@ -15,16 +14,6 @@ namespace LightingChartSamples.Scatter
     public sealed class ActDataJsonParser
     {
         private static readonly string[] DraftNoAliases = { "Draft_NO", "Draft_No", "draft_No" };
-        private readonly JavaScriptSerializer serializer;
-
-        public ActDataJsonParser()
-        {
-            serializer = new JavaScriptSerializer
-            {
-                MaxJsonLength = int.MaxValue,
-                RecursionLimit = 256
-            };
-        }
 
         public IList<string> ExpandDocuments(IEnumerable<string> actDataDocuments)
         {
@@ -58,9 +47,10 @@ namespace LightingChartSamples.Scatter
                 object root;
                 try
                 {
-                    root = serializer.DeserializeObject(RemoveBom(source[documentIndex].Trim()));
+                    root = PcaJsonUtility.DeserializeObject(
+                        PcaJsonUtility.RemoveBom(source[documentIndex].Trim()));
                 }
-                catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+                catch (Exception ex) when (PcaJsonUtility.IsJsonException(ex))
                 {
                     throw new FormatException(
                         string.Format(
@@ -111,7 +101,7 @@ namespace LightingChartSamples.Scatter
                     // 이후 PCA 파이프라인은 평탄화된 사전의 수치 leaf 값만 특징으로 사용한다.
                     var flattened = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                     FlattenDictionary(dictionary, flattened, string.Empty, 0);
-                    rows.Add(serializer.Serialize(flattened));
+                    rows.Add(PcaJsonUtility.SerializeObject(flattened));
                     return;
                 }
 
@@ -129,12 +119,13 @@ namespace LightingChartSamples.Scatter
                 try
                 {
                     CollectExperimentRows(
-                        serializer.DeserializeObject(RemoveBom(nestedJson.Trim())),
+                        PcaJsonUtility.DeserializeObject(
+                            PcaJsonUtility.RemoveBom(nestedJson.Trim())),
                         rows,
                         path + "(json-string)",
                         depth + 1);
                 }
-                catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+                catch (Exception ex) when (PcaJsonUtility.IsJsonException(ex))
                 {
                     throw new FormatException(path + "의 중첩 JSON 문자열 파싱에 실패했습니다.", ex);
                 }
@@ -224,7 +215,7 @@ namespace LightingChartSamples.Scatter
 
         private static string RemoveBom(string value)
         {
-            return string.IsNullOrEmpty(value) ? string.Empty : value.TrimStart('\uFEFF');
+            return PcaJsonUtility.RemoveBom(value);
         }
     }
 
