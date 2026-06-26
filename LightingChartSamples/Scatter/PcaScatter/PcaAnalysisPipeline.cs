@@ -46,6 +46,126 @@ namespace LightingChartSamples.Scatter
         public string Message { get; set; }
     }
 
+    public sealed class PcaAnalysisDiagnosticReport
+    {
+        private PcaAnalysisDiagnosticReport()
+        {
+        }
+
+        public int RowCount { get; private set; }
+        public int FeatureCount { get; private set; }
+        public int ExcludedFeatureCount { get; private set; }
+        public int MissingExperimentCount { get; private set; }
+        public double Pc1Percent { get; private set; }
+        public double Pc2Percent { get; private set; }
+        public double Pc1Pc2Percent { get; private set; }
+        public string ShapeCode { get; private set; }
+        public string CompactText { get; private set; }
+
+        public static PcaAnalysisDiagnosticReport Create(
+            PcaAnalysisResult analysisResult,
+            int rowCount,
+            int missingExperimentCount)
+        {
+            int featureCount = analysisResult == null || analysisResult.FeatureNames == null
+                ? 0
+                : analysisResult.FeatureNames.Length;
+            int excludedCount = analysisResult == null || analysisResult.ExcludedFeatureNames == null
+                ? 0
+                : analysisResult.ExcludedFeatureNames.Length;
+            double pc1 = GetExplainedVariancePercent(analysisResult, 0);
+            double pc2 = GetExplainedVariancePercent(analysisResult, 1);
+            string shapeCode = ResolveShapeCode(rowCount, featureCount, pc1, pc2);
+            string compactText = string.Format(
+                CultureInfo.InvariantCulture,
+                "DIAG R={0} F={1} X={2} M={3} PC1={4:0.0} PC2={5:0.0} SUM={6:0.0} SHAPE={7}",
+                rowCount,
+                featureCount,
+                excludedCount,
+                missingExperimentCount,
+                pc1,
+                pc2,
+                pc1 + pc2,
+                shapeCode);
+
+            return new PcaAnalysisDiagnosticReport
+            {
+                RowCount = rowCount,
+                FeatureCount = featureCount,
+                ExcludedFeatureCount = excludedCount,
+                MissingExperimentCount = missingExperimentCount,
+                Pc1Percent = pc1,
+                Pc2Percent = pc2,
+                Pc1Pc2Percent = pc1 + pc2,
+                ShapeCode = shapeCode,
+                CompactText = compactText
+            };
+        }
+
+        private static double GetExplainedVariancePercent(PcaAnalysisResult analysisResult, int index)
+        {
+            if (analysisResult == null
+                || analysisResult.PcaModel == null
+                || analysisResult.PcaModel.ExplainedVarianceRatios == null
+                || analysisResult.PcaModel.ExplainedVarianceRatios.Length <= index)
+            {
+                return 0d;
+            }
+
+            double ratio = analysisResult.PcaModel.ExplainedVarianceRatios[index];
+            if (double.IsNaN(ratio) || double.IsInfinity(ratio))
+            {
+                return 0d;
+            }
+
+            return ratio * 100d;
+        }
+
+        private static string ResolveShapeCode(
+            int rowCount,
+            int featureCount,
+            double pc1Percent,
+            double pc2Percent)
+        {
+            if (rowCount < 3)
+            {
+                return "ROWS_LT3";
+            }
+
+            if (rowCount < 30)
+            {
+                return "ROWS_LOW";
+            }
+
+            if (featureCount < 2)
+            {
+                return "FEATURE_LT2";
+            }
+
+            if (featureCount <= 5)
+            {
+                return "FEATURE_LOW";
+            }
+
+            if (pc1Percent >= 95d && pc2Percent <= 5d)
+            {
+                return "LINE_PC1_HIGH";
+            }
+
+            if (pc1Percent >= 85d && pc2Percent <= 10d)
+            {
+                return "LINE_LIKELY";
+            }
+
+            if (pc1Percent + pc2Percent < 50d)
+            {
+                return "PCA2_LOW";
+            }
+
+            return "OK";
+        }
+    }
+
     public sealed class PcaAnalysisResult
     {
         internal PcaAnalysisResult()
@@ -64,6 +184,7 @@ namespace LightingChartSamples.Scatter
         public PcaProjectionModel PcaModel { get; internal set; }
         public KnnSimilarityService Knn { get; internal set; }
         public PcaVerificationReport Verification { get; internal set; }
+        public PcaAnalysisDiagnosticReport Diagnostic { get; internal set; }
 
         public IList<KnnNeighbor> FindNearest(string draftNo, int count)
         {
@@ -188,7 +309,7 @@ namespace LightingChartSamples.Scatter
                 throw new InvalidOperationException("PCA/KNN verification failed: " + verification.Message);
             }
 
-            return new PcaAnalysisResult
+            var result = new PcaAnalysisResult
             {
                 ScatterData = scatterData,
                 FeatureNames = features.FeatureNames,
@@ -199,6 +320,8 @@ namespace LightingChartSamples.Scatter
                 Knn = knn,
                 Verification = verification
             };
+            result.Diagnostic = PcaAnalysisDiagnosticReport.Create(result, rows.Count, 0);
+            return result;
         }
 
         private static List<PcaSourceRow> ParseRows(IEnumerable<string> jsonSamples)

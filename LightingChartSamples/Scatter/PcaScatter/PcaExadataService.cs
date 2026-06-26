@@ -158,6 +158,10 @@ namespace LightingChartSamples.Scatter
             Records = new ReadOnlyCollection<PcaExperimentRecord>(
                 (records ?? new List<PcaExperimentRecord>()).ToList());
             MissingExperimentCount = missingExperimentCount;
+            Diagnostic = PcaAnalysisDiagnosticReport.Create(
+                analysisResult,
+                Records.Count,
+                MissingExperimentCount);
         }
 
         public PcaExadataSnapshot Snapshot { get; private set; }
@@ -165,6 +169,7 @@ namespace LightingChartSamples.Scatter
         public PcaAnalysisResult AnalysisResult { get; private set; }
         public IList<PcaExperimentRecord> Records { get; private set; }
         public int MissingExperimentCount { get; private set; }
+        public PcaAnalysisDiagnosticReport Diagnostic { get; private set; }
     }
 
     public sealed class PcaDraftQueryResult

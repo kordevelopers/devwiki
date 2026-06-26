@@ -122,6 +122,35 @@ await scatterMain.LoadConvExperimentDataTableAsync(table);
 
 PCA와 KNN은 동일한 `StandardScalerModel` 객체 참조를 공유해야 하며, 검증 실패 시 분석은 중단됩니다.
 
+## 진단 코드
+
+분석 후 화면 상단에는 다음 형태의 짧은 진단 코드가 표시됩니다.
+
+```text
+DIAG R=2500 F=80 X=12 M=0 PC1=98.7 PC2=0.8 SUM=99.5 SHAPE=LINE_PC1_HIGH
+```
+
+이 값만 전달해도 데이터가 선처럼 보이는 원인을 빠르게 판단할 수 있습니다.
+
+- `R`: PCA에 실제 사용된 행 수
+- `F`: PCA에 실제 사용된 수치 feature 수
+- `X`: 제외된 feature 수
+- `M`: 실험 JSON이 없어 제외된 행 수
+- `PC1`: X1 축이 설명하는 분산 비율
+- `PC2`: X2 축이 설명하는 분산 비율
+- `SUM`: PC1 + PC2
+- `SHAPE`: 간단한 판정 코드
+
+`SHAPE=LINE_PC1_HIGH` 또는 `SHAPE=LINE_LIKELY`이면 차트가 선처럼 보이는 것이
+데이터 특성 때문일 가능성이 큽니다. `SHAPE=FEATURE_LOW`이면 실제 PCA에 사용된
+feature가 너무 적은지 확인해야 합니다.
+
+코드에서는 다음 속성으로 같은 값을 읽을 수 있습니다.
+
+```csharp
+string diagnostic = result.Diagnostic.CompactText;
+```
+
 ## 가상 데이터
 
 ```csharp

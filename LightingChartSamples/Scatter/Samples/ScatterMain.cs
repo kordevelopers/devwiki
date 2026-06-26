@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -386,24 +387,17 @@ namespace LightingChartSamples.Scatter
                 return;
             }
 
-            PcaAnalysisResult current = result.AnalysisResult;
-            double pc1Ratio = current.PcaModel != null
-                && current.PcaModel.ExplainedVarianceRatios.Length > 0
-                    ? current.PcaModel.ExplainedVarianceRatios[0] * 100d
-                    : 0d;
-            double pc2Ratio = current.PcaModel != null
-                && current.PcaModel.ExplainedVarianceRatios.Length > 1
-                    ? current.PcaModel.ExplainedVarianceRatios[1] * 100d
-                    : 0d;
+            PcaAnalysisDiagnosticReport diagnostic = result.Diagnostic
+                ?? PcaAnalysisDiagnosticReport.Create(
+                    result.AnalysisResult,
+                    result.Records == null ? 0 : result.Records.Count,
+                    result.MissingExperimentCount);
             summaryLabel.Text = string.Format(
-                "{0} | {1} {2:N0}건 | Feature {3:N0} | 누락 {4:N0} | PCA {5:0.0}% + {6:0.0}%",
-                sourceDescription,
+                CultureInfo.InvariantCulture,
+                "{0} | TYPE={1} SRC={2}",
+                diagnostic.CompactText,
                 PcaParameterTypeParser.ToDatabaseValue(result.ParameterType),
-                result.Records.Count,
-                current.FeatureNames == null ? 0 : current.FeatureNames.Length,
-                result.MissingExperimentCount,
-                pc1Ratio,
-                pc2Ratio);
+                sourceDescription);
         }
 
         private void BindNearestNeighborTable(DataTable table)
