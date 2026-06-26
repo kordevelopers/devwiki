@@ -11,6 +11,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         public PcaScatterAnalysisOptions()
         {
             ConstantVarianceThreshold = 1e-10d;
+            MinimumNumericCoverageRatio = 0.90d;
+            MeanImputationEnabled = true;
             ComponentCount = 2;
             MaxIterations = 2000;
             ConvergenceTolerance = 1e-10d;
@@ -18,6 +20,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         }
 
         public double ConstantVarianceThreshold { get; set; }
+        public double MinimumNumericCoverageRatio { get; set; }
+        public bool MeanImputationEnabled { get; set; }
         public int ComponentCount { get; set; }
         public int MaxIterations { get; set; }
         public double ConvergenceTolerance { get; set; }
@@ -28,6 +32,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             return new PcaAnalysisOptions
             {
                 ConstantVarianceThreshold = ConstantVarianceThreshold,
+                MinimumNumericCoverageRatio = MinimumNumericCoverageRatio,
+                MeanImputationEnabled = MeanImputationEnabled,
                 ComponentCount = ComponentCount,
                 MaxIterations = MaxIterations,
                 ConvergenceTolerance = ConvergenceTolerance,

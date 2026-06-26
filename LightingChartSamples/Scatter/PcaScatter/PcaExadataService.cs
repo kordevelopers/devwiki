@@ -453,9 +453,23 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         private static bool TryConvertFiniteNumber(object value, out double numericValue)
         {
             numericValue = 0d;
-            if (value == null || value is bool || value is string)
+            if (value == null || value is bool)
             {
                 return false;
+            }
+
+            string textValue = value as string;
+            if (textValue != null)
+            {
+                string trimmed = textValue.Trim();
+                return trimmed.Length > 0
+                    && double.TryParse(
+                        trimmed,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out numericValue)
+                    && !double.IsNaN(numericValue)
+                    && !double.IsInfinity(numericValue);
             }
 
             TypeCode typeCode = Type.GetTypeCode(value.GetType());

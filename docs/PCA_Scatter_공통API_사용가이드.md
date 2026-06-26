@@ -174,6 +174,8 @@ PcaScatterOptions options = PcaScatterOptions.CreateDefault600x400();
 
 options.Analysis.NeighborCount = 3;
 options.Analysis.ConstantVarianceThreshold = 1e-10d;
+options.Analysis.MinimumNumericCoverageRatio = 0.90d;
+options.Analysis.MeanImputationEnabled = true;
 
 options.Display.XAxisTitle = "X1";
 options.Display.YAxisTitle = "X2";
@@ -272,3 +274,10 @@ DataTable survivingPopulation = analysis.CreateSurvivingPopulationDataTable();
 - `Variance`: 분산 값. 너무 작으면 상수/저분산 feature로 제거됩니다.
 
 `survivingPopulation`은 실제 PCA에 들어간 모집단 row와 살아남은 feature 값만 포함합니다. `DRAFT_NO`, `PARAM_TYP`, `LABEL_Y`, `X1`, `X2`와 함께 PCA 입력 feature 컬럼을 확인할 수 있습니다.
+
+기본 분석 옵션은 feature별 숫자 데이터가 전체 row의 90% 이상이면 PCA 입력에 포함합니다. 숫자가 아닌 일부 row는 해당 feature의 평균값으로 보정합니다. 예를 들어 2260건 중 2118건이 숫자인 feature는 약 93.7% 커버리지이므로 포함됩니다.
+
+```csharp
+options.Analysis.MinimumNumericCoverageRatio = 0.90d;
+options.Analysis.MeanImputationEnabled = true;
+```

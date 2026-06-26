@@ -286,10 +286,12 @@ namespace LightingChartSamples.Scatter
             exadataAnalysis = result;
             currentRecords = result.Records.ToList();
             pcaChart.Bind(result.AnalysisResult, chartOptions);
-            ShowFeatureSelectionMessage(result);
+            ShowFeatureSelectionMessage(result, chartOptions);
         }
 
-        private void ShowFeatureSelectionMessage(PcaExadataAnalysisResult result)
+        private void ShowFeatureSelectionMessage(
+            PcaExadataAnalysisResult result,
+            PcaScatterOptions chartOptions)
         {
             if (result == null || result.FeatureSelectionReport == null)
             {
@@ -307,6 +309,20 @@ namespace LightingChartSamples.Scatter
             }
 
             builder.AppendLine(report.ToSummaryText());
+            builder.AppendLine(string.Format(
+                CultureInfo.InvariantCulture,
+                "Numeric coverage threshold: {0:P1}",
+                (chartOptions == null || chartOptions.Analysis == null)
+                    ? 1d
+                    : chartOptions.Analysis.MinimumNumericCoverageRatio));
+            builder.AppendLine(string.Format(
+                CultureInfo.InvariantCulture,
+                "Mean imputation: {0}",
+                chartOptions != null
+                    && chartOptions.Analysis != null
+                    && chartOptions.Analysis.MeanImputationEnabled
+                        ? "Enabled"
+                        : "Disabled"));
             builder.AppendLine(string.Format(
                 CultureInfo.InvariantCulture,
                 "Surviving population rows: {0:N0}",

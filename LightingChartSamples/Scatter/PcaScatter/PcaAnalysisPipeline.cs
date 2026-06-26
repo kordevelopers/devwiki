@@ -14,6 +14,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         public PcaAnalysisOptions()
         {
             ConstantVarianceThreshold = 1e-10d;
+            MinimumNumericCoverageRatio = 0.90d;
+            MeanImputationEnabled = true;
             ComponentCount = 2;
             MaxIterations = 2000;
             ConvergenceTolerance = 1e-10d;
@@ -21,6 +23,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         }
 
         public double ConstantVarianceThreshold { get; set; }
+        public double MinimumNumericCoverageRatio { get; set; }
+        public bool MeanImputationEnabled { get; set; }
         public int ComponentCount { get; set; }
         public int MaxIterations { get; set; }
         public double ConvergenceTolerance { get; set; }
@@ -669,7 +673,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         public PcaAnalysisResult Analyze(IEnumerable<string> jsonSamples)
         {
             List<PcaSourceRow> rows = ParseRows(jsonSamples);
-            FeatureMatrixResult features = BuildFeatureMatrix(rows, options.ConstantVarianceThreshold);
+            FeatureMatrixResult features = BuildFeatureMatrix(rows, options);
             StandardScalerModel scaler = StandardScalerModel.Fit(features.Matrix, features.FeatureNames);
             double[][] standardized = scaler.Transform(features.Matrix);
             PcaProjectionModel pca = PcaProjectionModel.Fit(
@@ -841,8 +845,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 
         private static FeatureMatrixResult BuildFeatureMatrix(
             IList<PcaSourceRow> rows,
-            double varianceThreshold)
+            PcaAnalysisOptions analysisOptions)
         {
+            PcaAnalysisOptions effectiveOptions = analysisOptions ?? new PcaAnalysisOptions();
+            double varianceThreshold = Math.Max(0d, effectiveOptions.ConstantVarianceThreshold);
+            double minimumNumericCoverageRatio = NormalizeCoverageRatio(
+                effectiveOptions.MinimumNumericCoverageRatio);
             string[] allFields = rows
                 .SelectMany(row => row.DataFieldNames)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -850,31 +858,44 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
                 .ToArray();
             var included = new List<string>();
             var excluded = new List<string>();
+            var imputationMeans = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
             foreach (string fieldName in allFields)
             {
-                bool numericInEveryRow = rows.All(row => row.NumericValues.ContainsKey(fieldName));
-                if (!numericInEveryRow)
+                double[] numericValues = rows
+                    .Where(row => row.NumericValues.ContainsKey(fieldName))
+                    .Select(row => row.NumericValues[fieldName])
+                    .ToArray();
+                double numericCoverageRatio = rows.Count == 0
+                    ? 0d
+                    : numericValues.Length / (double)rows.Count;
+                bool numericInEveryRow = numericValues.Length == rows.Count;
+                bool coverageAccepted = numericValues.Length > 0
+                    && (numericInEveryRow
+                    || (effectiveOptions.MeanImputationEnabled
+                        && numericCoverageRatio >= minimumNumericCoverageRatio));
+                if (!coverageAccepted)
                 {
                     excluded.Add(fieldName);
                     continue;
                 }
 
-                double mean = rows.Average(row => row.NumericValues[fieldName]);
-                double variance = rows.Average(row =>
+                double mean = numericValues.Average();
+                double variance = numericValues.Average(value =>
                 {
-                    double difference = row.NumericValues[fieldName] - mean;
+                    double difference = value - mean;
                     return difference * difference;
                 });
 
                 // 遺꾩궛??1e-10 ?댄븯??而щ읆? ?뺣낫?됱씠 ?녾퀬 ?쒖?????0?쇰줈 ?섎늻寃??섎?濡??쒓굅?쒕떎.
-                if (variance <= Math.Max(0d, varianceThreshold))
+                if (variance <= varianceThreshold)
                 {
                     excluded.Add(fieldName);
                     continue;
                 }
 
                 included.Add(fieldName);
+                imputationMeans[fieldName] = mean;
             }
 
             if (included.Count < 2)
@@ -883,7 +904,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             }
 
             double[][] matrix = rows
-                .Select(row => included.Select(feature => row.NumericValues[feature]).ToArray())
+                .Select(row => included.Select(feature =>
+                {
+                    double value;
+                    return row.NumericValues.TryGetValue(feature, out value)
+                        ? value
+                        : imputationMeans[feature];
+                }).ToArray())
                 .ToArray();
             return new FeatureMatrixResult
             {
@@ -895,6 +922,26 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
                     included,
                     varianceThreshold)
             };
+        }
+
+        private static double NormalizeCoverageRatio(double ratio)
+        {
+            if (double.IsNaN(ratio) || double.IsInfinity(ratio))
+            {
+                return 1d;
+            }
+
+            if (ratio < 0d)
+            {
+                return 0d;
+            }
+
+            if (ratio > 1d)
+            {
+                return 1d;
+            }
+
+            return ratio;
         }
     }
 
