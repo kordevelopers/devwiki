@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 
 namespace LightingChartSamples.Scatter
@@ -89,17 +90,18 @@ namespace LightingChartSamples.Scatter
     {
         public PcaScatterExadataOptions()
         {
-            ConnectionStringName = "PcaExadataDatabase";
-            Query = new ConvExperimentQueryOptions().QueryText;
             JsonColumnName = "CONV_EXPER_CTN";
-            CommandTimeoutSeconds = 120;
+            DraftNoColumnName = "DRAFT_NO";
+            ParameterTypeColumnName = "PARAM_TYP";
+            LabelColumnName = "LABEL_Y";
             ParameterType = PcaParameterType.Response;
         }
 
-        public string ConnectionStringName { get; set; }
-        public string Query { get; set; }
+        public DataTable SourceTable { get; set; }
         public string JsonColumnName { get; set; }
-        public int CommandTimeoutSeconds { get; set; }
+        public string DraftNoColumnName { get; set; }
+        public string ParameterTypeColumnName { get; set; }
+        public string LabelColumnName { get; set; }
         public PcaParameterType ParameterType { get; set; }
 
         public static PcaScatterExadataOptions CreateDefault()
@@ -107,11 +109,19 @@ namespace LightingChartSamples.Scatter
             ConvExperimentQueryOptions configured = ConvExperimentQueryOptions.FromConfiguration();
             return new PcaScatterExadataOptions
             {
-                ConnectionStringName = configured.ConnectionStringName,
-                Query = configured.QueryText,
                 JsonColumnName = configured.JsonColumnName,
-                CommandTimeoutSeconds = configured.CommandTimeoutSeconds,
+                DraftNoColumnName = configured.DraftNoColumnName,
+                ParameterTypeColumnName = configured.ParameterTypeColumnName,
+                LabelColumnName = configured.LabelColumnName,
                 ParameterType = PcaParameterType.Response
+            };
+        }
+
+        public static PcaScatterExadataOptions FromDataTable(DataTable sourceTable)
+        {
+            return new PcaScatterExadataOptions
+            {
+                SourceTable = sourceTable
             };
         }
 
@@ -119,16 +129,18 @@ namespace LightingChartSamples.Scatter
         {
             return new ConvExperimentQueryOptions
             {
-                ConnectionStringName = string.IsNullOrWhiteSpace(ConnectionStringName)
-                    ? "PcaExadataDatabase"
-                    : ConnectionStringName.Trim(),
-                QueryText = string.IsNullOrWhiteSpace(Query)
-                    ? new ConvExperimentQueryOptions().QueryText
-                    : Query.Trim(),
                 JsonColumnName = string.IsNullOrWhiteSpace(JsonColumnName)
                     ? "CONV_EXPER_CTN"
                     : JsonColumnName.Trim(),
-                CommandTimeoutSeconds = Math.Max(1, CommandTimeoutSeconds)
+                DraftNoColumnName = string.IsNullOrWhiteSpace(DraftNoColumnName)
+                    ? "DRAFT_NO"
+                    : DraftNoColumnName.Trim(),
+                ParameterTypeColumnName = string.IsNullOrWhiteSpace(ParameterTypeColumnName)
+                    ? "PARAM_TYP"
+                    : ParameterTypeColumnName.Trim(),
+                LabelColumnName = string.IsNullOrWhiteSpace(LabelColumnName)
+                    ? "LABEL_Y"
+                    : LabelColumnName.Trim()
             };
         }
     }
@@ -137,31 +149,32 @@ namespace LightingChartSamples.Scatter
     {
         public PcaScatterDatabaseOptions()
         {
-            ConnectionStringName = "AiInferenceDatabase";
-            Query = "SELECT ACT_DATA FROM AI_INFERNECE";
-            CommandTimeoutSeconds = 30;
+            ActDataColumnName = "ACT_DATA";
         }
 
-        public string ConnectionStringName { get; set; }
-        public string Query { get; set; }
-        public int CommandTimeoutSeconds { get; set; }
+        public DataTable SourceTable { get; set; }
+        public string ActDataColumnName { get; set; }
 
         public static PcaScatterDatabaseOptions CreateDefault()
         {
             return new PcaScatterDatabaseOptions();
         }
 
+        public static PcaScatterDatabaseOptions FromDataTable(DataTable sourceTable)
+        {
+            return new PcaScatterDatabaseOptions
+            {
+                SourceTable = sourceTable
+            };
+        }
+
         internal ActDataQueryOptions ToActDataQueryOptions()
         {
             return new ActDataQueryOptions
             {
-                ConnectionStringName = string.IsNullOrWhiteSpace(ConnectionStringName)
-                    ? "AiInferenceDatabase"
-                    : ConnectionStringName.Trim(),
-                QueryText = string.IsNullOrWhiteSpace(Query)
-                    ? "SELECT ACT_DATA FROM AI_INFERNECE"
-                    : Query.Trim(),
-                CommandTimeoutSeconds = Math.Max(1, CommandTimeoutSeconds)
+                ActDataColumnName = string.IsNullOrWhiteSpace(ActDataColumnName)
+                    ? "ACT_DATA"
+                    : ActDataColumnName.Trim()
             };
         }
     }

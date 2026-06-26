@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -165,6 +166,29 @@ namespace LightingChartSamples.Scatter
             BindFromDatabase(databaseOptions, options);
         }
 
+        public void BindFromDatabase(DataTable sourceTable)
+        {
+            BindFromDatabase(sourceTable, PcaScatterDatabaseOptions.CreateDefault(), options);
+        }
+
+        public void BindFromDatabase(
+            DataTable sourceTable,
+            PcaScatterDatabaseOptions databaseOptions)
+        {
+            BindFromDatabase(sourceTable, databaseOptions, options);
+        }
+
+        public void BindFromDatabase(
+            DataTable sourceTable,
+            PcaScatterDatabaseOptions databaseOptions,
+            PcaScatterOptions newOptions)
+        {
+            PcaScatterDatabaseOptions effectiveDatabaseOptions =
+                databaseOptions ?? PcaScatterDatabaseOptions.CreateDefault();
+            effectiveDatabaseOptions.SourceTable = sourceTable;
+            BindFromDatabase(effectiveDatabaseOptions, newOptions);
+        }
+
         public void BindFromDatabase(PcaScatterDatabaseOptions databaseOptions, PcaScatterOptions newOptions)
         {
             PcaScatterDatabaseOptions effectiveDatabaseOptions = databaseOptions ?? PcaScatterDatabaseOptions.CreateDefault();
@@ -172,7 +196,15 @@ namespace LightingChartSamples.Scatter
 
             try
             {
-                ActDataRepository repository = new ActDataRepository(effectiveDatabaseOptions.ToActDataQueryOptions());
+                if (effectiveDatabaseOptions.SourceTable == null)
+                {
+                    throw new InvalidOperationException(
+                        "BindFromDatabase requires a DataTable. Query data in the UI/service layer and pass it to the chart.");
+                }
+
+                ActDataRepository repository = new ActDataRepository(
+                    effectiveDatabaseOptions.SourceTable,
+                    effectiveDatabaseOptions.ToActDataQueryOptions());
                 IList<string> actDataDocuments = repository.LoadActData();
                 PcaAnalysisResult result = PcaScatterDataSource
                     .FromActDataJson(actDataDocuments)
@@ -191,6 +223,29 @@ namespace LightingChartSamples.Scatter
             BindFromExadata(exadataOptions, options);
         }
 
+        public void BindFromExadata(DataTable sourceTable)
+        {
+            BindFromExadata(sourceTable, PcaScatterExadataOptions.CreateDefault(), options);
+        }
+
+        public void BindFromExadata(
+            DataTable sourceTable,
+            PcaScatterExadataOptions exadataOptions)
+        {
+            BindFromExadata(sourceTable, exadataOptions, options);
+        }
+
+        public void BindFromExadata(
+            DataTable sourceTable,
+            PcaScatterExadataOptions exadataOptions,
+            PcaScatterOptions newOptions)
+        {
+            PcaScatterExadataOptions effectiveOptions =
+                exadataOptions ?? PcaScatterExadataOptions.CreateDefault();
+            effectiveOptions.SourceTable = sourceTable;
+            BindFromExadata(effectiveOptions, newOptions);
+        }
+
         public void BindFromExadata(
             PcaScatterExadataOptions exadataOptions,
             PcaScatterOptions newOptions)
@@ -202,7 +257,15 @@ namespace LightingChartSamples.Scatter
 
             try
             {
-                var repository = new ConvExperimentRepository(effectiveOptions.ToQueryOptions());
+                if (effectiveOptions.SourceTable == null)
+                {
+                    throw new InvalidOperationException(
+                        "BindFromExadata requires a DataTable. Query data in the UI/service layer and pass it to the chart.");
+                }
+
+                var repository = new ConvExperimentRepository(
+                    effectiveOptions.SourceTable,
+                    effectiveOptions.ToQueryOptions());
                 IList<PcaExadataSourceRow> rows = repository.LoadAll();
                 var snapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
                 var service = new PcaExadataService(repository);

@@ -13,6 +13,7 @@ namespace LightingChartSamples.Scatter
     {
         private readonly PcaScatterChart pcaChart;
         private readonly PcaExadataService exadataService;
+        private readonly ConvExperimentRepository exadataRepository;
 
         private PcaAnalysisResult analysisResult;
         private PcaExadataAnalysisResult exadataAnalysis;
@@ -28,14 +29,15 @@ namespace LightingChartSamples.Scatter
             currentRecords = new List<PcaExperimentRecord>();
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
             {
+                exadataRepository = null;
                 exadataService = null;
                 pcaChart = null;
                 return;
             }
 
-            exadataService = new PcaExadataService(
-                new ConvExperimentRepository(
-                    PcaScatterExadataOptions.CreateDefault().ToQueryOptions()));
+            exadataRepository = new ConvExperimentRepository(
+                PcaScatterExadataOptions.CreateDefault().ToQueryOptions());
+            exadataService = new PcaExadataService(exadataRepository);
 
             BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
             pcaChart = PcaScatterChart.Create(chartHost, CreateChartOptions());
@@ -46,6 +48,19 @@ namespace LightingChartSamples.Scatter
             summaryLabel.Text = "PARAM_TYP과 DRAFT_NO를 선택하여 조회하거나 전체 데이터를 새로고침하세요.";
             parameterChangeEnabled = true;
             SetToolbarEnabled(true);
+        }
+
+        public async Task LoadConvExperimentDataTableAsync(DataTable sourceTable)
+        {
+            if (sourceTable == null)
+            {
+                throw new ArgumentNullException("sourceTable");
+            }
+
+            exadataRepository.SetSourceTable(sourceTable);
+            PcaExadataSnapshot snapshot = await exadataService.LoadAllAsync();
+            preferMemoryCheckBox.Checked = true;
+            await AnalyzeCurrentSnapshotAsync(snapshot);
         }
 
         private async void SearchButton_Click(object sender, EventArgs e)

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
@@ -434,6 +435,18 @@ namespace LightingChartSamples.Scatter
         {
         }
 
+        public PcaExadataService(DataTable sourceTable)
+            : this(new ConvExperimentRepository(sourceTable))
+        {
+        }
+
+        public PcaExadataService(
+            DataTable sourceTable,
+            ConvExperimentQueryOptions tableOptions)
+            : this(new ConvExperimentRepository(sourceTable, tableOptions))
+        {
+        }
+
         public PcaExadataService(IPcaExadataRowRepository repository)
         {
             if (repository == null)
@@ -485,6 +498,23 @@ namespace LightingChartSamples.Scatter
             }
         }
 
+        public PcaExadataSnapshot SetDataTable(DataTable sourceTable)
+        {
+            return SetDataTable(sourceTable, ConvExperimentQueryOptions.FromConfiguration());
+        }
+
+        public PcaExadataSnapshot SetDataTable(
+            DataTable sourceTable,
+            ConvExperimentQueryOptions tableOptions)
+        {
+            IList<PcaExadataSourceRow> rows = ConvExperimentRepository.LoadFromDataTable(
+                sourceTable,
+                tableOptions);
+            var snapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
+            SetSnapshot(snapshot);
+            return snapshot;
+        }
+
         public Task<PcaExadataSnapshot> LoadAllAsync()
         {
             return Task.Run(delegate
@@ -497,6 +527,23 @@ namespace LightingChartSamples.Scatter
                 }
 
                 return snapshot;
+            });
+        }
+
+        public Task<PcaExadataSnapshot> LoadFromDataTableAsync(DataTable sourceTable)
+        {
+            return LoadFromDataTableAsync(
+                sourceTable,
+                ConvExperimentQueryOptions.FromConfiguration());
+        }
+
+        public Task<PcaExadataSnapshot> LoadFromDataTableAsync(
+            DataTable sourceTable,
+            ConvExperimentQueryOptions tableOptions)
+        {
+            return Task.Run(delegate
+            {
+                return SetDataTable(sourceTable, tableOptions);
             });
         }
 
@@ -520,6 +567,31 @@ namespace LightingChartSamples.Scatter
                 }
 
                 return result;
+            });
+        }
+
+        public Task<PcaExadataAnalysisResult> AnalyzeDataTableAsync(
+            DataTable sourceTable,
+            PcaParameterType parameterType,
+            PcaScatterAnalysisOptions analysisOptions)
+        {
+            return AnalyzeDataTableAsync(
+                sourceTable,
+                parameterType,
+                analysisOptions,
+                ConvExperimentQueryOptions.FromConfiguration());
+        }
+
+        public Task<PcaExadataAnalysisResult> AnalyzeDataTableAsync(
+            DataTable sourceTable,
+            PcaParameterType parameterType,
+            PcaScatterAnalysisOptions analysisOptions,
+            ConvExperimentQueryOptions tableOptions)
+        {
+            return Task.Run(delegate
+            {
+                PcaExadataSnapshot snapshot = SetDataTable(sourceTable, tableOptions);
+                return AnalyzeSnapshot(snapshot, parameterType, analysisOptions);
             });
         }
 
@@ -587,6 +659,70 @@ namespace LightingChartSamples.Scatter
                     target,
                     neighbors,
                     usedMemorySnapshot);
+            });
+        }
+
+        public Task<PcaDraftQueryResult> QueryDraftFromDataTableAsync(
+            string draftNo,
+            PcaParameterType parameterType,
+            DataTable sourceTable,
+            PcaScatterAnalysisOptions analysisOptions)
+        {
+            return QueryDraftFromDataTableAsync(
+                draftNo,
+                parameterType,
+                sourceTable,
+                analysisOptions,
+                ConvExperimentQueryOptions.FromConfiguration());
+        }
+
+        public Task<PcaDraftQueryResult> QueryDraftFromDataTableAsync(
+            string draftNo,
+            PcaParameterType parameterType,
+            DataTable sourceTable,
+            PcaScatterAnalysisOptions analysisOptions,
+            ConvExperimentQueryOptions tableOptions)
+        {
+            string resolvedDraftNo = (draftNo ?? string.Empty).Trim();
+            if (resolvedDraftNo.Length == 0)
+            {
+                throw new ArgumentException("조회할 DRAFT_NO를 입력해야 합니다.", "draftNo");
+            }
+
+            return Task.Run(delegate
+            {
+                PcaExadataSnapshot snapshot = SetDataTable(sourceTable, tableOptions);
+                IList<PcaExadataSourceRow> population = FilterPopulation(snapshot, parameterType);
+                PcaExadataSourceRow targetSource = population.FirstOrDefault(row =>
+                    string.Equals(row.DraftNo, resolvedDraftNo, StringComparison.OrdinalIgnoreCase));
+                if (targetSource == null)
+                {
+                    throw new KeyNotFoundException(
+                        string.Format(
+                            "선택한 PARAM_TYP '{0}'에 DRAFT_NO '{1}'가 없습니다.",
+                            PcaParameterTypeParser.ToDatabaseValue(parameterType),
+                            resolvedDraftNo));
+                }
+
+                PcaScatterAnalysisOptions effectiveAnalysisOptions =
+                    analysisOptions ?? new PcaScatterAnalysisOptions();
+                PcaExadataAnalysisResult analysis = AnalyzePopulation(
+                    snapshot,
+                    parameterType,
+                    population,
+                    effectiveAnalysisOptions,
+                    targetSource.DraftNo);
+                PcaExperimentRecord target = analysis.Records.First(record =>
+                    string.Equals(record.DraftNo, resolvedDraftNo, StringComparison.OrdinalIgnoreCase));
+                IList<KnnNeighbor> neighbors = analysis.AnalysisResult.FindNearest(
+                    target.DraftNo,
+                    Math.Max(1, effectiveAnalysisOptions.NeighborCount));
+
+                return new PcaDraftQueryResult(
+                    analysis,
+                    target,
+                    neighbors,
+                    false);
             });
         }
 
