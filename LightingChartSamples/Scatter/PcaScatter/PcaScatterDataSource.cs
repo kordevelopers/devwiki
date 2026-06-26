@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 
-namespace LightingChartSamples.Scatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 {
     public enum PcaScatterDataSourceKind
     {

@@ -1,11 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using LightingChartSamples.Scatter;
 
-namespace LightingChartSamples.Scatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 {
     public sealed class PcaScatterSampleClickedEventArgs : EventArgs
     {

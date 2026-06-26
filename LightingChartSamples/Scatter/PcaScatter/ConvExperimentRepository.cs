@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.IO;
 
-namespace LightingChartSamples.Scatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 {
     /// <summary>
     /// Converts caller-supplied CONV_EXPER_CTN service results into PCA source rows.

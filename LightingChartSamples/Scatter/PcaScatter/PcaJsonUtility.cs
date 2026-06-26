@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace LightingChartSamples.Scatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 {
     internal static class PcaJsonUtility
     {

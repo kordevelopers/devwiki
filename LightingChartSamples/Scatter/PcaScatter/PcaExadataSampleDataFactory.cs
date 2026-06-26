@@ -1,12 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace LightingChartSamples.Scatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 {
     /// <summary>
-    /// 화면 시연용 CONV_EXPER_CTN 행을 생성한다.
-    /// 운영 DataTable과 같은 PcaExadataSourceRow/PcaExadataService 경로를 사용한다.
+    /// ?붾㈃ ?쒖뿰??CONV_EXPER_CTN ?됱쓣 ?앹꽦?쒕떎.
+    /// ?댁쁺 DataTable怨?媛숈? PcaExadataSourceRow/PcaExadataService 寃쎈줈瑜??ъ슜?쒕떎.
     /// </summary>
     public sealed class PcaExadataSampleDataFactory
     {

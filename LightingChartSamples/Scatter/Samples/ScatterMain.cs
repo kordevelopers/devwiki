@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter;
 
 namespace LightingChartSamples.Scatter
 {

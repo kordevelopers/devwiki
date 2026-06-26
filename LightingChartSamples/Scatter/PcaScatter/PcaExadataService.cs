@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -7,7 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace LightingChartSamples.Scatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 {
     public enum PcaParameterType
     {
@@ -150,7 +150,8 @@ namespace LightingChartSamples.Scatter
             PcaParameterType parameterType,
             PcaAnalysisResult analysisResult,
             IList<PcaExperimentRecord> records,
-            int missingExperimentCount)
+            int missingExperimentCount,
+            PcaFeatureSelectionReport featureSelectionReport)
         {
             Snapshot = snapshot;
             ParameterType = parameterType;
@@ -158,6 +159,9 @@ namespace LightingChartSamples.Scatter
             Records = new ReadOnlyCollection<PcaExperimentRecord>(
                 (records ?? new List<PcaExperimentRecord>()).ToList());
             MissingExperimentCount = missingExperimentCount;
+            FeatureSelectionReport = featureSelectionReport
+                ?? (analysisResult == null ? null : analysisResult.FeatureSelectionReport)
+                ?? PcaFeatureSelectionReport.Empty();
             Diagnostic = PcaAnalysisDiagnosticReport.Create(
                 analysisResult,
                 Records.Count,
@@ -170,6 +174,86 @@ namespace LightingChartSamples.Scatter
         public IList<PcaExperimentRecord> Records { get; private set; }
         public int MissingExperimentCount { get; private set; }
         public PcaAnalysisDiagnosticReport Diagnostic { get; private set; }
+        public PcaFeatureSelectionReport FeatureSelectionReport { get; private set; }
+
+        public DataTable CreateFeatureSelectionDataTable()
+        {
+            return (FeatureSelectionReport ?? PcaFeatureSelectionReport.Empty()).ToDataTable();
+        }
+
+        public DataTable CreateSurvivingPopulationDataTable()
+        {
+            DataTable table = new DataTable("PCA_SURVIVING_POPULATION");
+            table.Columns.Add("DRAFT_NO", typeof(string));
+            table.Columns.Add("PARAM_TYP", typeof(string));
+            table.Columns.Add("LABEL_Y", typeof(string));
+            table.Columns.Add("X1", typeof(double));
+            table.Columns.Add("X2", typeof(double));
+
+            string[] featureNames = AnalysisResult == null || AnalysisResult.FeatureNames == null
+                ? new string[0]
+                : AnalysisResult.FeatureNames;
+            var featureColumnNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string featureName in featureNames)
+            {
+                string columnName = ResolveFeatureColumnName(table, featureName);
+                featureColumnNames[featureName] = columnName;
+                if (!table.Columns.Contains(columnName))
+                {
+                    table.Columns.Add(columnName, typeof(double));
+                }
+            }
+
+            foreach (PcaExperimentRecord record in Records)
+            {
+                DataRow row = table.NewRow();
+                row["DRAFT_NO"] = record.DraftNo;
+                row["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(record.ParameterType);
+                row["LABEL_Y"] = record.LabelY;
+                row["X1"] = record.X1;
+                row["X2"] = record.X2;
+                foreach (string featureName in featureNames)
+                {
+                    double value;
+                    string columnName = featureColumnNames[featureName];
+                    row[columnName] = record.NumericFeatures != null
+                        && record.NumericFeatures.TryGetValue(featureName, out value)
+                            ? (object)value
+                            : DBNull.Value;
+                }
+
+                table.Rows.Add(row);
+            }
+
+            return table;
+        }
+
+        private static string ResolveFeatureColumnName(DataTable table, string featureName)
+        {
+            string baseName = string.IsNullOrWhiteSpace(featureName)
+                ? "FEATURE"
+                : featureName;
+            if (!table.Columns.Contains(baseName))
+            {
+                return baseName;
+            }
+
+            string prefixed = "FEATURE_" + baseName;
+            if (!table.Columns.Contains(prefixed))
+            {
+                return prefixed;
+            }
+
+            int index = 1;
+            string candidate;
+            do
+            {
+                candidate = prefixed + "_" + index.ToString(CultureInfo.InvariantCulture);
+                index++;
+            }
+            while (table.Columns.Contains(candidate));
+            return candidate;
+        }
     }
 
     public sealed class PcaDraftQueryResult
@@ -201,7 +285,7 @@ namespace LightingChartSamples.Scatter
     public sealed class PcaExperimentDataMissingException : InvalidOperationException
     {
         public PcaExperimentDataMissingException(string draftNo)
-            : base("DRAFT_NO '" + (draftNo ?? string.Empty) + "'의 실험 데이터가 없습니다.")
+            : base("DRAFT_NO '" + (draftNo ?? string.Empty) + "'???ㅽ뿕 ?곗씠?곌? ?놁뒿?덈떎.")
         {
             DraftNo = draftNo ?? string.Empty;
         }
@@ -236,7 +320,7 @@ namespace LightingChartSamples.Scatter
             {
                 throw new FormatException(
                     string.Format(
-                        "CONV_EXPER_CTN[{0}] JSON 파싱에 실패했습니다. DRAFT_NO={1}: {2}",
+                        "CONV_EXPER_CTN[{0}] JSON ?뚯떛???ㅽ뙣?덉뒿?덈떎. DRAFT_NO={1}: {2}",
                         source.SourceRowIndex,
                         source.DraftNo,
                         ex.Message),
@@ -253,7 +337,7 @@ namespace LightingChartSamples.Scatter
             {
                 throw new FormatException(
                     string.Format(
-                        "CONV_EXPER_CTN[{0}]에는 실험 객체가 한 건이어야 합니다. DRAFT_NO={1}, Count={2}",
+                        "CONV_EXPER_CTN[{0}]?먮뒗 ?ㅽ뿕 媛앹껜媛 ??嫄댁씠?댁빞 ?⑸땲?? DRAFT_NO={1}, Count={2}",
                         source.SourceRowIndex,
                         source.DraftNo,
                         items.Count));
@@ -264,7 +348,7 @@ namespace LightingChartSamples.Scatter
             {
                 throw new FormatException(
                     string.Format(
-                        "CONV_EXPER_CTN[{0}]의 배열 원소가 JSON 객체가 아닙니다. DRAFT_NO={1}",
+                        "CONV_EXPER_CTN[{0}]??諛곗뿴 ?먯냼媛 JSON 媛앹껜媛 ?꾨떃?덈떎. DRAFT_NO={1}",
                         source.SourceRowIndex,
                         source.DraftNo));
             }
@@ -326,7 +410,7 @@ namespace LightingChartSamples.Scatter
         {
             if (depth > 64)
             {
-                throw new FormatException("CONV_EXPER_CTN의 JSON 중첩 깊이가 허용 범위를 초과했습니다.");
+                throw new FormatException("CONV_EXPER_CTN??JSON 以묒꺽 源딆씠媛 ?덉슜 踰붿쐞瑜?珥덇낵?덉뒿?덈떎.");
             }
 
             foreach (KeyValuePair<string, object> pair in source)
@@ -621,7 +705,7 @@ namespace LightingChartSamples.Scatter
             string resolvedDraftNo = (draftNo ?? string.Empty).Trim();
             if (resolvedDraftNo.Length == 0)
             {
-                throw new ArgumentException("조회할 DRAFT_NO를 입력해야 합니다.", "draftNo");
+                throw new ArgumentException("議고쉶??DRAFT_NO瑜??낅젰?댁빞 ?⑸땲??", "draftNo");
             }
 
             return Task.Run(delegate
@@ -635,7 +719,7 @@ namespace LightingChartSamples.Scatter
                 {
                     throw new KeyNotFoundException(
                         string.Format(
-                            "선택한 PARAM_TYP '{0}'에 DRAFT_NO '{1}'가 없습니다.",
+                            "?좏깮??PARAM_TYP '{0}'??DRAFT_NO '{1}'媛 ?놁뒿?덈떎.",
                             PcaParameterTypeParser.ToDatabaseValue(parameterType),
                             resolvedDraftNo));
                 }
@@ -691,7 +775,7 @@ namespace LightingChartSamples.Scatter
             string resolvedDraftNo = (draftNo ?? string.Empty).Trim();
             if (resolvedDraftNo.Length == 0)
             {
-                throw new ArgumentException("조회할 DRAFT_NO를 입력해야 합니다.", "draftNo");
+                throw new ArgumentException("議고쉶??DRAFT_NO瑜??낅젰?댁빞 ?⑸땲??", "draftNo");
             }
 
             return Task.Run(delegate
@@ -704,7 +788,7 @@ namespace LightingChartSamples.Scatter
                 {
                     throw new KeyNotFoundException(
                         string.Format(
-                            "선택한 PARAM_TYP '{0}'에 DRAFT_NO '{1}'가 없습니다.",
+                            "?좏깮??PARAM_TYP '{0}'??DRAFT_NO '{1}'媛 ?놁뒿?덈떎.",
                             PcaParameterTypeParser.ToDatabaseValue(parameterType),
                             resolvedDraftNo));
                 }
@@ -788,8 +872,8 @@ namespace LightingChartSamples.Scatter
             if (population.Count == 0)
             {
                 throw new InvalidOperationException(
-                    "선택한 PARAM_TYP '" + PcaParameterTypeParser.ToDatabaseValue(parameterType)
-                    + "'의 PCA 데이터가 없습니다.");
+                    "?좏깮??PARAM_TYP '" + PcaParameterTypeParser.ToDatabaseValue(parameterType)
+                    + "'??PCA ?곗씠?곌? ?놁뒿?덈떎.");
             }
 
             string duplicateDraft = population
@@ -800,7 +884,7 @@ namespace LightingChartSamples.Scatter
             if (!string.IsNullOrEmpty(duplicateDraft))
             {
                 throw new InvalidOperationException(
-                    "선택한 PARAM_TYP에서 DRAFT_NO가 중복되었습니다: " + duplicateDraft);
+                    "?좏깮??PARAM_TYP?먯꽌 DRAFT_NO媛 以묐났?섏뿀?듬땲?? " + duplicateDraft);
             }
 
             return population;
@@ -846,7 +930,7 @@ namespace LightingChartSamples.Scatter
             if (parsed.Count < 3)
             {
                 throw new InvalidOperationException(
-                    "PCA 분석에는 실험 데이터가 있는 행이 최소 3건 필요합니다.");
+                    "PCA 遺꾩꽍?먮뒗 ?ㅽ뿕 ?곗씠?곌? ?덈뒗 ?됱씠 理쒖냼 3嫄??꾩슂?⑸땲??");
             }
 
             IList<string> normalizedRows = parsed.Select(item =>
@@ -867,6 +951,12 @@ namespace LightingChartSamples.Scatter
             PcaAnalysisOptions pipelineOptions =
                 (analysisOptions ?? new PcaScatterAnalysisOptions()).ToPipelineOptions();
             PcaAnalysisResult analysis = new PcaAnalysisPipeline(pipelineOptions).Analyze(normalizedRows);
+            PcaFeatureSelectionReport featureSelectionReport =
+                PcaFeatureSelectionReport.CreateFromParsedExperiments(
+                    parsed,
+                    analysis.FeatureNames,
+                    pipelineOptions.ConstantVarianceThreshold);
+            analysis.FeatureSelectionReport = featureSelectionReport;
             var records = new List<PcaExperimentRecord>(parsed.Count);
             for (int index = 0; index < parsed.Count; index++)
             {
@@ -894,7 +984,8 @@ namespace LightingChartSamples.Scatter
                 parameterType,
                 analysis,
                 records,
-                missingCount);
+                missingCount,
+                featureSelectionReport);
         }
     }
 }

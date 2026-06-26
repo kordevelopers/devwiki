@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using LightingChartSamples.Scatter;
 
-namespace LightingChartSamples.Scatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 {
     public sealed class PcaScatterAnalysisOptions
     {
@@ -106,7 +107,7 @@ namespace LightingChartSamples.Scatter
     {
         public PcaScatterDisplayOptions()
         {
-            FontName = "맑은 고딕";
+            FontName = "留묒? 怨좊뵓";
             ShowTitle = false;
             Title = string.Empty;
             BackgroundColor = Color.White;
@@ -169,7 +170,7 @@ namespace LightingChartSamples.Scatter
             };
             NoData = new LightningScatterNoDataOptions
             {
-                Text = "PCA Scatter 데이터가 없습니다.",
+                Text = "PCA Scatter ?곗씠?곌? ?놁뒿?덈떎.",
                 ShowWhenDataMissing = true,
                 ShowWhenAllValuesZero = false,
                 FontSize = 11f,
@@ -256,7 +257,7 @@ namespace LightingChartSamples.Scatter
             LightningScatterOptions scatterOptions = LightningScatterOptions.CreateDefaultBubble();
             PcaScatterDisplayOptions display = snapshot.Display ?? new PcaScatterDisplayOptions();
 
-            scatterOptions.FontName = string.IsNullOrWhiteSpace(display.FontName) ? "맑은 고딕" : display.FontName.Trim();
+            scatterOptions.FontName = string.IsNullOrWhiteSpace(display.FontName) ? "留묒? 怨좊뵓" : display.FontName.Trim();
             scatterOptions.ShowTitle = display.ShowTitle;
             scatterOptions.Title = display.Title ?? string.Empty;
             scatterOptions.BackgroundColor = display.BackgroundColor;

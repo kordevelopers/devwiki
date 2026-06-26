@@ -231,3 +231,44 @@ Image image = chart.LoadLastSavedImage();
 - 기존 `LightningScatter.Create(...)` API는 유지됩니다.
 - BarChart 코드는 이번 변경에서 수정하지 않습니다.
 - `ActDataRepository` 기반 ACT_DATA 호환 API는 남아 있지만, `CONV_EXPER_CTN` 업무 경로는 `DataTable` 주입 방식만 사용합니다.
+
+## Namespace
+
+PCA Scatter 공통 모듈은 다음 네임스페이스를 사용합니다. WinForms 샘플 화면(`ScatterMain` 등 UI 클래스)은 기존 샘플 네임스페이스를 유지합니다.
+
+```csharp
+using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter;
+```
+
+`LightningScatter` 범용 래퍼는 기존 네임스페이스를 유지합니다.
+
+```csharp
+using LightingChartSamples.Scatter;
+```
+
+## Feature Selection Audit
+
+차트가 대각선처럼 보이거나 `SHAPE=FEATURE_LOW`가 표시될 때는 PCA 알고리즘보다 입력 feature가 너무 많이 제거된 것이 원인일 수 있습니다. 분석 결과에서 어떤 컬럼이 살아남았고 어떤 컬럼이 제거됐는지 확인할 수 있습니다.
+
+```csharp
+PcaExadataAnalysisResult analysis = await service.RefreshAndAnalyzeAsync(
+    PcaParameterType.Response,
+    chartOptions.Analysis);
+
+string summary = analysis.FeatureSelectionReport.ToSummaryText();
+DataTable featureAudit = analysis.CreateFeatureSelectionDataTable();
+DataTable survivingPopulation = analysis.CreateSurvivingPopulationDataTable();
+```
+
+`featureAudit` 주요 컬럼:
+
+- `FeatureName`: JSON에서 Flatten 처리된 feature 이름
+- `Included`: PCA 입력에 실제 사용됐는지 여부
+- `Reason`: `Included`, `Metadata`, `MissingInRows`, `NonNumeric`, `ConstantOrLowVariance`
+- `PresentCount`: 전체 모집단 row 중 해당 feature가 존재한 row 수
+- `NumericCount`: 숫자로 사용할 수 있었던 row 수
+- `MissingCount`: feature가 없는 row 수
+- `NonNumericCount`: 존재하지만 숫자로 사용할 수 없었던 row 수
+- `Variance`: 분산 값. 너무 작으면 상수/저분산 feature로 제거됩니다.
+
+`survivingPopulation`은 실제 PCA에 들어간 모집단 row와 살아남은 feature 값만 포함합니다. `DRAFT_NO`, `PARAM_TYP`, `LABEL_Y`, `X1`, `X2`와 함께 PCA 입력 feature 컬럼을 확인할 수 있습니다.
