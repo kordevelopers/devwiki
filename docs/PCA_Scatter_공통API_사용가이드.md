@@ -83,7 +83,7 @@ JSON 배열에는 실험 객체가 한 건 들어 있어야 합니다. `PUB_NO`,
 ```xml
 <connectionStrings>
   <add name="PcaExadataDatabase"
-       connectionString="운영 환경 Oracle 연결 문자열"
+       connectionString="User Id=YOUR_USER_ID;Password=YOUR_PASSWORD;Data Source=(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=YOUR_EXADATA_HOST)(PORT=1521))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=YOUR_SERVICE_NAME)));Pooling=true;Min Pool Size=0;Max Pool Size=20;Connection Timeout=30;"
        providerName="Oracle.ManagedDataAccess.Client" />
 </connectionStrings>
 <appSettings>
@@ -97,6 +97,22 @@ JSON 배열에는 실험 객체가 한 건 들어 있어야 합니다. `PUB_NO`,
 ODP.NET 공급자 종류에 따라 `providerName`은 배포 환경에 등록된 값을 사용합니다.
 프로젝트는 `DbProviderFactory`로 연결하므로 연결 문자열과 공급자 등록을 소스 코드에
 고정하지 않습니다.
+
+Exadata라고 해서 ID와 비밀번호만으로 항상 접속할 수 있는 것은 아닙니다.
+
+- TNS 별칭이 설정되지 않은 PC: `HOST`, `PORT`, `SERVICE_NAME`, ID, 비밀번호 필요
+- `tnsnames.ora`에 별칭이 설정된 PC: ID, 비밀번호, TNS 별칭 필요
+
+TNS 별칭 방식:
+
+```xml
+connectionString="User Id=YOUR_USER_ID;Password=YOUR_PASSWORD;Data Source=YOUR_TNS_ALIAS;"
+```
+
+`YOUR_...` 샘플 값을 그대로 사용하면 프로그램은 Oracle 접속 전에 설정 오류를
+표시합니다. 비밀번호가 들어 있는 실제 `App.config` 또는
+`LightingChartSamples.exe.config`는 외부 배포 설정으로 관리하고 공개 저장소에
+커밋하지 않는 것을 권장합니다.
 
 지원 타입은 `Response`, `Defect`, `Epm`, `Probe`이며 현재 샘플 UI에는
 `RESPONSE`, `DEFECT`만 표시합니다.

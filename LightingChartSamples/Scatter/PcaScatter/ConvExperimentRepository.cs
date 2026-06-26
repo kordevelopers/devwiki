@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Data;
 using System.Data.Common;
 using System.IO;
+using System.Linq;
 
 namespace LightingChartSamples.Scatter
 {
@@ -93,6 +94,8 @@ namespace LightingChartSamples.Scatter
                     + "' Oracle Exadata 연결 문자열을 설정해야 합니다.");
             }
 
+            ValidateConnectionString(settings.ConnectionString);
+
             string providerName = string.IsNullOrWhiteSpace(settings.ProviderName)
                 ? "Oracle.ManagedDataAccess.Client"
                 : settings.ProviderName.Trim();
@@ -181,6 +184,26 @@ namespace LightingChartSamples.Scatter
 
                     return rows;
                 }
+            }
+        }
+
+        private static void ValidateConnectionString(string connectionString)
+        {
+            string[] placeholders =
+            {
+                "YOUR_USER_ID",
+                "YOUR_PASSWORD",
+                "YOUR_EXADATA_HOST",
+                "YOUR_SERVICE_NAME",
+                "YOUR_TNS_ALIAS"
+            };
+            string placeholder = placeholders.FirstOrDefault(value =>
+                connectionString.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (!string.IsNullOrEmpty(placeholder))
+            {
+                throw new ConfigurationErrorsException(
+                    "App.config의 PcaExadataDatabase 연결 문자열에서 샘플 값 '"
+                    + placeholder + "'을 실제 Oracle Exadata 접속 정보로 변경해야 합니다.");
             }
         }
 
