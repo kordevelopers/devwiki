@@ -270,7 +270,7 @@ namespace LightingChartSamples.Scatter
             this.MinimumSize = new System.Drawing.Size(900, 650);
             this.Name = "ScatterMain";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "ScatterMain - Exadata PCA Scatter";
+            this.Text = "ScatterMain - PCA Scatter";
             this.rootLayout.ResumeLayout(false);
             this.toolbarLayout.ResumeLayout(false);
             this.commandPanel.ResumeLayout(false);

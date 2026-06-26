@@ -199,7 +199,7 @@ namespace LightingChartSamples.Scatter
                 if (effectiveDatabaseOptions.SourceTable == null)
                 {
                     throw new InvalidOperationException(
-                        "BindFromDatabase requires a DataTable. Query data in the UI/service layer and pass it to the chart.");
+                        "BindFromDatabase requires a DataTable. Load data in the UI/service layer and pass it to the chart.");
                 }
 
                 ActDataRepository repository = new ActDataRepository(
@@ -260,7 +260,7 @@ namespace LightingChartSamples.Scatter
                 if (effectiveOptions.SourceTable == null)
                 {
                     throw new InvalidOperationException(
-                        "BindFromExadata requires a DataTable. Query data in the UI/service layer and pass it to the chart.");
+                        "BindFromExadata requires a DataTable. Load data in the UI/service layer and pass it to the chart.");
                 }
 
                 var repository = new ConvExperimentRepository(

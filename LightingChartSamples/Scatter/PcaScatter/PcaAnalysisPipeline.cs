@@ -125,7 +125,7 @@ namespace LightingChartSamples.Scatter
         }
 
         /// <summary>
-        /// Oracle Exadata의 CONV_EXPER_CTN JSON 배열을 개별 실험 행으로 펼쳐 분석한다.
+        /// Service DataTable의 CONV_EXPER_CTN JSON 배열을 개별 실험 행으로 펼쳐 분석한다.
         /// 전체 데이터가 하나의 스냅샷으로 표준화되며 PCA와 KNN이 같은 결과를 사용한다.
         /// </summary>
         public PcaAnalysisResult AnalyzeConvExperimentDocuments(

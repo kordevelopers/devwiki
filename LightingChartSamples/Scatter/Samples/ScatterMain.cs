@@ -45,7 +45,7 @@ namespace LightingChartSamples.Scatter
             pcaChart.AnalysisCompleted += PcaChart_AnalysisCompleted;
             pcaChart.AnalysisFailed += PcaChart_AnalysisFailed;
             pcaChart.Clear();
-            summaryLabel.Text = "PARAM_TYP과 DRAFT_NO를 선택하여 조회하거나 전체 데이터를 새로고침하세요.";
+            summaryLabel.Text = "서비스 DataTable을 전달한 뒤 PARAM_TYP과 DRAFT_NO를 선택해 분석하세요.";
             parameterChangeEnabled = true;
             SetToolbarEnabled(true);
         }
@@ -146,7 +146,7 @@ namespace LightingChartSamples.Scatter
                     CreateNearestNeighborTable(result.Target, result.Neighbors));
                 UpdateSummary(result.Analysis, result.UsedMemorySnapshot
                     ? "메모리 스냅샷"
-                    : "Exadata 새 조회");
+                    : "서비스 DataTable");
             }
             catch (Exception ex)
             {
@@ -161,7 +161,7 @@ namespace LightingChartSamples.Scatter
         private async Task LoadSampleDataAsync()
         {
             SetToolbarEnabled(false);
-            summaryLabel.Text = "가상 Exadata 데이터 생성 및 PCA 분석 중...";
+            summaryLabel.Text = "가상 CONV_EXPER_CTN 데이터 생성 및 PCA 분석 중...";
 
             try
             {
@@ -200,7 +200,7 @@ namespace LightingChartSamples.Scatter
         {
             SetToolbarEnabled(false);
             PcaParameterType parameterType = GetSelectedParameterType();
-            summaryLabel.Text = "Exadata 최근 10일 전체 데이터 새로고침 중...";
+            summaryLabel.Text = "서비스 DataTable 전체 데이터 PCA 분석 중...";
 
             try
             {
@@ -214,12 +214,12 @@ namespace LightingChartSamples.Scatter
                 UpdateSummary(
                     result,
                     string.Format(
-                        "Exadata 새 조회 ({0:N0}행)",
+                        "서비스 DataTable ({0:N0}행)",
                         result.Snapshot.Rows.Count));
             }
             catch (Exception ex)
             {
-                ShowOperationError(ex, "Exadata 전체 새로고침 실패");
+                ShowOperationError(ex, "서비스 DataTable 분석 실패");
             }
             finally
             {

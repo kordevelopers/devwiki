@@ -5,8 +5,8 @@ using System.Globalization;
 namespace LightingChartSamples.Scatter
 {
     /// <summary>
-    /// 화면 시연용 Exadata 행을 생성한다.
-    /// 운영 조회와 같은 PcaExadataSourceRow/PcaExadataService 경로를 사용한다.
+    /// 화면 시연용 CONV_EXPER_CTN 행을 생성한다.
+    /// 운영 DataTable과 같은 PcaExadataSourceRow/PcaExadataService 경로를 사용한다.
     /// </summary>
     public sealed class PcaExadataSampleDataFactory
     {

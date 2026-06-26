@@ -7,7 +7,7 @@ using System.IO;
 namespace LightingChartSamples.Scatter
 {
     /// <summary>
-    /// Converts caller-supplied CONV_EXPER_CTN query results into PCA source rows.
+    /// Converts caller-supplied CONV_EXPER_CTN service results into PCA source rows.
     /// DB access is intentionally outside this class. The UI or service layer should
     /// call the company data service and pass the completed DataTable here.
     /// </summary>
@@ -18,7 +18,7 @@ namespace LightingChartSamples.Scatter
             JsonColumnName = "CONV_EXPER_CTN";
             DraftNoColumnName = "DRAFT_NO";
             ParameterTypeColumnName = "PARAM_TYP";
-            LabelColumnName = "LABEL_Y";
+            LabelColumnName = "ENGR_RSLT_VAL";
         }
 
         public string JsonColumnName { get; set; }
@@ -87,7 +87,7 @@ namespace LightingChartSamples.Scatter
             if (table == null)
             {
                 throw new InvalidOperationException(
-                    "CONV_EXPER_CTN DataTable is required. Query data through the company service and pass the DataTable.");
+                    "CONV_EXPER_CTN DataTable is required. Load data through the company service and pass the DataTable.");
             }
 
             ConvExperimentQueryOptions effectiveOptions =
@@ -95,7 +95,11 @@ namespace LightingChartSamples.Scatter
             DataColumn jsonColumn = FindColumn(table, effectiveOptions.JsonColumnName);
             DataColumn draftNoColumn = FindColumn(table, effectiveOptions.DraftNoColumnName);
             DataColumn parameterTypeColumn = FindColumn(table, effectiveOptions.ParameterTypeColumnName);
-            DataColumn labelColumn = FindColumn(table, effectiveOptions.LabelColumnName);
+            DataColumn labelColumn = FindColumn(
+                table,
+                effectiveOptions.LabelColumnName,
+                "ENGR_RSLT_VAL",
+                "LABEL_Y");
 
             var rows = new List<PcaExadataSourceRow>();
             for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
@@ -142,23 +146,50 @@ namespace LightingChartSamples.Scatter
             return rows;
         }
 
-        private static DataColumn FindColumn(DataTable table, string columnName)
+        private static DataColumn FindColumn(
+            DataTable table,
+            string columnName,
+            params string[] fallbackColumnNames)
         {
-            if (string.IsNullOrWhiteSpace(columnName))
+            var candidates = new List<string>();
+            if (!string.IsNullOrWhiteSpace(columnName))
+            {
+                candidates.Add(columnName.Trim());
+            }
+
+            if (fallbackColumnNames != null)
+            {
+                foreach (string fallback in fallbackColumnNames)
+                {
+                    if (!string.IsNullOrWhiteSpace(fallback)
+                        && !candidates.Exists(candidate => string.Equals(
+                            candidate,
+                            fallback.Trim(),
+                            StringComparison.OrdinalIgnoreCase)))
+                    {
+                        candidates.Add(fallback.Trim());
+                    }
+                }
+            }
+
+            if (candidates.Count == 0)
             {
                 throw new ArgumentException("Column name is required.", "columnName");
             }
 
-            foreach (DataColumn column in table.Columns)
+            foreach (string candidate in candidates)
             {
-                if (string.Equals(column.ColumnName, columnName, StringComparison.OrdinalIgnoreCase))
+                foreach (DataColumn column in table.Columns)
                 {
-                    return column;
+                    if (string.Equals(column.ColumnName, candidate, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return column;
+                    }
                 }
             }
 
             throw new InvalidOperationException(
-                "The DataTable does not contain required column '" + columnName + "'.");
+                "The DataTable does not contain required column '" + string.Join("' or '", candidates.ToArray()) + "'.");
         }
 
         private static string ReadRequiredText(

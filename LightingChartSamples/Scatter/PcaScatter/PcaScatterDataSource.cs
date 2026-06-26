@@ -93,7 +93,7 @@ namespace LightingChartSamples.Scatter
             JsonColumnName = "CONV_EXPER_CTN";
             DraftNoColumnName = "DRAFT_NO";
             ParameterTypeColumnName = "PARAM_TYP";
-            LabelColumnName = "LABEL_Y";
+            LabelColumnName = "ENGR_RSLT_VAL";
             ParameterType = PcaParameterType.Response;
         }
 
@@ -139,7 +139,7 @@ namespace LightingChartSamples.Scatter
                     ? "PARAM_TYP"
                     : ParameterTypeColumnName.Trim(),
                 LabelColumnName = string.IsNullOrWhiteSpace(LabelColumnName)
-                    ? "LABEL_Y"
+                    ? "ENGR_RSLT_VAL"
                     : LabelColumnName.Trim()
             };
         }

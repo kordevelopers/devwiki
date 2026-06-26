@@ -6,8 +6,8 @@
 `LightningScatter`는 저수준 차트 래퍼로 유지하고, PCA 업무 로직은 `PcaExadataService`,
 `PcaAnalysisPipeline`, `ConvExperimentRepository`에서 처리합니다.
 
-현재 Exadata 연동 경로는 DB에 직접 접속하지 않습니다. 회사 내부 서비스 또는 화면 코드에서
-DB 조회를 수행한 뒤, 조회 결과 `DataTable`을 PCA 모듈에 전달합니다.
+현재 운영 데이터 경로는 DB에 직접 접속하지 않습니다. 회사 내부 서비스 또는 화면 코드에서
+데이터를 받아온 뒤, 결과 `DataTable`을 PCA 모듈에 전달합니다.
 
 ## 기본 JSON 사용
 
@@ -42,10 +42,12 @@ object 배열, wrapper object, 이중 인코딩된 JSON 문자열을 파서가 �
 
 - `DRAFT_NO`: 검색 및 결과 식별 기준
 - `PARAM_TYP`: `RESPONSE`, `DEFECT`, `EPM`, `PROBE`
-- `LABEL_Y`: `J.ENGR_RSLT_VAL` 원본 라벨
+- `ENGR_RSLT_VAL`: `Review`, `Pass` 등 원본 판정 라벨
 - `CONV_EXPER_CTN`: JSON 배열 문자열
 
 DB 조회 SQL, Oracle 연결 문자열, provider 설정은 PCA 모듈이 관리하지 않습니다.
+서비스에서 `M.DRAFT_NO`, `M.PARAM_TYP`, `J.ENGR_RSLT_VAL`, `M.CONV_EXPER_CTN` 컬럼을
+포함한 `DataTable`을 넘겨주면 됩니다. `LABEL_Y` 컬럼명은 기존 alias 호환용으로만 허용합니다.
 
 ```csharp
 DataTable table = companyService.GetConvExperimentTable();
@@ -65,7 +67,7 @@ var tableOptions = new ConvExperimentQueryOptions
 {
     DraftNoColumnName = "DRAFT_NO",
     ParameterTypeColumnName = "PARAM_TYP",
-    LabelColumnName = "LABEL_Y",
+    LabelColumnName = "ENGR_RSLT_VAL",
     JsonColumnName = "CONV_EXPER_CTN"
 };
 

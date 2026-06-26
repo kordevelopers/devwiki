@@ -27,7 +27,7 @@ namespace LightingChartSamples.Scatter
     #region ACT_DATA DataTable Repository
 
     /// <summary>
-    /// Converts caller-supplied ACT_DATA query results into JSON documents.
+    /// Converts caller-supplied ACT_DATA service results into JSON documents.
     /// DB access is intentionally outside this class.
     /// </summary>
     public sealed class ActDataRepository
@@ -76,7 +76,7 @@ namespace LightingChartSamples.Scatter
             if (table == null)
             {
                 throw new InvalidOperationException(
-                    "ACT_DATA DataTable is required. Query data in the UI/service layer and pass the DataTable.");
+                    "ACT_DATA DataTable is required. Load data in the UI/service layer and pass the DataTable.");
             }
 
             ActDataQueryOptions effectiveOptions = options ?? ActDataQueryOptions.FromConfiguration();
