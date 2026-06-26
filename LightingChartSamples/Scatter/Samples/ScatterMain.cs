@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter;
@@ -285,6 +286,131 @@ namespace LightingChartSamples.Scatter
             exadataAnalysis = result;
             currentRecords = result.Records.ToList();
             pcaChart.Bind(result.AnalysisResult, chartOptions);
+            ShowFeatureSelectionMessage(result);
+        }
+
+        private void ShowFeatureSelectionMessage(PcaExadataAnalysisResult result)
+        {
+            if (result == null || result.FeatureSelectionReport == null)
+            {
+                return;
+            }
+
+            PcaFeatureSelectionReport report = result.FeatureSelectionReport;
+            DataTable survivingPopulation = result.CreateSurvivingPopulationDataTable();
+            var builder = new StringBuilder();
+            builder.AppendLine("PCA Feature Selection Audit");
+            builder.AppendLine();
+            if (result.Diagnostic != null)
+            {
+                builder.AppendLine(result.Diagnostic.CompactText);
+            }
+
+            builder.AppendLine(report.ToSummaryText());
+            builder.AppendLine(string.Format(
+                CultureInfo.InvariantCulture,
+                "Surviving population rows: {0:N0}",
+                survivingPopulation.Rows.Count));
+            builder.AppendLine(string.Format(
+                CultureInfo.InvariantCulture,
+                "Surviving feature columns: {0:N0}",
+                report.IncludedFeatureCount));
+            builder.AppendLine();
+
+            AppendExcludedReasonSummary(builder, report);
+            AppendFeatureNameSummary(builder, "Included features", report.IncludedFeatureNames);
+            AppendExcludedFeatureSamples(builder, report);
+
+            MessageBox.Show(
+                this,
+                builder.ToString(),
+                "PCA Feature Audit",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+
+        private static void AppendExcludedReasonSummary(
+            StringBuilder builder,
+            PcaFeatureSelectionReport report)
+        {
+            builder.AppendLine("Excluded reason summary:");
+            var groups = report.Details
+                .Where(detail => !detail.Included)
+                .GroupBy(detail => detail.Reason)
+                .OrderByDescending(group => group.Count())
+                .ToList();
+            if (groups.Count == 0)
+            {
+                builder.AppendLine("- None");
+            }
+            else
+            {
+                foreach (IGrouping<PcaFeatureSelectionReason, PcaFeatureSelectionDetail> group in groups)
+                {
+                    builder.AppendLine(string.Format(
+                        CultureInfo.InvariantCulture,
+                        "- {0}: {1:N0}",
+                        group.Key,
+                        group.Count()));
+                }
+            }
+
+            builder.AppendLine();
+        }
+
+        private static void AppendFeatureNameSummary(
+            StringBuilder builder,
+            string title,
+            IEnumerable<string> featureNames)
+        {
+            string[] names = (featureNames ?? Enumerable.Empty<string>()).Take(20).ToArray();
+            builder.AppendLine(title + " (max 20):");
+            if (names.Length == 0)
+            {
+                builder.AppendLine("- None");
+            }
+            else
+            {
+                foreach (string name in names)
+                {
+                    builder.AppendLine("- " + name);
+                }
+            }
+
+            builder.AppendLine();
+        }
+
+        private static void AppendExcludedFeatureSamples(
+            StringBuilder builder,
+            PcaFeatureSelectionReport report)
+        {
+            builder.AppendLine("Excluded feature samples (max 15):");
+            PcaFeatureSelectionDetail[] details = report.Details
+                .Where(detail => !detail.Included)
+                .OrderByDescending(detail => detail.MissingCount)
+                .ThenByDescending(detail => detail.NonNumericCount)
+                .ThenBy(detail => detail.FeatureName, StringComparer.OrdinalIgnoreCase)
+                .Take(15)
+                .ToArray();
+            if (details.Length == 0)
+            {
+                builder.AppendLine("- None");
+                return;
+            }
+
+            foreach (PcaFeatureSelectionDetail detail in details)
+            {
+                builder.AppendLine(string.Format(
+                    CultureInfo.InvariantCulture,
+                    "- {0}: {1}, Present={2:N0}, Numeric={3:N0}, Missing={4:N0}, NonNumeric={5:N0}, Var={6:0.##########}",
+                    detail.FeatureName,
+                    detail.Reason,
+                    detail.PresentCount,
+                    detail.NumericCount,
+                    detail.MissingCount,
+                    detail.NonNumericCount,
+                    detail.HasStatistics ? detail.Variance : 0d));
+            }
         }
 
         private void PcaChart_SampleClicked(object sender, PcaScatterSampleClickedEventArgs e)
