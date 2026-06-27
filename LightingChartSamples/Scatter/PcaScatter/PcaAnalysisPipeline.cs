@@ -1058,6 +1058,27 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         public int[] Iterations { get; private set; }
         public StandardScalerModel Scaler { get; private set; }
 
+        // Accord.NET 경로에서 계산된 component를 기존 차트/진단 DTO에 담기 위한 어댑터입니다.
+        // 이 메서드는 covariance/eigenvector를 계산하지 않으므로 수동 PCA 로직을 실행하지 않습니다.
+        internal static PcaProjectionModel FromComponents(
+            double[][] components,
+            double[] eigenValues,
+            double[] ratios,
+            StandardScalerModel scaler)
+        {
+            if (components == null || components.Length == 0)
+            {
+                throw new ArgumentException("PCA components are required.", "components");
+            }
+
+            return new PcaProjectionModel(
+                components.Select(component => (double[])component.Clone()).ToArray(),
+                eigenValues == null ? new double[0] : (double[])eigenValues.Clone(),
+                ratios == null ? new double[0] : (double[])ratios.Clone(),
+                Enumerable.Repeat(0, components.Length).ToArray(),
+                scaler);
+        }
+
         public static PcaProjectionModel Fit(
             double[][] standardizedMatrix,
             int componentCount,

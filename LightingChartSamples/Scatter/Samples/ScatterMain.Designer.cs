@@ -39,6 +39,7 @@ namespace LightingChartSamples.Scatter
             this.searchButton = new System.Windows.Forms.Button();
             this.refreshAllButton = new System.Windows.Forms.Button();
             this.sampleDataButton = new System.Windows.Forms.Button();
+            this.accordPcaButton = new System.Windows.Forms.Button();
             this.preferMemoryCheckBox = new System.Windows.Forms.CheckBox();
             this.chartHost = new System.Windows.Forms.Panel();
             this.nearestNeighborGrid = new System.Windows.Forms.DataGridView();
@@ -121,6 +122,7 @@ namespace LightingChartSamples.Scatter
             this.commandPanel.Controls.Add(this.searchButton);
             this.commandPanel.Controls.Add(this.refreshAllButton);
             this.commandPanel.Controls.Add(this.sampleDataButton);
+            this.commandPanel.Controls.Add(this.accordPcaButton);
             this.commandPanel.Controls.Add(this.preferMemoryCheckBox);
             this.commandPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.commandPanel.Location = new System.Drawing.Point(12, 38);
@@ -218,14 +220,25 @@ namespace LightingChartSamples.Scatter
             this.sampleDataButton.UseVisualStyleBackColor = true;
             this.sampleDataButton.Click += new System.EventHandler(this.SampleDataButton_Click);
             //
+            // accordPcaButton
+            //
+            this.accordPcaButton.Location = new System.Drawing.Point(828, 1);
+            this.accordPcaButton.Margin = new System.Windows.Forms.Padding(0, 1, 8, 1);
+            this.accordPcaButton.Name = "accordPcaButton";
+            this.accordPcaButton.Size = new System.Drawing.Size(104, 28);
+            this.accordPcaButton.TabIndex = 8;
+            this.accordPcaButton.Text = "Accord PCA";
+            this.accordPcaButton.UseVisualStyleBackColor = true;
+            this.accordPcaButton.Click += new System.EventHandler(this.AccordPcaButton_Click);
+            //
             // preferMemoryCheckBox
             //
             this.preferMemoryCheckBox.AutoSize = true;
-            this.preferMemoryCheckBox.Location = new System.Drawing.Point(832, 6);
+            this.preferMemoryCheckBox.Location = new System.Drawing.Point(944, 6);
             this.preferMemoryCheckBox.Margin = new System.Windows.Forms.Padding(4, 6, 0, 0);
             this.preferMemoryCheckBox.Name = "preferMemoryCheckBox";
             this.preferMemoryCheckBox.Size = new System.Drawing.Size(129, 19);
-            this.preferMemoryCheckBox.TabIndex = 8;
+            this.preferMemoryCheckBox.TabIndex = 9;
             this.preferMemoryCheckBox.Text = "메모리 데이터 우선";
             this.preferMemoryCheckBox.UseVisualStyleBackColor = true;
             //
@@ -294,6 +307,7 @@ namespace LightingChartSamples.Scatter
         private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.Button refreshAllButton;
         private System.Windows.Forms.Button sampleDataButton;
+        private System.Windows.Forms.Button accordPcaButton;
         private System.Windows.Forms.CheckBox preferMemoryCheckBox;
         private System.Windows.Forms.Panel chartHost;
         private System.Windows.Forms.DataGridView nearestNeighborGrid;

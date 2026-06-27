@@ -81,6 +81,11 @@ namespace LightingChartSamples.Scatter
             await LoadSampleDataAsync();
         }
 
+        private async void AccordPcaButton_Click(object sender, EventArgs e)
+        {
+            await RunAccordPcaAsync();
+        }
+
         private async void ParameterType_CheckedChanged(object sender, EventArgs e)
         {
             RadioButton radioButton = sender as RadioButton;
@@ -271,6 +276,67 @@ namespace LightingChartSamples.Scatter
                 {
                     SetToolbarEnabled(true);
                 }
+            }
+        }
+
+        private async Task RunAccordPcaAsync()
+        {
+            PcaExadataSnapshot snapshot = exadataService.CurrentSnapshot;
+            if (snapshot == null)
+            {
+                MessageBox.Show(
+                    this,
+                    "먼저 서비스 DataTable을 전달하거나 가상 데이터를 생성하세요.",
+                    "Accord PCA",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            SetToolbarEnabled(false);
+            PcaParameterType parameterType = GetSelectedParameterType();
+            summaryLabel.Text = PcaParameterTypeParser.ToDatabaseValue(parameterType)
+                + " Accord.NET PCA 분석 중...";
+
+            try
+            {
+                PcaScatterOptions chartOptions = CreateChartOptions();
+                var analyzer = new AccordPcaScatterAnalyzer();
+                PcaExadataAnalysisResult result = await Task.Run(delegate
+                {
+                    return analyzer.AnalyzeSnapshot(
+                        snapshot,
+                        parameterType,
+                        chartOptions.Analysis);
+                });
+
+                PcaExperimentRecord target = null;
+                IList<KnnNeighbor> neighbors = null;
+                string draftNo = (draftNoTextBox.Text ?? string.Empty).Trim();
+                if (draftNo.Length > 0)
+                {
+                    target = result.Records.FirstOrDefault(record =>
+                        string.Equals(record.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
+                    if (target != null)
+                    {
+                        chartOptions.Series.HighlightDraftNo = target.DraftNo;
+                        neighbors = result.AnalysisResult.FindNearest(
+                            target.DraftNo,
+                            Math.Max(1, chartOptions.Analysis.NeighborCount));
+                    }
+                }
+
+                ApplyAnalysis(result, chartOptions);
+                BindNearestNeighborTable(CreateNearestNeighborTable(target, neighbors));
+                UpdateSummary(result, "Accord.NET PCA");
+            }
+            catch (Exception ex)
+            {
+                ShowOperationError(ex, "Accord.NET PCA 분석 실패");
+            }
+            finally
+            {
+                SetToolbarEnabled(true);
             }
         }
 
@@ -495,6 +561,7 @@ namespace LightingChartSamples.Scatter
             searchButton.Enabled = enabled;
             refreshAllButton.Enabled = enabled;
             sampleDataButton.Enabled = enabled;
+            accordPcaButton.Enabled = enabled;
             preferMemoryCheckBox.Enabled = enabled;
         }
 

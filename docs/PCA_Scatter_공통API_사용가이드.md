@@ -281,3 +281,24 @@ DataTable survivingPopulation = analysis.CreateSurvivingPopulationDataTable();
 options.Analysis.MinimumNumericCoverageRatio = 0.90d;
 options.Analysis.MeanImputationEnabled = true;
 ```
+
+## Accord.NET PCA
+
+Accord.NET 기반 PCA는 `Scatter/PcaScatter/Accord/AccordPcaScatterAnalyzer.cs`에 별도로 분리되어 있습니다.
+이 클래스는 기존 수동 PCA 파이프라인인 `PcaAnalysisPipeline.Analyze`, `PcaProjectionModel.Fit`, `PcaAlgorithmVerifier`를 호출하지 않습니다.
+
+공유하는 부분은 `DataTable`/JSON 파싱, feature 선택 리포트, `StandardScalerModel`, KNN, 차트 바인딩용 DTO입니다.
+PC1/PC2 투영 계산은 Accord.NET `PrincipalComponentAnalysis`만 사용합니다.
+
+```csharp
+var analyzer = new AccordPcaScatterAnalyzer();
+
+PcaExadataAnalysisResult result = analyzer.AnalyzeDataTable(
+    sourceTable,
+    PcaParameterType.Response,
+    options.Analysis);
+
+chart.Bind(result.AnalysisResult, options);
+```
+
+`ScatterMain` 샘플 화면에는 `Accord PCA` 버튼이 추가되어 있습니다. 서비스 `DataTable`을 전달하거나 가상 데이터를 생성한 뒤 이 버튼을 누르면 현재 메모리 스냅샷을 Accord.NET PCA로 다시 분석해 같은 차트에 표시합니다.
