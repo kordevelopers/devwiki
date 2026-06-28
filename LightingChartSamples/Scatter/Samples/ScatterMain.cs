@@ -31,6 +31,7 @@ namespace LightingChartSamples.Scatter
         private Panel busyOverlayPanel;
         private Label busyOverlayLabel;
         private ProgressBar busyOverlayProgressBar;
+        private Font nearestNeighborGridFont;
 
         public ScatterMain()
             : this(new PcaScatterVirtualDatabaseDataProvider())
@@ -56,6 +57,7 @@ namespace LightingChartSamples.Scatter
                 PcaScatterExadataOptions.CreateDefault().ToQueryOptions());
             exadataService = new PcaExadataService(exadataRepository);
 
+            ConfigureNearestNeighborGrid();
             BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
             pcaChart = PcaScatterChart.Create(chartHost, CreateChartOptions());
             pcaChart.SampleClicked += PcaChart_SampleClicked;
@@ -66,6 +68,34 @@ namespace LightingChartSamples.Scatter
             summaryLabel.Text = "서비스 DataTable을 전달한 뒤 PARAM_TYP과 DRAFT_NO를 선택해 분석하세요.";
             parameterChangeEnabled = true;
             SetToolbarEnabled(true);
+        }
+
+        private void ConfigureNearestNeighborGrid()
+        {
+            if (nearestNeighborGridFont == null)
+            {
+                nearestNeighborGridFont = new Font("맑은 고딕", 10f, FontStyle.Regular);
+            }
+
+            nearestNeighborGrid.AllowUserToResizeRows = false;
+            nearestNeighborGrid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
+            nearestNeighborGrid.RowTemplate.Height = 28;
+            nearestNeighborGrid.RowTemplate.Resizable = DataGridViewTriState.False;
+            nearestNeighborGrid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+
+            nearestNeighborGrid.ColumnHeadersDefaultCellStyle.Alignment =
+                DataGridViewContentAlignment.MiddleCenter;
+            nearestNeighborGrid.ColumnHeadersDefaultCellStyle.Font = nearestNeighborGridFont;
+
+            nearestNeighborGrid.DefaultCellStyle.Alignment =
+                DataGridViewContentAlignment.MiddleLeft;
+            nearestNeighborGrid.DefaultCellStyle.Font = nearestNeighborGridFont;
+            nearestNeighborGrid.RowsDefaultCellStyle.Alignment =
+                DataGridViewContentAlignment.MiddleLeft;
+            nearestNeighborGrid.RowsDefaultCellStyle.Font = nearestNeighborGridFont;
+            nearestNeighborGrid.AlternatingRowsDefaultCellStyle.Alignment =
+                DataGridViewContentAlignment.MiddleLeft;
+            nearestNeighborGrid.AlternatingRowsDefaultCellStyle.Font = nearestNeighborGridFont;
         }
 
         public async Task LoadConvExperimentDataTableAsync(DataTable sourceTable)
@@ -1009,6 +1039,7 @@ namespace LightingChartSamples.Scatter
 
                 nearestNeighborGrid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(255, 242, 128);
                 nearestNeighborGrid.DefaultCellStyle.SelectionForeColor = Color.Black;
+                ConfigureNearestNeighborGrid();
                 nearestNeighborGrid.ClearSelection();
             }
             finally

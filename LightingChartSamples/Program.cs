@@ -17,7 +17,7 @@ namespace LightingChartSamples
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new ScatterMain());
+            Application.Run(new AccordScatterMain());
         }
     }
 }

@@ -131,6 +131,9 @@
     <Compile Include="Scatter\Samples\PcaScatterSampleForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Scatter\Samples\AccordScatterMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Scatter\PcaScatter\ActDataJsonParser.cs" />
     <Compile Include="Scatter\PcaScatter\ActDataRepository.cs" />
     <Compile Include="Scatter\PcaScatter\ConvExperimentRepository.cs" />

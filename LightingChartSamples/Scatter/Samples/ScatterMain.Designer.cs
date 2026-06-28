@@ -17,6 +17,12 @@ namespace LightingChartSamples.Scatter
                 {
                     components.Dispose();
                 }
+
+                if (nearestNeighborGridFont != null)
+                {
+                    nearestNeighborGridFont.Dispose();
+                    nearestNeighborGridFont = null;
+                }
             }
 
             base.Dispose(disposing);
