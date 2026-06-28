@@ -280,7 +280,35 @@ DataTable survivingPopulation = analysis.CreateSurvivingPopulationDataTable();
 ```csharp
 options.Analysis.MinimumNumericCoverageRatio = 0.90d;
 options.Analysis.MeanImputationEnabled = true;
+options.Analysis.KnnSearchAlgorithm = KnnSearchAlgorithm.Auto;
 ```
+
+## KNN 검색 알고리즘
+
+`KnnSearchAlgorithm` 기본값은 `Auto`입니다. 이 옵션은 PCA 계산이 아니라 PCA 이후 가까운 Draft를 찾는 KNN 검색 단계에 적용됩니다.
+
+```csharp
+PcaScatterOptions options = PcaScatterOptions.CreateDefault600x400();
+
+// 기본값: 데이터 크기와 차원 수에 따라 자동 선택
+options.Analysis.KnnSearchAlgorithm = KnnSearchAlgorithm.Auto;
+
+// 필요 시 강제 선택 가능
+options.Analysis.KnnSearchAlgorithm = KnnSearchAlgorithm.BruteForce;
+options.Analysis.KnnSearchAlgorithm = KnnSearchAlgorithm.KdTree;
+options.Analysis.KnnSearchAlgorithm = KnnSearchAlgorithm.BallTree;
+```
+
+자동 선택 기준:
+
+```text
+row <= 10,000              -> BruteForce
+row > 10,000, feature <= 10 -> KdTree
+row > 10,000, feature <= 30 -> BallTree
+feature > 30               -> BruteForce
+```
+
+분석 로그의 `DIAG ... KNN=...` 값과 `KNN reason` 항목에서 실제 선택된 알고리즘과 이유를 확인할 수 있습니다.
 
 ## Accord.NET PCA
 

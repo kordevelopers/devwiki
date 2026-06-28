@@ -137,6 +137,7 @@
     <Compile Include="Scatter\PcaScatter\Accord\AccordPcaScatterAnalyzer.cs" />
     <Compile Include="Scatter\PcaScatter\PcaExadataService.cs" />
     <Compile Include="Scatter\PcaScatter\PcaExadataSampleDataFactory.cs" />
+    <Compile Include="Scatter\PcaScatter\PcaScatterPopupDataProvider.cs" />
     <Compile Include="Scatter\PcaScatter\PcaAnalysisPipeline.cs" />
     <Compile Include="Scatter\PcaScatter\PcaJsonUtility.cs" />
     <Compile Include="Scatter\PcaScatter\PcaScatterChart.cs" />

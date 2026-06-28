@@ -271,6 +271,7 @@ namespace LightingChartSamples.Scatter
             this.nearestNeighborGrid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.nearestNeighborGrid.Size = new System.Drawing.Size(1156, 152);
             this.nearestNeighborGrid.TabIndex = 2;
+            this.nearestNeighborGrid.SelectionChanged += new System.EventHandler(this.NearestNeighborGrid_SelectionChanged);
             //
             // ScatterMain
             //

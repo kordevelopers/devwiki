@@ -146,7 +146,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             var knn = new KnnSimilarityService(
                 parsed.Select(item => item.Source.DraftNo).ToArray(),
                 standardized,
-                scaler);
+                scaler,
+                pipelineOptions.KnnSearchAlgorithm);
             var analysis = new PcaAnalysisResult
             {
                 ScatterData = scatterData,

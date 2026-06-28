@@ -9,6 +9,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 {
     #region Analysis Result Models
 
+    public enum KnnSearchAlgorithm
+    {
+        Auto,
+        BruteForce,
+        KdTree,
+        BallTree
+    }
+
     public sealed class PcaAnalysisOptions
     {
         public PcaAnalysisOptions()
@@ -20,6 +28,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             MaxIterations = 2000;
             ConvergenceTolerance = 1e-10d;
             NeighborCount = 3;
+            KnnSearchAlgorithm = KnnSearchAlgorithm.Auto;
         }
 
         public double ConstantVarianceThreshold { get; set; }
@@ -29,6 +38,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         public int MaxIterations { get; set; }
         public double ConvergenceTolerance { get; set; }
         public int NeighborCount { get; set; }
+        public KnnSearchAlgorithm KnnSearchAlgorithm { get; set; }
     }
 
     public sealed class KnnNeighbor
@@ -66,6 +76,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         public double Pc2Percent { get; private set; }
         public double Pc1Pc2Percent { get; private set; }
         public string ShapeCode { get; private set; }
+        public KnnSearchAlgorithm KnnAlgorithm { get; private set; }
+        public string KnnAlgorithmReason { get; private set; }
         public string CompactText { get; private set; }
 
         public static PcaAnalysisDiagnosticReport Create(
@@ -79,10 +91,16 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             int excludedCount = ResolveExcludedFeatureCount(analysisResult);
             double pc1 = GetExplainedVariancePercent(analysisResult, 0);
             double pc2 = GetExplainedVariancePercent(analysisResult, 1);
+            KnnSearchAlgorithm knnAlgorithm = analysisResult == null || analysisResult.Knn == null
+                ? KnnSearchAlgorithm.Auto
+                : analysisResult.Knn.ActualAlgorithm;
+            string knnReason = analysisResult == null || analysisResult.Knn == null
+                ? string.Empty
+                : analysisResult.Knn.SelectionReason;
             string shapeCode = ResolveShapeCode(rowCount, featureCount, pc1, pc2);
             string compactText = string.Format(
                 CultureInfo.InvariantCulture,
-                "DIAG R={0} F={1} X={2} M={3} PC1={4:0.0} PC2={5:0.0} SUM={6:0.0} SHAPE={7}",
+                "DIAG R={0} F={1} X={2} M={3} PC1={4:0.0} PC2={5:0.0} SUM={6:0.0} SHAPE={7} KNN={8}",
                 rowCount,
                 featureCount,
                 excludedCount,
@@ -90,7 +108,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
                 pc1,
                 pc2,
                 pc1 + pc2,
-                shapeCode);
+                shapeCode,
+                knnAlgorithm);
 
             return new PcaAnalysisDiagnosticReport
             {
@@ -102,6 +121,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
                 Pc2Percent = pc2,
                 Pc1Pc2Percent = pc1 + pc2,
                 ShapeCode = shapeCode,
+                KnnAlgorithm = knnAlgorithm,
+                KnnAlgorithmReason = knnReason,
                 CompactText = compactText
             };
         }
@@ -701,7 +722,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             var knn = new KnnSimilarityService(
                 rows.Select(row => row.DraftNo).ToArray(),
                 standardized,
-                scaler);
+                scaler,
+                options.KnnSearchAlgorithm);
             PcaVerificationReport verification = PcaAlgorithmVerifier.Verify(
                 standardized,
                 scaler,
@@ -1331,9 +1353,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         private readonly string[] draftNos;
         private readonly double[][] standardizedMatrix;
         private readonly Dictionary<string, int> indexByDraftNo;
+        private readonly IKnnSearchIndex searchIndex;
 
         public KnnSimilarityService(string[] draftNos, double[][] standardizedMatrix)
-            : this(draftNos, standardizedMatrix, null)
+            : this(draftNos, standardizedMatrix, null, KnnSearchAlgorithm.Auto)
         {
         }
 
@@ -1341,6 +1364,15 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             string[] draftNos,
             double[][] standardizedMatrix,
             StandardScalerModel scaler)
+            : this(draftNos, standardizedMatrix, scaler, KnnSearchAlgorithm.Auto)
+        {
+        }
+
+        public KnnSimilarityService(
+            string[] draftNos,
+            double[][] standardizedMatrix,
+            StandardScalerModel scaler,
+            KnnSearchAlgorithm requestedAlgorithm)
         {
             if (draftNos == null || standardizedMatrix == null || draftNos.Length != standardizedMatrix.Length)
             {
@@ -1349,7 +1381,16 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 
             this.draftNos = (string[])draftNos.Clone();
             this.standardizedMatrix = standardizedMatrix.Select(row => (double[])row.Clone()).ToArray();
+            ValidateMatrix(this.standardizedMatrix);
             Scaler = scaler;
+            RequestedAlgorithm = requestedAlgorithm;
+            ActualAlgorithm = ResolveAlgorithm(
+                requestedAlgorithm,
+                this.standardizedMatrix.Length,
+                this.standardizedMatrix[0].Length,
+                out string selectionReason);
+            SelectionReason = selectionReason;
+            searchIndex = CreateSearchIndex(ActualAlgorithm, this.standardizedMatrix, this.draftNos);
             indexByDraftNo = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             for (int index = 0; index < this.draftNos.Length; index++)
             {
@@ -1361,6 +1402,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         }
 
         public StandardScalerModel Scaler { get; private set; }
+        public KnnSearchAlgorithm RequestedAlgorithm { get; private set; }
+        public KnnSearchAlgorithm ActualAlgorithm { get; private set; }
+        public string SelectionReason { get; private set; }
 
         public IList<KnnNeighbor> FindNearest(string draftNo, int count)
         {
@@ -1371,40 +1415,115 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             }
 
             int safeCount = Math.Max(0, count);
-            var candidates = new List<KnnNeighbor>();
-            for (int sourceIndex = 0; sourceIndex < standardizedMatrix.Length; sourceIndex++)
+            if (safeCount == 0)
             {
-                if (sourceIndex == targetIndex)
-                {
-                    continue;
-                }
+                return new List<KnnNeighbor>();
+            }
 
-                // KNN 嫄곕━??PCA 2李⑥썝 醫뚰몴媛 ?꾨땲???숈씪 scaler濡?蹂?섑븳 80李⑥썝 ?뱀쭠?먯꽌 怨꾩궛?쒕떎.
-                double distance = CalculateEuclideanDistance(
-                    standardizedMatrix[targetIndex],
-                    standardizedMatrix[sourceIndex]);
-                candidates.Add(new KnnNeighbor
+            IList<NeighborCandidate> candidates = searchIndex.FindNearest(targetIndex, safeCount);
+            var neighbors = new List<KnnNeighbor>(candidates.Count);
+            for (int index = 0; index < candidates.Count; index++)
+            {
+                NeighborCandidate candidate = candidates[index];
+                neighbors.Add(new KnnNeighbor
                 {
-                    SourceIndex = sourceIndex,
-                    DraftNo = draftNos[sourceIndex],
-                    Distance = distance
+                    Rank = index + 1,
+                    SourceIndex = candidate.SourceIndex,
+                    DraftNo = draftNos[candidate.SourceIndex],
+                    Distance = Math.Sqrt(candidate.DistanceSquared)
                 });
             }
 
-            KnnNeighbor[] nearest = candidates
-                .OrderBy(item => item.Distance)
-                .ThenBy(item => item.DraftNo, StringComparer.OrdinalIgnoreCase)
-                .Take(safeCount)
-                .ToArray();
-            for (int index = 0; index < nearest.Length; index++)
-            {
-                nearest[index].Rank = index + 1;
-            }
-
-            return nearest;
+            return neighbors;
         }
 
-        private static double CalculateEuclideanDistance(double[] left, double[] right)
+        private static void ValidateMatrix(double[][] matrix)
+        {
+            if (matrix == null || matrix.Length == 0 || matrix[0] == null || matrix[0].Length == 0)
+            {
+                throw new ArgumentException("KNN matrix must contain rows and columns.", "standardizedMatrix");
+            }
+
+            int dimensionCount = matrix[0].Length;
+            if (matrix.Any(row => row == null || row.Length != dimensionCount))
+            {
+                throw new ArgumentException("All KNN matrix rows must have the same dimension count.", "standardizedMatrix");
+            }
+        }
+
+        private static KnnSearchAlgorithm ResolveAlgorithm(
+            KnnSearchAlgorithm requestedAlgorithm,
+            int rowCount,
+            int dimensionCount,
+            out string reason)
+        {
+            if (requestedAlgorithm != KnnSearchAlgorithm.Auto)
+            {
+                reason = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "ManualSelection Rows={0} Dimensions={1}",
+                    rowCount,
+                    dimensionCount);
+                return requestedAlgorithm;
+            }
+
+            if (rowCount <= 10000)
+            {
+                reason = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "Auto:RowsNotLarge Rows={0} Dimensions={1}",
+                    rowCount,
+                    dimensionCount);
+                return KnnSearchAlgorithm.BruteForce;
+            }
+
+            if (dimensionCount <= 10)
+            {
+                reason = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "Auto:LowDimension Rows={0} Dimensions={1}",
+                    rowCount,
+                    dimensionCount);
+                return KnnSearchAlgorithm.KdTree;
+            }
+
+            if (dimensionCount <= 30)
+            {
+                reason = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "Auto:MediumDimension Rows={0} Dimensions={1}",
+                    rowCount,
+                    dimensionCount);
+                return KnnSearchAlgorithm.BallTree;
+            }
+
+            reason = string.Format(
+                CultureInfo.InvariantCulture,
+                "Auto:HighDimension Rows={0} Dimensions={1}",
+                rowCount,
+                dimensionCount);
+            return KnnSearchAlgorithm.BruteForce;
+        }
+
+        private static IKnnSearchIndex CreateSearchIndex(
+            KnnSearchAlgorithm algorithm,
+            double[][] matrix,
+            string[] draftNos)
+        {
+            switch (algorithm)
+            {
+                case KnnSearchAlgorithm.KdTree:
+                    return new KdTreeSearchIndex(matrix, draftNos);
+                case KnnSearchAlgorithm.BallTree:
+                    return new BallTreeSearchIndex(matrix, draftNos);
+                case KnnSearchAlgorithm.BruteForce:
+                case KnnSearchAlgorithm.Auto:
+                default:
+                    return new BruteForceSearchIndex(matrix, draftNos);
+            }
+        }
+
+        private static double CalculateSquaredDistance(double[] left, double[] right)
         {
             double squaredDistance = 0d;
             for (int index = 0; index < left.Length; index++)
@@ -1413,7 +1532,394 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
                 squaredDistance += difference * difference;
             }
 
-            return Math.Sqrt(squaredDistance);
+            return squaredDistance;
+        }
+
+        private static int CompareCandidate(
+            NeighborCandidate left,
+            NeighborCandidate right,
+            string[] draftNumbers)
+        {
+            int distanceCompare = left.DistanceSquared.CompareTo(right.DistanceSquared);
+            if (distanceCompare != 0)
+            {
+                return distanceCompare;
+            }
+
+            return string.Compare(
+                draftNumbers[left.SourceIndex],
+                draftNumbers[right.SourceIndex],
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private interface IKnnSearchIndex
+        {
+            IList<NeighborCandidate> FindNearest(int targetIndex, int count);
+        }
+
+        private sealed class NeighborCandidate
+        {
+            public int SourceIndex { get; set; }
+            public double DistanceSquared { get; set; }
+        }
+
+        private sealed class NeighborCandidateQueue
+        {
+            private readonly string[] draftNumbers;
+            private readonly int capacity;
+            private readonly List<NeighborCandidate> candidates;
+
+            public NeighborCandidateQueue(int capacity, string[] draftNumbers)
+            {
+                this.capacity = Math.Max(0, capacity);
+                this.draftNumbers = draftNumbers;
+                candidates = new List<NeighborCandidate>(this.capacity);
+            }
+
+            public int Count
+            {
+                get { return candidates.Count; }
+            }
+
+            public double WorstDistanceSquared
+            {
+                get
+                {
+                    return candidates.Count < capacity || candidates.Count == 0
+                        ? double.PositiveInfinity
+                        : candidates[candidates.Count - 1].DistanceSquared;
+                }
+            }
+
+            public bool IsFull
+            {
+                get { return capacity > 0 && candidates.Count >= capacity; }
+            }
+
+            public void Add(int sourceIndex, double distanceSquared)
+            {
+                if (capacity <= 0)
+                {
+                    return;
+                }
+
+                var candidate = new NeighborCandidate
+                {
+                    SourceIndex = sourceIndex,
+                    DistanceSquared = distanceSquared
+                };
+                int insertIndex = candidates.FindIndex(item =>
+                    CompareCandidate(candidate, item, draftNumbers) < 0);
+                if (insertIndex < 0)
+                {
+                    candidates.Add(candidate);
+                }
+                else
+                {
+                    candidates.Insert(insertIndex, candidate);
+                }
+
+                if (candidates.Count > capacity)
+                {
+                    candidates.RemoveAt(candidates.Count - 1);
+                }
+            }
+
+            public IList<NeighborCandidate> ToList()
+            {
+                return candidates.ToList();
+            }
+        }
+
+        private sealed class BruteForceSearchIndex : IKnnSearchIndex
+        {
+            private readonly double[][] matrix;
+            private readonly string[] draftNumbers;
+
+            public BruteForceSearchIndex(double[][] matrix, string[] draftNumbers)
+            {
+                this.matrix = matrix;
+                this.draftNumbers = draftNumbers;
+            }
+
+            public IList<NeighborCandidate> FindNearest(int targetIndex, int count)
+            {
+                var queue = new NeighborCandidateQueue(count, draftNumbers);
+                double[] target = matrix[targetIndex];
+                for (int sourceIndex = 0; sourceIndex < matrix.Length; sourceIndex++)
+                {
+                    if (sourceIndex == targetIndex)
+                    {
+                        continue;
+                    }
+
+                    queue.Add(sourceIndex, CalculateSquaredDistance(target, matrix[sourceIndex]));
+                }
+
+                return queue.ToList();
+            }
+        }
+
+        private sealed class KdTreeSearchIndex : IKnnSearchIndex
+        {
+            private readonly double[][] matrix;
+            private readonly string[] draftNumbers;
+            private readonly KdNode root;
+            private readonly int dimensionCount;
+
+            public KdTreeSearchIndex(double[][] matrix, string[] draftNumbers)
+            {
+                this.matrix = matrix;
+                this.draftNumbers = draftNumbers;
+                dimensionCount = matrix[0].Length;
+                root = Build(Enumerable.Range(0, matrix.Length).ToArray(), 0);
+            }
+
+            public IList<NeighborCandidate> FindNearest(int targetIndex, int count)
+            {
+                var queue = new NeighborCandidateQueue(count, draftNumbers);
+                Search(root, targetIndex, matrix[targetIndex], queue);
+                return queue.ToList();
+            }
+
+            private KdNode Build(int[] indices, int depth)
+            {
+                if (indices == null || indices.Length == 0)
+                {
+                    return null;
+                }
+
+                int axis = SelectSplitAxis(indices, depth);
+                Array.Sort(indices, (left, right) => matrix[left][axis].CompareTo(matrix[right][axis]));
+                int median = indices.Length / 2;
+                return new KdNode
+                {
+                    SourceIndex = indices[median],
+                    Axis = axis,
+                    Left = Build(indices.Take(median).ToArray(), depth + 1),
+                    Right = Build(indices.Skip(median + 1).ToArray(), depth + 1)
+                };
+            }
+
+            private int SelectSplitAxis(int[] indices, int depth)
+            {
+                if (indices.Length < 8)
+                {
+                    return depth % dimensionCount;
+                }
+
+                int bestAxis = 0;
+                double bestVariance = double.NegativeInfinity;
+                for (int axis = 0; axis < dimensionCount; axis++)
+                {
+                    double mean = indices.Average(index => matrix[index][axis]);
+                    double variance = indices.Average(index =>
+                    {
+                        double diff = matrix[index][axis] - mean;
+                        return diff * diff;
+                    });
+                    if (variance > bestVariance)
+                    {
+                        bestVariance = variance;
+                        bestAxis = axis;
+                    }
+                }
+
+                return bestAxis;
+            }
+
+            private void Search(
+                KdNode node,
+                int targetIndex,
+                double[] target,
+                NeighborCandidateQueue queue)
+            {
+                if (node == null)
+                {
+                    return;
+                }
+
+                double axisDifference = target[node.Axis] - matrix[node.SourceIndex][node.Axis];
+                KdNode first = axisDifference <= 0d ? node.Left : node.Right;
+                KdNode second = axisDifference <= 0d ? node.Right : node.Left;
+                Search(first, targetIndex, target, queue);
+
+                if (node.SourceIndex != targetIndex)
+                {
+                    queue.Add(
+                        node.SourceIndex,
+                        CalculateSquaredDistance(target, matrix[node.SourceIndex]));
+                }
+
+                if (!queue.IsFull
+                    || (axisDifference * axisDifference) <= queue.WorstDistanceSquared)
+                {
+                    Search(second, targetIndex, target, queue);
+                }
+            }
+
+            private sealed class KdNode
+            {
+                public int SourceIndex { get; set; }
+                public int Axis { get; set; }
+                public KdNode Left { get; set; }
+                public KdNode Right { get; set; }
+            }
+        }
+
+        private sealed class BallTreeSearchIndex : IKnnSearchIndex
+        {
+            private const int LeafSize = 32;
+            private readonly double[][] matrix;
+            private readonly string[] draftNumbers;
+            private readonly int dimensionCount;
+            private readonly BallNode root;
+
+            public BallTreeSearchIndex(double[][] matrix, string[] draftNumbers)
+            {
+                this.matrix = matrix;
+                this.draftNumbers = draftNumbers;
+                dimensionCount = matrix[0].Length;
+                root = Build(Enumerable.Range(0, matrix.Length).ToArray());
+            }
+
+            public IList<NeighborCandidate> FindNearest(int targetIndex, int count)
+            {
+                var queue = new NeighborCandidateQueue(count, draftNumbers);
+                Search(root, targetIndex, matrix[targetIndex], queue);
+                return queue.ToList();
+            }
+
+            private BallNode Build(int[] indices)
+            {
+                if (indices == null || indices.Length == 0)
+                {
+                    return null;
+                }
+
+                double[] center = CalculateCenter(indices);
+                double radius = indices.Max(index => Math.Sqrt(CalculateSquaredDistance(center, matrix[index])));
+                if (indices.Length <= LeafSize)
+                {
+                    return new BallNode
+                    {
+                        Center = center,
+                        Radius = radius,
+                        Indices = indices
+                    };
+                }
+
+                int axis = SelectSplitAxis(indices);
+                Array.Sort(indices, (left, right) => matrix[left][axis].CompareTo(matrix[right][axis]));
+                int middle = indices.Length / 2;
+                return new BallNode
+                {
+                    Center = center,
+                    Radius = radius,
+                    Left = Build(indices.Take(middle).ToArray()),
+                    Right = Build(indices.Skip(middle).ToArray())
+                };
+            }
+
+            private double[] CalculateCenter(int[] indices)
+            {
+                var center = new double[dimensionCount];
+                for (int axis = 0; axis < dimensionCount; axis++)
+                {
+                    center[axis] = indices.Average(index => matrix[index][axis]);
+                }
+
+                return center;
+            }
+
+            private int SelectSplitAxis(int[] indices)
+            {
+                int bestAxis = 0;
+                double bestVariance = double.NegativeInfinity;
+                for (int axis = 0; axis < dimensionCount; axis++)
+                {
+                    double mean = indices.Average(index => matrix[index][axis]);
+                    double variance = indices.Average(index =>
+                    {
+                        double diff = matrix[index][axis] - mean;
+                        return diff * diff;
+                    });
+                    if (variance > bestVariance)
+                    {
+                        bestVariance = variance;
+                        bestAxis = axis;
+                    }
+                }
+
+                return bestAxis;
+            }
+
+            private void Search(
+                BallNode node,
+                int targetIndex,
+                double[] target,
+                NeighborCandidateQueue queue)
+            {
+                if (node == null)
+                {
+                    return;
+                }
+
+                double lowerBound = CalculateLowerBoundSquared(target, node);
+                if (queue.IsFull && lowerBound > queue.WorstDistanceSquared)
+                {
+                    return;
+                }
+
+                if (node.Indices != null)
+                {
+                    foreach (int sourceIndex in node.Indices)
+                    {
+                        if (sourceIndex == targetIndex)
+                        {
+                            continue;
+                        }
+
+                        queue.Add(sourceIndex, CalculateSquaredDistance(target, matrix[sourceIndex]));
+                    }
+
+                    return;
+                }
+
+                double leftBound = CalculateLowerBoundSquared(target, node.Left);
+                double rightBound = CalculateLowerBoundSquared(target, node.Right);
+                if (leftBound <= rightBound)
+                {
+                    Search(node.Left, targetIndex, target, queue);
+                    Search(node.Right, targetIndex, target, queue);
+                }
+                else
+                {
+                    Search(node.Right, targetIndex, target, queue);
+                    Search(node.Left, targetIndex, target, queue);
+                }
+            }
+
+            private static double CalculateLowerBoundSquared(double[] target, BallNode node)
+            {
+                if (node == null)
+                {
+                    return double.PositiveInfinity;
+                }
+
+                double centerDistance = Math.Sqrt(CalculateSquaredDistance(target, node.Center));
+                double lowerBound = Math.Max(0d, centerDistance - node.Radius);
+                return lowerBound * lowerBound;
+            }
+
+            private sealed class BallNode
+            {
+                public double[] Center { get; set; }
+                public double Radius { get; set; }
+                public int[] Indices { get; set; }
+                public BallNode Left { get; set; }
+                public BallNode Right { get; set; }
+            }
         }
     }
 

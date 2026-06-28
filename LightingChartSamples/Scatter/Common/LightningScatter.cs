@@ -81,22 +81,28 @@ namespace LightingChartSamples.Scatter
             LegendLabel = string.Empty;
             Points = new List<LightningScatterPoint>();
             PointColor = Color.FromArgb(129, 178, 231);
+            PointBorderColor = Color.Empty;
+            PointBorderWidth = -1f;
             LineColor = Color.FromArgb(129, 178, 231);
             PointSize = 14f;
             LineWidth = 1.5f;
             ShowLine = false;
             ShowPoints = true;
+            ShowInLegend = true;
         }
 
         public string Name { get; set; }
         public string LegendLabel { get; set; }
         public IList<LightningScatterPoint> Points { get; set; }
         public Color PointColor { get; set; }
+        public Color PointBorderColor { get; set; }
+        public float PointBorderWidth { get; set; }
         public Color LineColor { get; set; }
         public float PointSize { get; set; }
         public float LineWidth { get; set; }
         public bool ShowLine { get; set; }
         public bool ShowPoints { get; set; }
+        public bool ShowInLegend { get; set; }
 
         public LightningScatterSeries Clone()
         {
@@ -108,11 +114,14 @@ namespace LightingChartSamples.Scatter
                     ? new List<LightningScatterPoint>()
                     : Points.Select(point => point == null ? new LightningScatterPoint() : point.Clone()).ToList(),
                 PointColor = PointColor,
+                PointBorderColor = PointBorderColor,
+                PointBorderWidth = PointBorderWidth,
                 LineColor = LineColor,
                 PointSize = PointSize,
                 LineWidth = LineWidth,
                 ShowLine = ShowLine,
-                ShowPoints = ShowPoints
+                ShowPoints = ShowPoints,
+                ShowInLegend = ShowInLegend
             };
         }
     }
@@ -934,7 +943,7 @@ namespace LightingChartSamples.Scatter
                 Color seriesColor = ResolveSeriesColor(sourceSeries, i, styleOptions);
                 bool forceBubbleStyle = styleOptions.ForceBubbleStyle;
                 chartSeries.Title.Text = GetLegendLabel(sourceSeries, i);
-                chartSeries.ShowInLegendBox = true;
+                chartSeries.ShowInLegendBox = sourceSeries.ShowInLegend;
                 chartSeries.PointsVisible = forceBubbleStyle || sourceSeries.ShowPoints;
                 chartSeries.LineVisible = !forceBubbleStyle && sourceSeries.ShowLine;
                 chartSeries.LineStyle.Color = seriesColor;
@@ -944,8 +953,8 @@ namespace LightingChartSamples.Scatter
                 chartSeries.PointStyle.Height = ResolveBubbleSize(sourceSeries, styleOptions);
                 chartSeries.PointStyle.Color1 = seriesColor;
                 chartSeries.PointStyle.Color2 = seriesColor;
-                chartSeries.PointStyle.BorderColor = seriesColor;
-                chartSeries.PointStyle.BorderWidth = Math.Max(0f, styleOptions.BubbleBorderWidth);
+                chartSeries.PointStyle.BorderColor = ResolvePointBorderColor(sourceSeries, seriesColor);
+                chartSeries.PointStyle.BorderWidth = ResolvePointBorderWidth(sourceSeries, styleOptions);
                 chartSeries.MouseInteraction = true;
                 chartSeries.CursorTrackEnabled = true;
                 chartSeries.MouseClick += PointSeries_MouseClick;
@@ -1253,13 +1262,39 @@ namespace LightingChartSamples.Scatter
 
         private float ResolveBubbleSize(LightningScatterSeries sourceSeries, LightningScatterStyleOptions styleOptions)
         {
+            if (sourceSeries != null && sourceSeries.PointSize > 0f)
+            {
+                return Math.Max(1f, sourceSeries.PointSize);
+            }
+
             LightningScatterStyleOptions effectiveOptions = styleOptions ?? new LightningScatterStyleOptions();
             if (effectiveOptions.ForceBubbleStyle)
             {
                 return Math.Max(1f, effectiveOptions.BubbleSize);
             }
 
-            return sourceSeries == null ? Math.Max(1f, effectiveOptions.BubbleSize) : Math.Max(1f, sourceSeries.PointSize);
+            return Math.Max(1f, effectiveOptions.BubbleSize);
+        }
+
+        private Color ResolvePointBorderColor(LightningScatterSeries sourceSeries, Color fallbackColor)
+        {
+            if (sourceSeries == null || sourceSeries.PointBorderColor.IsEmpty)
+            {
+                return fallbackColor;
+            }
+
+            return sourceSeries.PointBorderColor;
+        }
+
+        private float ResolvePointBorderWidth(LightningScatterSeries sourceSeries, LightningScatterStyleOptions styleOptions)
+        {
+            if (sourceSeries != null && sourceSeries.PointBorderWidth >= 0f)
+            {
+                return sourceSeries.PointBorderWidth;
+            }
+
+            LightningScatterStyleOptions effectiveOptions = styleOptions ?? new LightningScatterStyleOptions();
+            return Math.Max(0f, effectiveOptions.BubbleBorderWidth);
         }
 
         private LegendBoxPositionXY ConvertLegendPosition(LightningScatterLegendPosition position)

@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,17 +19,29 @@ namespace LightingChartSamples.Scatter
         private readonly PcaScatterChart pcaChart;
         private readonly PcaExadataService exadataService;
         private readonly ConvExperimentRepository exadataRepository;
+        private readonly IPcaScatterPopupDataProvider popupDataProvider;
 
         private PcaAnalysisResult analysisResult;
         private PcaExadataAnalysisResult exadataAnalysis;
         private IList<ScatterSampleData> currentSamples;
         private IList<PcaExperimentRecord> currentRecords;
         private bool parameterChangeEnabled;
+        private bool nearestNeighborGridBinding;
+        private string lastFeatureAuditLogPath;
+        private Panel busyOverlayPanel;
+        private Label busyOverlayLabel;
+        private ProgressBar busyOverlayProgressBar;
 
         public ScatterMain()
+            : this(new PcaScatterVirtualDatabaseDataProvider())
+        {
+        }
+
+        public ScatterMain(IPcaScatterPopupDataProvider popupDataProvider)
         {
             InitializeComponent();
 
+            this.popupDataProvider = popupDataProvider ?? new PcaScatterVirtualDatabaseDataProvider();
             currentSamples = new List<ScatterSampleData>();
             currentRecords = new List<PcaExperimentRecord>();
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
@@ -48,6 +62,7 @@ namespace LightingChartSamples.Scatter
             pcaChart.AnalysisCompleted += PcaChart_AnalysisCompleted;
             pcaChart.AnalysisFailed += PcaChart_AnalysisFailed;
             pcaChart.Clear();
+            InitializeBusyOverlay();
             summaryLabel.Text = "서비스 DataTable을 전달한 뒤 PARAM_TYP과 DRAFT_NO를 선택해 분석하세요.";
             parameterChangeEnabled = true;
             SetToolbarEnabled(true);
@@ -60,10 +75,19 @@ namespace LightingChartSamples.Scatter
                 throw new ArgumentNullException("sourceTable");
             }
 
-            exadataRepository.SetSourceTable(sourceTable);
-            PcaExadataSnapshot snapshot = await exadataService.LoadAllAsync();
-            preferMemoryCheckBox.Checked = true;
-            await AnalyzeCurrentSnapshotAsync(snapshot);
+            SetToolbarEnabled(false);
+            ShowBusyOverlay("전달받은 DataTable 메모리 적재 및 PCA 분석 중...");
+            try
+            {
+                exadataRepository.SetSourceTable(sourceTable);
+                PcaExadataSnapshot snapshot = await exadataService.LoadAllAsync();
+                preferMemoryCheckBox.Checked = true;
+                await AnalyzeCurrentSnapshotAsync(snapshot, false);
+            }
+            finally
+            {
+                SetToolbarEnabled(true);
+            }
         }
 
         private async void SearchButton_Click(object sender, EventArgs e)
@@ -131,6 +155,7 @@ namespace LightingChartSamples.Scatter
             }
 
             SetToolbarEnabled(false);
+            ShowBusyOverlay("Draft 조회 및 PCA 분석 중...");
             PcaParameterType parameterType = GetSelectedParameterType();
             PcaExadataRefreshMode refreshMode = preferMemoryCheckBox.Checked
                 ? PcaExadataRefreshMode.PreferMemorySnapshot
@@ -139,9 +164,21 @@ namespace LightingChartSamples.Scatter
                 "{0} 전체 데이터에서 DRAFT_NO {1} 조회 및 PCA 분석 중...",
                 PcaParameterTypeParser.ToDatabaseValue(parameterType),
                 draftNo);
+            UpdateBusyMessage(summaryLabel.Text);
 
             try
             {
+                if (exadataService.CurrentSnapshot == null)
+                {
+                    await LoadPopupDatabaseSnapshotAsync();
+                }
+
+                if (exadataService.CurrentSnapshot != null)
+                {
+                    preferMemoryCheckBox.Checked = true;
+                    refreshMode = PcaExadataRefreshMode.PreferMemorySnapshot;
+                }
+
                 PcaScatterOptions chartOptions = CreateChartOptions();
                 PcaDraftQueryResult result = await exadataService.QueryDraftAsync(
                     draftNo,
@@ -169,6 +206,7 @@ namespace LightingChartSamples.Scatter
         private async Task LoadSampleDataAsync()
         {
             SetToolbarEnabled(false);
+            ShowBusyOverlay("가상 데이터 생성 및 PCA 분석 중...");
             summaryLabel.Text = "가상 CONV_EXPER_CTN 데이터 생성 및 PCA 분석 중...";
 
             try
@@ -204,19 +242,41 @@ namespace LightingChartSamples.Scatter
             }
         }
 
+        private async Task<PcaExadataSnapshot> LoadPopupDatabaseSnapshotAsync()
+        {
+            if (popupDataProvider == null)
+            {
+                throw new InvalidOperationException("PCA popup data provider is not configured.");
+            }
+
+            summaryLabel.Text = popupDataProvider.SourceDescription + " 데이터 조회 중...";
+            UpdateBusyMessage(summaryLabel.Text);
+            DataTable sourceTable = await popupDataProvider.LoadAllAsync();
+            UpdateBusyMessage("조회 데이터 변환 및 메모리 적재 중...");
+            exadataRepository.SetSourceTable(sourceTable);
+            PcaExadataSnapshot snapshot = await exadataService.LoadFromDataTableAsync(sourceTable);
+            preferMemoryCheckBox.Checked = true;
+            return snapshot;
+        }
+
         private async Task RefreshAllAsync()
         {
             SetToolbarEnabled(false);
+            ShowBusyOverlay("전체 데이터 조회 및 PCA 분석 중...");
             PcaParameterType parameterType = GetSelectedParameterType();
             summaryLabel.Text = "서비스 DataTable 전체 데이터 PCA 분석 중...";
 
             try
             {
+                PcaExadataSnapshot snapshot = await LoadPopupDatabaseSnapshotAsync();
                 PcaScatterOptions chartOptions = CreateChartOptions();
-                PcaExadataAnalysisResult result =
-                    await exadataService.RefreshAndAnalyzeAsync(
+                PcaExadataAnalysisResult result = await Task.Run(delegate
+                {
+                    return exadataService.AnalyzeSnapshot(
+                        snapshot,
                         parameterType,
                         chartOptions.Analysis);
+                });
                 ApplyAnalysis(result, chartOptions);
                 BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
                 UpdateSummary(
@@ -247,6 +307,7 @@ namespace LightingChartSamples.Scatter
             if (manageToolbar)
             {
                 SetToolbarEnabled(false);
+                ShowBusyOverlay("메모리 데이터 필터링 및 PCA 분석 중...");
             }
 
             PcaParameterType parameterType = GetSelectedParameterType();
@@ -294,6 +355,7 @@ namespace LightingChartSamples.Scatter
             }
 
             SetToolbarEnabled(false);
+            ShowBusyOverlay("Accord.NET PCA 분석 중...");
             PcaParameterType parameterType = GetSelectedParameterType();
             summaryLabel.Text = PcaParameterTypeParser.ToDatabaseValue(parameterType)
                 + " Accord.NET PCA 분석 중...";
@@ -301,6 +363,7 @@ namespace LightingChartSamples.Scatter
             try
             {
                 PcaScatterOptions chartOptions = CreateChartOptions();
+                UpdateBusyMessage("Accord.NET PCA 분석 중...");
                 var analyzer = new AccordPcaScatterAnalyzer();
                 PcaExadataAnalysisResult result = await Task.Run(delegate
                 {
@@ -352,10 +415,10 @@ namespace LightingChartSamples.Scatter
             exadataAnalysis = result;
             currentRecords = result.Records.ToList();
             pcaChart.Bind(result.AnalysisResult, chartOptions);
-            ShowFeatureSelectionMessage(result, chartOptions);
+            WriteFeatureSelectionAuditLog(result, chartOptions);
         }
 
-        private void ShowFeatureSelectionMessage(
+        private void WriteFeatureSelectionAuditLog(
             PcaExadataAnalysisResult result,
             PcaScatterOptions chartOptions)
         {
@@ -364,14 +427,59 @@ namespace LightingChartSamples.Scatter
                 return;
             }
 
+            string detailedLog = BuildFeatureSelectionAuditText(result, chartOptions, true);
+            lastFeatureAuditLogPath = SaveFeatureSelectionAuditLog(result, detailedLog);
+            Debug.WriteLine("PCA Feature Audit Log: " + lastFeatureAuditLogPath);
+
+#if DEBUG
+            string popupLog = BuildFeatureSelectionAuditText(result, chartOptions, false);
+            if (!string.IsNullOrWhiteSpace(lastFeatureAuditLogPath))
+            {
+                popupLog += Environment.NewLine
+                    + "Developer log file:"
+                    + Environment.NewLine
+                    + lastFeatureAuditLogPath;
+            }
+
+            MessageBox.Show(
+                this,
+                popupLog,
+                "PCA Feature Audit (Developer)",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+#endif
+        }
+
+        private string BuildFeatureSelectionAuditText(
+            PcaExadataAnalysisResult result,
+            PcaScatterOptions chartOptions,
+            bool includeFullDetails)
+        {
             PcaFeatureSelectionReport report = result.FeatureSelectionReport;
             DataTable survivingPopulation = result.CreateSurvivingPopulationDataTable();
             var builder = new StringBuilder();
             builder.AppendLine("PCA Feature Selection Audit");
+            builder.AppendLine(string.Format(
+                CultureInfo.InvariantCulture,
+                "CreatedAt: {0:yyyy-MM-dd HH:mm:ss.fff}",
+                DateTime.Now));
+            builder.AppendLine(string.Format(
+                CultureInfo.InvariantCulture,
+                "ParameterType: {0}",
+                PcaParameterTypeParser.ToDatabaseValue(result.ParameterType)));
+            builder.AppendLine(string.Format(
+                CultureInfo.InvariantCulture,
+                "LogMode: {0}",
+                includeFullDetails ? "Detailed" : "Summary"));
             builder.AppendLine();
             if (result.Diagnostic != null)
             {
                 builder.AppendLine(result.Diagnostic.CompactText);
+                builder.AppendLine("KNN algorithm: " + result.Diagnostic.KnnAlgorithm);
+                if (!string.IsNullOrWhiteSpace(result.Diagnostic.KnnAlgorithmReason))
+                {
+                    builder.AppendLine("KNN reason: " + result.Diagnostic.KnnAlgorithmReason);
+                }
             }
 
             builder.AppendLine(report.ToSummaryText());
@@ -400,15 +508,74 @@ namespace LightingChartSamples.Scatter
             builder.AppendLine();
 
             AppendExcludedReasonSummary(builder, report);
-            AppendFeatureNameSummary(builder, "Included features", report.IncludedFeatureNames);
-            AppendExcludedFeatureSamples(builder, report);
+            AppendFeatureNameSummary(
+                builder,
+                includeFullDetails ? "Included features" : "Included features",
+                report.IncludedFeatureNames,
+                includeFullDetails ? int.MaxValue : 20);
+            AppendExcludedFeatureSamples(
+                builder,
+                report,
+                includeFullDetails ? int.MaxValue : 15);
 
-            MessageBox.Show(
-                this,
-                builder.ToString(),
-                "PCA Feature Audit",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            if (includeFullDetails)
+            {
+                AppendFeatureDetailTable(
+                    builder,
+                    "Included feature details",
+                    report.Details.Where(detail => detail.Included));
+                AppendFeatureDetailTable(
+                    builder,
+                    "Excluded feature details",
+                    report.Details.Where(detail => !detail.Included));
+            }
+
+            return builder.ToString();
+        }
+
+        private static string SaveFeatureSelectionAuditLog(
+            PcaExadataAnalysisResult result,
+            string logText)
+        {
+            try
+            {
+                string root = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "SKhynix",
+                    "TAS",
+                    "PcaScatter",
+                    "AnalysisLogs",
+                    DateTime.Now.ToString("yyyyMMdd", CultureInfo.InvariantCulture));
+                Directory.CreateDirectory(root);
+                string parameterType = result == null
+                    ? "UNKNOWN"
+                    : PcaParameterTypeParser.ToDatabaseValue(result.ParameterType);
+                string fileName = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "pca_feature_audit_{0}_{1:yyyyMMdd_HHmmss_fff}_{2}.log",
+                    SanitizeFileName(parameterType),
+                    DateTime.Now,
+                    Guid.NewGuid().ToString("N").Substring(0, 8));
+                string path = Path.Combine(root, fileName);
+                File.WriteAllText(path, logText ?? string.Empty, Encoding.UTF8);
+                return path;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("PCA Feature Audit log save failed: " + ex.Message);
+                return string.Empty;
+            }
+        }
+
+        private static string SanitizeFileName(string value)
+        {
+            string safeValue = string.IsNullOrWhiteSpace(value) ? "UNKNOWN" : value.Trim();
+            foreach (char invalidChar in Path.GetInvalidFileNameChars())
+            {
+                safeValue = safeValue.Replace(invalidChar, '_');
+            }
+
+            return safeValue;
         }
 
         private static void AppendExcludedReasonSummary(
@@ -443,10 +610,14 @@ namespace LightingChartSamples.Scatter
         private static void AppendFeatureNameSummary(
             StringBuilder builder,
             string title,
-            IEnumerable<string> featureNames)
+            IEnumerable<string> featureNames,
+            int maxCount)
         {
-            string[] names = (featureNames ?? Enumerable.Empty<string>()).Take(20).ToArray();
-            builder.AppendLine(title + " (max 20):");
+            int safeMaxCount = maxCount <= 0 ? int.MaxValue : maxCount;
+            string[] names = (featureNames ?? Enumerable.Empty<string>()).Take(safeMaxCount).ToArray();
+            builder.AppendLine(safeMaxCount == int.MaxValue
+                ? title + " (all):"
+                : title + string.Format(CultureInfo.InvariantCulture, " (max {0}):", safeMaxCount));
             if (names.Length == 0)
             {
                 builder.AppendLine("- None");
@@ -464,15 +635,19 @@ namespace LightingChartSamples.Scatter
 
         private static void AppendExcludedFeatureSamples(
             StringBuilder builder,
-            PcaFeatureSelectionReport report)
+            PcaFeatureSelectionReport report,
+            int maxCount)
         {
-            builder.AppendLine("Excluded feature samples (max 15):");
+            int safeMaxCount = maxCount <= 0 ? int.MaxValue : maxCount;
+            builder.AppendLine(safeMaxCount == int.MaxValue
+                ? "Excluded feature samples (all):"
+                : string.Format(CultureInfo.InvariantCulture, "Excluded feature samples (max {0}):", safeMaxCount));
             PcaFeatureSelectionDetail[] details = report.Details
                 .Where(detail => !detail.Included)
                 .OrderByDescending(detail => detail.MissingCount)
                 .ThenByDescending(detail => detail.NonNumericCount)
                 .ThenBy(detail => detail.FeatureName, StringComparer.OrdinalIgnoreCase)
-                .Take(15)
+                .Take(safeMaxCount)
                 .ToArray();
             if (details.Length == 0)
             {
@@ -492,6 +667,36 @@ namespace LightingChartSamples.Scatter
                     detail.MissingCount,
                     detail.NonNumericCount,
                     detail.HasStatistics ? detail.Variance : 0d));
+            }
+        }
+
+        private static void AppendFeatureDetailTable(
+            StringBuilder builder,
+            string title,
+            IEnumerable<PcaFeatureSelectionDetail> details)
+        {
+            builder.AppendLine();
+            builder.AppendLine(title + ":");
+            builder.AppendLine("FeatureName\tIncluded\tReason\tPresent\tNumeric\tMissing\tNonNumeric\tMean\tStdDev\tVariance\tMin\tMax\tSampleDraftNo");
+            foreach (PcaFeatureSelectionDetail detail in (details ?? Enumerable.Empty<PcaFeatureSelectionDetail>())
+                .OrderBy(detail => detail.FeatureName, StringComparer.OrdinalIgnoreCase))
+            {
+                builder.AppendLine(string.Format(
+                    CultureInfo.InvariantCulture,
+                    "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7:0.##########}\t{8:0.##########}\t{9:0.##########}\t{10:0.##########}\t{11:0.##########}\t{12}",
+                    detail.FeatureName,
+                    detail.Included,
+                    detail.Reason,
+                    detail.PresentCount,
+                    detail.NumericCount,
+                    detail.MissingCount,
+                    detail.NonNumericCount,
+                    detail.HasStatistics ? detail.Mean : 0d,
+                    detail.HasStatistics ? detail.StandardDeviation : 0d,
+                    detail.HasStatistics ? detail.Variance : 0d,
+                    detail.HasStatistics ? detail.Minimum : 0d,
+                    detail.HasStatistics ? detail.Maximum : 0d,
+                    detail.SampleDraftNo ?? string.Empty));
             }
         }
 
@@ -532,6 +737,61 @@ namespace LightingChartSamples.Scatter
                 : "분석 실패: " + e.Exception.Message;
         }
 
+        private void NearestNeighborGrid_SelectionChanged(object sender, EventArgs e)
+        {
+            if (nearestNeighborGridBinding)
+            {
+                return;
+            }
+
+            UpdateSelectedNeighborHighlight();
+        }
+
+        private void UpdateSelectedNeighborHighlight()
+        {
+            if (pcaChart == null || nearestNeighborGrid.SelectedRows.Count == 0)
+            {
+                if (pcaChart != null)
+                {
+                    pcaChart.ClearSelectedDraftHighlight();
+                }
+
+                return;
+            }
+
+            string draftNo = ResolveSelectedNeighborDraftNo();
+            if (string.IsNullOrWhiteSpace(draftNo))
+            {
+                pcaChart.ClearSelectedDraftHighlight();
+                return;
+            }
+
+            pcaChart.HighlightSelectedDraft(draftNo);
+        }
+
+        private string ResolveSelectedNeighborDraftNo()
+        {
+            DataGridViewRow row = nearestNeighborGrid.SelectedRows
+                .Cast<DataGridViewRow>()
+                .FirstOrDefault(item => item != null && !item.IsNewRow);
+            if (row == null)
+            {
+                return string.Empty;
+            }
+
+            object value = null;
+            if (nearestNeighborGrid.Columns.Contains("DRAFT_NO"))
+            {
+                value = row.Cells["DRAFT_NO"].Value;
+            }
+            else if (nearestNeighborGrid.Columns.Contains("Similar_Draft"))
+            {
+                value = row.Cells["Similar_Draft"].Value;
+            }
+
+            return value == null ? string.Empty : Convert.ToString(value, CultureInfo.InvariantCulture);
+        }
+
         private void ShowOperationError(Exception exception, string title)
         {
             summaryLabel.Text = title;
@@ -563,6 +823,122 @@ namespace LightingChartSamples.Scatter
             sampleDataButton.Enabled = enabled;
             accordPcaButton.Enabled = enabled;
             preferMemoryCheckBox.Enabled = enabled;
+            nearestNeighborGrid.Enabled = enabled;
+            UseWaitCursor = !enabled;
+            if (enabled)
+            {
+                HideBusyOverlay();
+            }
+            else
+            {
+                ShowBusyOverlay(string.IsNullOrWhiteSpace(summaryLabel.Text)
+                    ? "처리 중입니다. 잠시만 기다려 주세요."
+                    : summaryLabel.Text);
+            }
+        }
+
+        private void InitializeBusyOverlay()
+        {
+            busyOverlayPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                Visible = false
+            };
+
+            busyOverlayLabel = new Label
+            {
+                AutoEllipsis = true,
+                TextAlign = ContentAlignment.MiddleCenter,
+                ForeColor = Color.FromArgb(70, 70, 70),
+                Font = new Font(Font.FontFamily, 10f, FontStyle.Regular)
+            };
+
+            busyOverlayProgressBar = new ProgressBar
+            {
+                Style = ProgressBarStyle.Marquee,
+                MarqueeAnimationSpeed = 32
+            };
+
+            busyOverlayPanel.Controls.Add(busyOverlayLabel);
+            busyOverlayPanel.Controls.Add(busyOverlayProgressBar);
+            busyOverlayPanel.Resize += BusyOverlayPanel_Resize;
+            chartHost.Controls.Add(busyOverlayPanel);
+            busyOverlayPanel.BringToFront();
+            UpdateBusyOverlayLayout();
+        }
+
+        private void ShowBusyOverlay(string message)
+        {
+            if (busyOverlayPanel == null)
+            {
+                return;
+            }
+
+            busyOverlayLabel.Text = string.IsNullOrWhiteSpace(message)
+                ? "처리 중입니다. 잠시만 기다려 주세요."
+                : message.Trim();
+            busyOverlayProgressBar.MarqueeAnimationSpeed = 32;
+            busyOverlayPanel.Visible = true;
+            busyOverlayPanel.Enabled = true;
+            busyOverlayPanel.BringToFront();
+            UpdateBusyOverlayLayout();
+            Application.DoEvents();
+        }
+
+        private void HideBusyOverlay()
+        {
+            if (busyOverlayPanel == null)
+            {
+                return;
+            }
+
+            busyOverlayProgressBar.MarqueeAnimationSpeed = 0;
+            busyOverlayPanel.Visible = false;
+        }
+
+        private void UpdateBusyMessage(string message)
+        {
+            if (busyOverlayPanel == null || !busyOverlayPanel.Visible)
+            {
+                return;
+            }
+
+            busyOverlayLabel.Text = string.IsNullOrWhiteSpace(message)
+                ? "처리 중입니다. 잠시만 기다려 주세요."
+                : message.Trim();
+            Application.DoEvents();
+        }
+
+        private void BusyOverlayPanel_Resize(object sender, EventArgs e)
+        {
+            UpdateBusyOverlayLayout();
+        }
+
+        private void UpdateBusyOverlayLayout()
+        {
+            if (busyOverlayPanel == null
+                || busyOverlayLabel == null
+                || busyOverlayProgressBar == null)
+            {
+                return;
+            }
+
+            int contentWidth = Math.Min(420, Math.Max(260, busyOverlayPanel.ClientSize.Width - 80));
+            int progressWidth = Math.Min(360, contentWidth);
+            int centerX = busyOverlayPanel.ClientSize.Width / 2;
+            int centerY = busyOverlayPanel.ClientSize.Height / 2;
+
+            busyOverlayLabel.SetBounds(
+                Math.Max(8, centerX - (contentWidth / 2)),
+                Math.Max(8, centerY - 34),
+                contentWidth,
+                24);
+            busyOverlayProgressBar.SetBounds(
+                Math.Max(8, centerX - (progressWidth / 2)),
+                busyOverlayLabel.Bottom + 10,
+                progressWidth,
+                18);
         }
 
         private static PcaScatterOptions CreateChartOptions()
@@ -612,21 +988,35 @@ namespace LightingChartSamples.Scatter
 
         private void BindNearestNeighborTable(DataTable table)
         {
-            nearestNeighborGrid.DataSource = table;
-            if (nearestNeighborGrid.Columns.Contains("X1"))
+            nearestNeighborGridBinding = true;
+            try
             {
-                nearestNeighborGrid.Columns["X1"].DefaultCellStyle.Format = "0.####";
+                nearestNeighborGrid.DataSource = table;
+                if (nearestNeighborGrid.Columns.Contains("X1"))
+                {
+                    nearestNeighborGrid.Columns["X1"].DefaultCellStyle.Format = "0.####";
+                }
+
+                if (nearestNeighborGrid.Columns.Contains("X2"))
+                {
+                    nearestNeighborGrid.Columns["X2"].DefaultCellStyle.Format = "0.####";
+                }
+
+                if (nearestNeighborGrid.Columns.Contains("Distance"))
+                {
+                    nearestNeighborGrid.Columns["Distance"].DefaultCellStyle.Format = "0.0000";
+                }
+
+                nearestNeighborGrid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(255, 242, 128);
+                nearestNeighborGrid.DefaultCellStyle.SelectionForeColor = Color.Black;
+                nearestNeighborGrid.ClearSelection();
+            }
+            finally
+            {
+                nearestNeighborGridBinding = false;
             }
 
-            if (nearestNeighborGrid.Columns.Contains("X2"))
-            {
-                nearestNeighborGrid.Columns["X2"].DefaultCellStyle.Format = "0.####";
-            }
-
-            if (nearestNeighborGrid.Columns.Contains("Distance"))
-            {
-                nearestNeighborGrid.Columns["Distance"].DefaultCellStyle.Format = "0.0000";
-            }
+            UpdateSelectedNeighborHighlight();
         }
 
         private DataTable CreateNearestNeighborTable(
@@ -640,7 +1030,7 @@ namespace LightingChartSamples.Scatter
             table.Columns.Add("X1", typeof(double));
             table.Columns.Add("X2", typeof(double));
             table.Columns.Add("Rank", typeof(int));
-            table.Columns.Add("Similar_Draft", typeof(string));
+            table.Columns.Add("Target_Draft", typeof(string));
             table.Columns.Add("Distance", typeof(double));
 
             if (target == null || neighbors == null)
@@ -657,13 +1047,13 @@ namespace LightingChartSamples.Scatter
 
                 PcaExperimentRecord similar = currentRecords[neighbor.SourceIndex];
                 DataRow row = table.NewRow();
-                row["DRAFT_NO"] = target.DraftNo;
+                row["DRAFT_NO"] = similar.DraftNo;
                 row["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(similar.ParameterType);
                 row["LABEL(Y)"] = similar.LabelY;
                 row["X1"] = similar.X1;
                 row["X2"] = similar.X2;
                 row["Rank"] = neighbor.Rank;
-                row["Similar_Draft"] = similar.DraftNo;
+                row["Target_Draft"] = target.DraftNo;
                 row["Distance"] = neighbor.Distance;
                 table.Rows.Add(row);
             }

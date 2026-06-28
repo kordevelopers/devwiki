@@ -17,6 +17,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             MaxIterations = 2000;
             ConvergenceTolerance = 1e-10d;
             NeighborCount = 3;
+            KnnSearchAlgorithm = KnnSearchAlgorithm.Auto;
         }
 
         public double ConstantVarianceThreshold { get; set; }
@@ -26,6 +27,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         public int MaxIterations { get; set; }
         public double ConvergenceTolerance { get; set; }
         public int NeighborCount { get; set; }
+        public KnnSearchAlgorithm KnnSearchAlgorithm { get; set; }
 
         internal PcaAnalysisOptions ToPipelineOptions()
         {
@@ -37,7 +39,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
                 ComponentCount = ComponentCount,
                 MaxIterations = MaxIterations,
                 ConvergenceTolerance = ConvergenceTolerance,
-                NeighborCount = NeighborCount
+                NeighborCount = NeighborCount,
+                KnnSearchAlgorithm = KnnSearchAlgorithm
             };
         }
 
@@ -61,6 +64,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             DefaultColor = Color.FromArgb(129, 178, 231);
             HighlightColor = Color.Black;
             HighlightPointSize = 19f;
+            SelectedDraftNo = string.Empty;
+            SelectedPointColor = Color.FromArgb(255, 242, 128);
+            SelectedPointBorderColor = Color.Red;
+            SelectedPointBorderWidth = 2.8f;
+            SelectedPointSize = 24f;
             SeriesOrder = new[] { PassResultName, ReviewResultName };
             SeriesColors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
             PastelPalette = LightningScatterOptions.CreateDefaultPastelPalette();
@@ -77,6 +85,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         public string HighlightDraftNo { get; set; }
         public Color HighlightColor { get; set; }
         public float HighlightPointSize { get; set; }
+        public string SelectedDraftNo { get; set; }
+        public Color SelectedPointColor { get; set; }
+        public Color SelectedPointBorderColor { get; set; }
+        public float SelectedPointBorderWidth { get; set; }
+        public float SelectedPointSize { get; set; }
         public string[] SeriesOrder { get; set; }
         public IDictionary<string, Color> SeriesColors { get; set; }
         public Color[] PastelPalette { get; set; }
@@ -98,6 +111,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
                 HighlightDraftNo = HighlightDraftNo,
                 HighlightColor = HighlightColor,
                 HighlightPointSize = HighlightPointSize,
+                SelectedDraftNo = SelectedDraftNo,
+                SelectedPointColor = SelectedPointColor,
+                SelectedPointBorderColor = SelectedPointBorderColor,
+                SelectedPointBorderWidth = SelectedPointBorderWidth,
+                SelectedPointSize = SelectedPointSize,
                 SeriesOrder = SeriesOrder == null ? new string[0] : SeriesOrder.ToArray(),
                 SeriesColors = SeriesColors == null
                     ? new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)

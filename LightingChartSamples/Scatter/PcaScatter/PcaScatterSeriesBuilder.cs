@@ -17,9 +17,16 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
                 ? new List<ScatterSampleData>()
                 : analysisResult.ScatterData.Where(item => item != null).ToList();
             ScatterSampleData highlightedSample = ResolveHighlightedSample(samples, options);
+            ScatterSampleData selectedSample = ResolveSelectedSample(samples, options);
             IList<ScatterSampleData> regularSamples = highlightedSample == null
                 ? samples
                 : samples.Where(item => !object.ReferenceEquals(item, highlightedSample)).ToList();
+            if (selectedSample != null)
+            {
+                regularSamples = regularSamples
+                    .Where(item => !object.ReferenceEquals(item, selectedSample))
+                    .ToList();
+            }
 
             Dictionary<string, List<ScatterSampleData>> groups = regularSamples
                 .GroupBy(item => ResolveSeriesName(item, options), StringComparer.OrdinalIgnoreCase)
@@ -47,24 +54,26 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 
             if (highlightedSample != null)
             {
-                string highlightName = highlightedSample.DraftNo.Trim();
-                result.Add(new LightningScatterSeries
-                {
-                    Name = highlightName,
-                    LegendLabel = highlightName,
-                    LineColor = options.HighlightColor,
-                    PointColor = options.HighlightColor,
-                    PointSize = Math.Max(1f, options.HighlightPointSize),
-                    ShowLine = false,
-                    ShowPoints = true,
-                    Points = new List<LightningScatterPoint>
-                    {
-                        new LightningScatterPoint(
-                            highlightedSample.X1,
-                            highlightedSample.X2,
-                            highlightedSample)
-                    }
-                });
+                result.Add(CreateSinglePointSeries(
+                    highlightedSample,
+                    highlightedSample.DraftNo.Trim(),
+                    options.HighlightColor,
+                    options.HighlightColor,
+                    Math.Max(1f, options.HighlightPointSize),
+                    1.8f,
+                    true));
+            }
+
+            if (selectedSample != null && !object.ReferenceEquals(selectedSample, highlightedSample))
+            {
+                result.Add(CreateSinglePointSeries(
+                    selectedSample,
+                    selectedSample.DraftNo.Trim(),
+                    options.SelectedPointColor,
+                    options.SelectedPointBorderColor,
+                    Math.Max(1f, options.SelectedPointSize),
+                    Math.Max(0f, options.SelectedPointBorderWidth),
+                    false));
             }
 
             return result;
@@ -83,6 +92,49 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             return (samples ?? Enumerable.Empty<ScatterSampleData>()).FirstOrDefault(item =>
                 item != null
                 && string.Equals(item.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static ScatterSampleData ResolveSelectedSample(
+            IEnumerable<ScatterSampleData> samples,
+            PcaScatterSeriesOptions options)
+        {
+            if (string.IsNullOrWhiteSpace(options.SelectedDraftNo))
+            {
+                return null;
+            }
+
+            string draftNo = options.SelectedDraftNo.Trim();
+            return (samples ?? Enumerable.Empty<ScatterSampleData>()).FirstOrDefault(item =>
+                item != null
+                && string.Equals(item.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static LightningScatterSeries CreateSinglePointSeries(
+            ScatterSampleData sample,
+            string seriesName,
+            Color fillColor,
+            Color borderColor,
+            float pointSize,
+            float borderWidth,
+            bool showInLegend)
+        {
+            return new LightningScatterSeries
+            {
+                Name = seriesName,
+                LegendLabel = seriesName,
+                LineColor = borderColor,
+                PointColor = fillColor,
+                PointBorderColor = borderColor,
+                PointBorderWidth = borderWidth,
+                PointSize = pointSize,
+                ShowLine = false,
+                ShowPoints = true,
+                ShowInLegend = showInLegend,
+                Points = new List<LightningScatterPoint>
+                {
+                    new LightningScatterPoint(sample.X1, sample.X2, sample)
+                }
+            };
         }
 
         private static string ResolveSeriesName(ScatterSampleData sample, PcaScatterSeriesOptions options)

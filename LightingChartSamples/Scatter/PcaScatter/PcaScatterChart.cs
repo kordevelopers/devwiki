@@ -298,6 +298,32 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             return analysisResult.FindNearest(draftNo, Math.Max(1, count));
         }
 
+        public void HighlightSelectedDraft(string draftNo)
+        {
+            if (analysisResult == null)
+            {
+                return;
+            }
+
+            PcaScatterOptions nextOptions = options == null
+                ? PcaScatterOptions.CreateDefault()
+                : options.Clone();
+            if (nextOptions.Series == null)
+            {
+                nextOptions.Series = new PcaScatterSeriesOptions();
+            }
+
+            nextOptions.Series.SelectedDraftNo = string.IsNullOrWhiteSpace(draftNo)
+                ? string.Empty
+                : draftNo.Trim();
+            RefreshSeries(nextOptions);
+        }
+
+        public void ClearSelectedDraftHighlight()
+        {
+            HighlightSelectedDraft(string.Empty);
+        }
+
         public void Clear()
         {
             analysisResult = null;
@@ -340,6 +366,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 
             IList<KnnNeighbor> neighbors = FindNearest(sample.DraftNo, options.Analysis.NeighborCount);
             OnSampleClicked(new PcaScatterSampleClickedEventArgs(sample, neighbors, e));
+        }
+
+        private void RefreshSeries(PcaScatterOptions nextOptions)
+        {
+            options = nextOptions == null ? PcaScatterOptions.CreateDefault() : nextOptions.Clone();
+            IEnumerable<LightningScatterSeries> series = seriesBuilder.Build(analysisResult, options.Series);
+            scatterChart.UpdateData(series, options.ToScatterOptions(analysisResult));
         }
 
         private void OnSampleClicked(PcaScatterSampleClickedEventArgs e)

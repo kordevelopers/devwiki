@@ -27,6 +27,20 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             return new PcaExadataSnapshot(rows, DateTime.UtcNow);
         }
 
+        public PcaExadataSnapshot CreateDatabaseLikeSnapshot(
+            int responseCount,
+            int defectCount,
+            int epmCount,
+            int probeCount)
+        {
+            var rows = new List<PcaExadataSourceRow>();
+            AddRows(rows, PcaParameterType.Response, "DRAFT", Math.Max(0, responseCount), -0.9d);
+            AddRows(rows, PcaParameterType.Defect, "DRAFT", Math.Max(0, defectCount), 0.8d);
+            AddRows(rows, PcaParameterType.Epm, "DRAFT", Math.Max(0, epmCount), -0.2d);
+            AddRows(rows, PcaParameterType.Probe, "DRAFT", Math.Max(0, probeCount), 0.2d);
+            return new PcaExadataSnapshot(rows, DateTime.UtcNow);
+        }
+
         private void AddRows(
             IList<PcaExadataSourceRow> rows,
             PcaParameterType parameterType,
