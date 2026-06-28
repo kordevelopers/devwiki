@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
+using Accord.Statistics.Analysis;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
 {
@@ -284,20 +284,26 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
             int componentCount = Math.Min(
                 Math.Max(1, requestedComponentCount),
                 Math.Min(featureCount, 2));
-            AccordProjectionData accordProjection = AccordPrincipalComponentBridge.Project(
-                standardizedMatrix,
-                componentCount,
-                featureCount);
-            double[][] scores = accordProjection.Scores;
-            double[][] components = accordProjection.Components;
+            var accord = new PrincipalComponentAnalysis(
+                PrincipalComponentMethod.Center,
+                false,
+                componentCount);
+            accord.Learn(standardizedMatrix, null);
+
+            accord.NumberOfOutputs = componentCount;
+            double[][] scores = accord.Transform(standardizedMatrix);
+            double[][] components = accord.ComponentVectors
+                .Take(componentCount)
+                .Select(component => (double[])component.Clone())
+                .ToArray();
             CanonicalizeComponentSigns(components, scores);
 
-            double[] eigenValues = accordProjection.EigenValues == null
+            double[] eigenValues = accord.Eigenvalues == null
                 ? new double[0]
-                : accordProjection.EigenValues.Take(componentCount).ToArray();
-            double[] ratios = accordProjection.ComponentProportions == null
+                : accord.Eigenvalues.Take(componentCount).ToArray();
+            double[] ratios = accord.ComponentProportions == null
                 ? new double[0]
-                : accordProjection.ComponentProportions.Take(componentCount).ToArray();
+                : accord.ComponentProportions.Take(componentCount).ToArray();
 
             return new AccordProjectionResult
             {
@@ -464,313 +470,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         {
             public double[][] Scores { get; set; }
             public PcaProjectionModel Model { get; set; }
-        }
-
-        private sealed class AccordProjectionData
-        {
-            public double[][] Scores { get; set; }
-            public double[][] Components { get; set; }
-            public double[] EigenValues { get; set; }
-            public double[] ComponentProportions { get; set; }
-        }
-
-        private static class AccordPrincipalComponentBridge
-        {
-            public static AccordProjectionData Project(
-                double[][] standardizedMatrix,
-                int componentCount,
-                int featureCount)
-            {
-                Type pcaType = ResolveAccordType(
-                    "Accord.Statistics.Analysis.PrincipalComponentAnalysis");
-                object pca = CreateModernPca(pcaType, componentCount);
-                bool learned = TryLearn(pca, pcaType, standardizedMatrix);
-                if (!learned)
-                {
-                    pca = CreateLegacyPca(pcaType, standardizedMatrix);
-                    TrySetNumberOfOutputs(pca, pcaType, componentCount);
-                    InvokeCompute(pca, pcaType);
-                }
-
-                TrySetNumberOfOutputs(pca, pcaType, componentCount);
-
-                double[][] scores = Transform(pca, pcaType, standardizedMatrix, componentCount);
-                double[][] components = NormalizeComponents(
-                    ReadMatrixProperty(pca, pcaType, "ComponentVectors"),
-                    componentCount,
-                    featureCount);
-
-                return new AccordProjectionData
-                {
-                    Scores = scores,
-                    Components = components,
-                    EigenValues = ReadVectorProperty(pca, pcaType, "Eigenvalues"),
-                    ComponentProportions = ReadVectorProperty(pca, pcaType, "ComponentProportions")
-                };
-            }
-
-            private static Type ResolveAccordType(string fullName)
-            {
-                Type type = Type.GetType(fullName + ", Accord.Statistics", false);
-                if (type != null)
-                {
-                    return type;
-                }
-
-                foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-                {
-                    type = assembly.GetType(fullName, false);
-                    if (type != null)
-                    {
-                        return type;
-                    }
-                }
-
-                throw new InvalidOperationException(
-                    "Accord.Statistics.dll reference is required for Accord PCA analysis. "
-                    + "Install/restore Accord.Statistics 3.8.0 and build LightingChartSamples.csproj.");
-            }
-
-            private static object CreateModernPca(Type pcaType, int componentCount)
-            {
-                Type methodType = ResolveAccordType(
-                    "Accord.Statistics.Analysis.PrincipalComponentMethod");
-                ConstructorInfo constructor = pcaType.GetConstructor(new[]
-                {
-                    methodType,
-                    typeof(bool),
-                    typeof(int)
-                });
-                if (constructor == null)
-                {
-                    return null;
-                }
-
-                object center = Enum.Parse(methodType, "Center");
-                return constructor.Invoke(new[] { center, false, (object)componentCount });
-            }
-
-            private static object CreateLegacyPca(Type pcaType, double[][] standardizedMatrix)
-            {
-                Type methodType = ResolveAccordType(
-                    "Accord.Statistics.Analysis.AnalysisMethod");
-                ConstructorInfo constructor = pcaType.GetConstructor(new[]
-                {
-                    typeof(double[][]),
-                    methodType
-                });
-                if (constructor == null)
-                {
-                    throw new InvalidOperationException(
-                        "Accord PrincipalComponentAnalysis constructor was not found.");
-                }
-
-                object center = Enum.Parse(methodType, "Center");
-                return constructor.Invoke(new object[] { standardizedMatrix, center });
-            }
-
-            private static bool TryLearn(object pca, Type pcaType, double[][] standardizedMatrix)
-            {
-                if (pca == null)
-                {
-                    return false;
-                }
-
-                MethodInfo learn = pcaType.GetMethods()
-                    .Where(method => method.Name == "Learn")
-                    .FirstOrDefault(method =>
-                    {
-                        ParameterInfo[] parameters = method.GetParameters();
-                        return parameters.Length >= 1
-                            && parameters[0].ParameterType.IsAssignableFrom(typeof(double[][]));
-                    });
-                if (learn == null)
-                {
-                    return false;
-                }
-
-                ParameterInfo[] methodParameters = learn.GetParameters();
-                object[] arguments = new object[methodParameters.Length];
-                arguments[0] = standardizedMatrix;
-                for (int index = 1; index < arguments.Length; index++)
-                {
-                    arguments[index] = methodParameters[index].ParameterType.IsValueType
-                        ? Activator.CreateInstance(methodParameters[index].ParameterType)
-                        : null;
-                }
-
-                learn.Invoke(pca, arguments);
-                return true;
-            }
-
-            private static void InvokeCompute(object pca, Type pcaType)
-            {
-                MethodInfo compute = pcaType.GetMethod("Compute", Type.EmptyTypes);
-                if (compute != null)
-                {
-                    compute.Invoke(pca, new object[0]);
-                }
-            }
-
-            private static void TrySetNumberOfOutputs(object pca, Type pcaType, int componentCount)
-            {
-                PropertyInfo property = pcaType.GetProperty("NumberOfOutputs");
-                if (property != null && property.CanWrite)
-                {
-                    property.SetValue(pca, componentCount, null);
-                }
-            }
-
-            private static double[][] Transform(
-                object pca,
-                Type pcaType,
-                double[][] standardizedMatrix,
-                int componentCount)
-            {
-                MethodInfo transform = pcaType.GetMethods()
-                    .Where(method => method.Name == "Transform")
-                    .FirstOrDefault(method =>
-                    {
-                        ParameterInfo[] parameters = method.GetParameters();
-                        return parameters.Length == 1
-                            && parameters[0].ParameterType.IsAssignableFrom(typeof(double[][]));
-                    });
-                if (transform != null)
-                {
-                    return ToJaggedMatrix(transform.Invoke(pca, new object[] { standardizedMatrix }));
-                }
-
-                transform = pcaType.GetMethods()
-                    .Where(method => method.Name == "Transform")
-                    .FirstOrDefault(method =>
-                    {
-                        ParameterInfo[] parameters = method.GetParameters();
-                        return parameters.Length == 2
-                            && parameters[0].ParameterType.IsAssignableFrom(typeof(double[][]))
-                            && parameters[1].ParameterType == typeof(int);
-                    });
-                if (transform != null)
-                {
-                    return ToJaggedMatrix(transform.Invoke(
-                        pca,
-                        new object[] { standardizedMatrix, componentCount }));
-                }
-
-                return ToJaggedMatrix(ReadProperty(pca, pcaType, "Result"));
-            }
-
-            private static double[][] ReadMatrixProperty(
-                object instance,
-                Type instanceType,
-                string propertyName)
-            {
-                return ToJaggedMatrix(ReadProperty(instance, instanceType, propertyName));
-            }
-
-            private static double[] ReadVectorProperty(
-                object instance,
-                Type instanceType,
-                string propertyName)
-            {
-                object value = ReadProperty(instance, instanceType, propertyName);
-                double[] vector = value as double[];
-                if (vector != null)
-                {
-                    return (double[])vector.Clone();
-                }
-
-                IEnumerable<double> enumerable = value as IEnumerable<double>;
-                return enumerable == null ? new double[0] : enumerable.ToArray();
-            }
-
-            private static object ReadProperty(
-                object instance,
-                Type instanceType,
-                string propertyName)
-            {
-                PropertyInfo property = instanceType.GetProperty(propertyName);
-                if (property == null)
-                {
-                    return null;
-                }
-
-                return property.GetValue(instance, null);
-            }
-
-            private static double[][] ToJaggedMatrix(object value)
-            {
-                double[][] jagged = value as double[][];
-                if (jagged != null)
-                {
-                    return jagged
-                        .Select(row => row == null ? new double[0] : (double[])row.Clone())
-                        .ToArray();
-                }
-
-                double[,] rectangular = value as double[,];
-                if (rectangular == null)
-                {
-                    return new double[0][];
-                }
-
-                int rows = rectangular.GetLength(0);
-                int columns = rectangular.GetLength(1);
-                var result = new double[rows][];
-                for (int row = 0; row < rows; row++)
-                {
-                    result[row] = new double[columns];
-                    for (int column = 0; column < columns; column++)
-                    {
-                        result[row][column] = rectangular[row, column];
-                    }
-                }
-
-                return result;
-            }
-
-            private static double[][] NormalizeComponents(
-                double[][] components,
-                int componentCount,
-                int featureCount)
-            {
-                if (components == null || components.Length == 0)
-                {
-                    throw new InvalidOperationException(
-                        "Accord PCA did not return component vectors.");
-                }
-
-                if (components.Length >= componentCount
-                    && components[0] != null
-                    && components[0].Length == featureCount)
-                {
-                    return components
-                        .Take(componentCount)
-                        .Select(component => (double[])component.Clone())
-                        .ToArray();
-                }
-
-                if (components.Length == featureCount
-                    && components[0] != null
-                    && components[0].Length >= componentCount)
-                {
-                    var transposed = new double[componentCount][];
-                    for (int componentIndex = 0; componentIndex < componentCount; componentIndex++)
-                    {
-                        transposed[componentIndex] = new double[featureCount];
-                        for (int featureIndex = 0; featureIndex < featureCount; featureIndex++)
-                        {
-                            transposed[componentIndex][featureIndex] = components[featureIndex][componentIndex];
-                        }
-                    }
-
-                    return transposed;
-                }
-
-                return components
-                    .Take(componentCount)
-                    .Select(component => component == null ? new double[0] : (double[])component.Clone())
-                    .ToArray();
-            }
         }
     }
 }
