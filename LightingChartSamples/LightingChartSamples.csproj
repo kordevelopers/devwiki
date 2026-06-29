@@ -138,26 +138,36 @@
     <Compile Include="Scatter\AccordPcaScatter\AccordScatterMain.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Scatter\PcaScatter\ActDataJsonParser.cs" />
-    <Compile Include="Scatter\PcaScatter\ActDataRepository.cs" />
-    <Compile Include="Scatter\PcaScatter\ConvExperimentRepository.cs" />
+    <Compile Include="Scatter\AccordPcaScatter\AccordPcaCoreModels.cs" />
+    <Compile Include="Scatter\AccordPcaScatter\AccordPcaExperimentModels.cs" />
     <Compile Include="Scatter\AccordPcaScatter\AccordPcaScatterAnalyzer.cs" />
-    <Compile Include="Scatter\PcaScatter\PcaExadataService.cs" />
-    <Compile Include="Scatter\PcaScatter\PcaExadataSampleDataFactory.cs" />
-    <Compile Include="Scatter\PcaScatter\PcaScatterPopupDataProvider.cs" />
-    <Compile Include="Scatter\PcaScatter\PcaAnalysisPipeline.cs" />
-    <Compile Include="Scatter\PcaScatter\PcaJsonUtility.cs" />
-    <Compile Include="Scatter\PcaScatter\PcaScatterChart.cs" />
-    <Compile Include="Scatter\PcaScatter\PcaScatterDataSource.cs" />
-    <Compile Include="Scatter\PcaScatter\PcaScatterOptions.cs" />
-    <Compile Include="Scatter\PcaScatter\PcaScatterSeriesBuilder.cs" />
+    <Compile Include="Scatter\AccordPcaScatter\ConvExperimentRepository.cs" />
+    <Compile Include="Scatter\AccordPcaScatter\PcaExadataSampleDataFactory.cs" />
+    <Compile Include="Scatter\AccordPcaScatter\PcaJsonUtility.cs" />
+    <Compile Include="Scatter\AccordPcaScatter\PcaScatterChart.cs" />
+    <Compile Include="Scatter\AccordPcaScatter\PcaScatterOptions.cs" />
+    <Compile Include="Scatter\AccordPcaScatter\PcaScatterPopupDataProvider.cs" />
+    <Compile Include="Scatter\AccordPcaScatter\PcaScatterSeriesBuilder.cs" />
+    <Compile Include="Scatter\AccordPcaScatter\ScatterSampleData.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\ActDataJsonParser.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\ActDataRepository.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\ConvExperimentRepository.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\PcaExadataService.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\PcaExadataSampleDataFactory.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\PcaScatterPopupDataProvider.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\PcaAnalysisPipeline.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\PcaJsonUtility.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\PcaScatterChart.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\PcaScatterDataSource.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\PcaScatterOptions.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\PcaScatterSeriesBuilder.cs" />
     <Compile Include="Scatter\Samples\ScatterMain.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Scatter\Samples\ScatterMain.Designer.cs">
       <DependentUpon>ScatterMain.cs</DependentUpon>
     </Compile>
-    <Compile Include="Scatter\PcaScatter\ScatterSampleData.cs" />
+    <Compile Include="Scatter\LegacyManualPcaScatter\ScatterSampleData.cs" />
     <Compile Include="TabbedLayoutSampleForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -184,7 +194,7 @@
     <Compile Include="LightningRadarSample.Designer.cs">
       <DependentUpon>LightningRadarSample.cs</DependentUpon>
     </Compile>
-    <Compile Include="Scatter\Common\LightningScatter.cs">
+    <Compile Include="Scatter\AccordPcaScatter\LightningScatter.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Scatter\Samples\LightningScatterSampleForm.cs">

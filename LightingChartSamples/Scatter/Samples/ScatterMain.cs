@@ -10,7 +10,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter;
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter;
 
 namespace LightingChartSamples.Scatter
@@ -373,64 +372,10 @@ namespace LightingChartSamples.Scatter
 
         private async Task RunAccordPcaAsync()
         {
-            PcaExadataSnapshot snapshot = exadataService.CurrentSnapshot;
-            if (snapshot == null)
+            await Task.Yield();
+            using (var form = new LightingChartSamples.Scatter.AccordPcaScatter.AccordScatterMain())
             {
-                MessageBox.Show(
-                    this,
-                    "먼저 서비스 DataTable을 전달하거나 가상 데이터를 생성하세요.",
-                    "Accord PCA",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-                return;
-            }
-
-            SetToolbarEnabled(false);
-            ShowBusyOverlay("Accord.NET PCA 분석 중...");
-            PcaParameterType parameterType = GetSelectedParameterType();
-            summaryLabel.Text = PcaParameterTypeParser.ToDatabaseValue(parameterType)
-                + " Accord.NET PCA 분석 중...";
-
-            try
-            {
-                PcaScatterOptions chartOptions = CreateChartOptions();
-                UpdateBusyMessage("Accord.NET PCA 분석 중...");
-                var analyzer = new AccordPcaScatterAnalyzer();
-                PcaExadataAnalysisResult result = await Task.Run(delegate
-                {
-                    return analyzer.AnalyzeSnapshot(
-                        snapshot,
-                        parameterType,
-                        chartOptions.Analysis);
-                });
-
-                PcaExperimentRecord target = null;
-                IList<KnnNeighbor> neighbors = null;
-                string draftNo = (draftNoTextBox.Text ?? string.Empty).Trim();
-                if (draftNo.Length > 0)
-                {
-                    target = result.Records.FirstOrDefault(record =>
-                        string.Equals(record.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
-                    if (target != null)
-                    {
-                        chartOptions.Series.HighlightDraftNo = target.DraftNo;
-                        neighbors = result.AnalysisResult.FindNearest(
-                            target.DraftNo,
-                            Math.Max(1, chartOptions.Analysis.NeighborCount));
-                    }
-                }
-
-                ApplyAnalysis(result, chartOptions);
-                BindNearestNeighborTable(CreateNearestNeighborTable(target, neighbors));
-                UpdateSummary(result, "Accord.NET PCA");
-            }
-            catch (Exception ex)
-            {
-                ShowOperationError(ex, "Accord.NET PCA 분석 실패");
-            }
-            finally
-            {
-                SetToolbarEnabled(true);
+                form.ShowDialog(this);
             }
         }
 

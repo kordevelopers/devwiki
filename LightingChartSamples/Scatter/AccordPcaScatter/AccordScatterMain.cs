@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using LightingChartSamples.Scatter;
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter;
-using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter;
 
 namespace LightingChartSamples.Scatter.AccordPcaScatter
 {

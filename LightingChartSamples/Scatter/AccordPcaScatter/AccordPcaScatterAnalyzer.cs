@@ -4,14 +4,12 @@ using System.Data;
 using System.Globalization;
 using System.Linq;
 using Accord.Statistics.Analysis;
-using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 {
     /// <summary>
-    /// Accord.NET 전용 PCA 분석기입니다.
-    /// 기존 수동 PCA 파이프라인(PcaAnalysisPipeline.Analyze, PcaProjectionModel.Fit)을
-    /// 호출하지 않고 PrincipalComponentAnalysis로 PC1/PC2를 계산합니다.
+    /// Accord.NET-only PCA analyzer. PC1/PC2 are calculated by
+    /// Accord.Statistics.Analysis.PrincipalComponentAnalysis.
     /// </summary>
     public sealed class AccordPcaScatterAnalyzer
     {
@@ -64,8 +62,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             if (population.Count == 0)
             {
                 throw new InvalidOperationException(
-                    "선택한 PARAM_TYP '" + PcaParameterTypeParser.ToDatabaseValue(parameterType)
-                    + "'의 PCA 데이터가 없습니다.");
+                    "Selected PARAM_TYP '" + PcaParameterTypeParser.ToDatabaseValue(parameterType)
+                    + "' does not contain PCA data.");
             }
 
             string duplicateDraft = population
@@ -76,7 +74,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             if (!string.IsNullOrEmpty(duplicateDraft))
             {
                 throw new InvalidOperationException(
-                    "선택한 PARAM_TYP에서 DRAFT_NO가 중복되었습니다. " + duplicateDraft);
+                    "Duplicate DRAFT_NO exists in the selected PARAM_TYP: " + duplicateDraft);
             }
 
             return population;
@@ -108,7 +106,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             if (parsed.Count < 3)
             {
                 throw new InvalidOperationException(
-                    "Accord PCA 분석에는 실험 데이터가 있는 row가 최소 3건 필요합니다.");
+                    "Accord PCA analysis requires at least 3 rows with experiment data.");
             }
 
             PcaScatterAnalysisOptions effectiveOptions =
@@ -248,7 +246,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             if (included.Count < 2)
             {
                 throw new InvalidOperationException(
-                    "Accord PCA 분석에는 사용 가능한 수치 feature가 최소 2개 필요합니다.");
+                    "Accord PCA analysis requires at least 2 usable numeric features.");
             }
 
             double[][] matrix = parsed.Select(item =>
@@ -474,3 +472,4 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
         }
     }
 }
+
