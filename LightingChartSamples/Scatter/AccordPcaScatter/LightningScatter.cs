@@ -1436,7 +1436,7 @@ namespace LightingChartSamples.Scatter
 
         private bool TrySolveNearestPoint(PointLineSeries chartSeries, Point location, int tolerance, out NearestPointHit hit)
         {
-            // LightningChart의 화면 좌표에서 마우스와 가장 가까운 점을 찾는 UI 히트 테스트다.
+            // 라이트닝차트 화면에서 마우스와 가장 가까운 점을 찾는 처리다.
             // 표준화된 다차원 특징 벡터의 유클리드 거리를 계산하는 KNN과는 관계가 없다.
             hit = null;
             double x;

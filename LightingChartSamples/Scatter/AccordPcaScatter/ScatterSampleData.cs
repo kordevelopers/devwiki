@@ -7,8 +7,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
     #region PCA Scatter Output Contract
 
     /// <summary>
-    /// Display row passed to LightningChart and KNN result grids.
-    /// X1 and X2 are PC1/PC2 scores calculated by Accord.NET PCA.
+    /// 차트와 KNN 그리드에 표시할 한 건의 결과다.
     /// </summary>
     public sealed class ScatterSampleData
     {
@@ -35,10 +34,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
     #region JSON Sample Data Generation
 
     /// <summary>
-    /// Creates PCA test JSON that mimics the company data shape.
-    /// The default set contains 80 experiment rows, and each JSON row contains
-    /// numeric Feature_001 through Feature_080 values.
-    /// It also includes constant and text columns to verify preprocessing removal logic.
+    /// 회사 JSON 구조와 비슷한 PCA 테스트 데이터를 만든다.
     /// </summary>
     public sealed class PcaJsonSampleDataFactory
     {
@@ -55,9 +51,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
         }
 
         /// <summary>
-        /// Combines quality, process, and equipment factors to create correlated
-        /// numeric features. This makes it easy to verify that PCA compresses
-        /// shared variation into X1/X2.
+        /// 공통 요인이 섞인 수치 데이터를 만들어 PCA 확인에 사용한다.
         /// </summary>
         public IList<string> CreateDefaultJsonSamples()
         {
@@ -68,7 +62,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
                 bool isPass = sampleIndex < 52;
                 string aiResult = isPass ? PassResult : ReviewResult;
 
-                // The quality factor separates labels; process and equipment add shared variation.
+                // 라벨 차이와 공정 변동이 함께 보이도록 값을 만든다.
                 double qualityFactor = (isPass ? -1.05d : 1.25d) + NextGaussian(0d, 0.38d);
                 double processFactor = NextGaussian(0d, 1d);
                 double equipmentFactor = NextGaussian(0d, 0.75d);
@@ -97,13 +91,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
                         + measurementNoise;
                     value = Math.Round(value, 6);
 
-                    // Some features are stored as numeric strings to verify numeric parsing.
+                    // 숫자 문자열도 수치로 읽히는지 확인한다.
                     row[featureName] = featureNumber % 10 == 0
                         ? (object)value.ToString("0.######", CultureInfo.InvariantCulture)
                         : value;
                 }
 
-                // Constant columns must be removed by the variance filter.
+                // 상수 컬럼은 분산 필터에서 제거되어야 한다.
                 row["CONST_ZERO"] = 0d;
                 row["CONST_ONE"] = 1d;
                 result.Add(PcaJsonUtility.SerializeObject(row));
@@ -114,7 +108,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 
         private double NextGaussian(double mean, double standardDeviation)
         {
-            // Box-Muller transform for normally distributed sample data.
+            // 정규분포 형태의 샘플 값을 만든다.
             double u1 = 1d - random.NextDouble();
             double u2 = 1d - random.NextDouble();
             double standardNormal = Math.Sqrt(-2d * Math.Log(u1)) * Math.Sin(2d * Math.PI * u2);

@@ -684,7 +684,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
                 transformed[row] = new double[Means.Length];
                 for (int column = 0; column < Means.Length; column++)
                 {
-                    // StandardScaler formula: z = (source value - fitted mean) / fitted standard deviation.
+                    // 학습한 평균과 표준편차로 같은 기준의 z값을 만든다.
                     transformed[row][column] = (matrix[row][column] - Means[column])
                         / StandardDeviations[column];
                 }

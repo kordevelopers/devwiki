@@ -8,8 +8,7 @@ using Accord.Statistics.Analysis;
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 {
     /// <summary>
-    /// Accord.NET-only PCA analyzer. PC1/PC2 are calculated by
-    /// Accord.Statistics.Analysis.PrincipalComponentAnalysis.
+    /// 어코드 PCA로 X1, X2 좌표를 계산한다.
     /// </summary>
     public sealed class AccordPcaScatterAnalyzer
     {

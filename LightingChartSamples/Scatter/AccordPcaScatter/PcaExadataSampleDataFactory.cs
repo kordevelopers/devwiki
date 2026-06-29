@@ -5,7 +5,7 @@ using System.Globalization;
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 {
     /// <summary>
-    /// Creates sample CONV_EXPER_CTN rows for the Accord PCA scatter screen.
+    /// 어코드 PCA 화면에서 쓸 샘플 데이터를 만든다.
     /// </summary>
     public sealed class PcaExadataSampleDataFactory
     {

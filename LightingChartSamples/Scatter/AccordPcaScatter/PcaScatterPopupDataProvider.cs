@@ -12,9 +12,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
     }
 
     /// <summary>
-    /// Popup-internal data provider used until the company service call is wired in.
-    /// Replace this class with a service-backed provider that returns the same columns:
-    /// DRAFT_NO, PARAM_TYP, ENGR_RSLT_VAL, CONV_EXPER_CTN.
+    /// 실제 서비스 연결 전까지 사용하는 샘플 데이터 공급자다.
     /// </summary>
     public sealed class PcaScatterVirtualDatabaseDataProvider : IPcaScatterPopupDataProvider
     {

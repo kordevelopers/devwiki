@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
@@ -14,32 +15,13 @@ using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter;
 
 namespace LightingChartSamples.Scatter.AccordPcaScatter
 {
-    public sealed class AccordScatterMain : Form
+    public sealed partial class AccordScatterMain : Form
     {
         private readonly AccordPcaScatterAnalyzer accordAnalyzer;
         private readonly IPcaScatterPopupDataProvider popupDataProvider;
         private readonly ConvExperimentQueryOptions dataTableOptions;
         private readonly Font gridFont;
         private readonly Timer busyProgressTimer;
-
-        private TableLayoutPanel rootLayout;
-        private FlowLayoutPanel commandPanel;
-        private Label titleLabel;
-        private Label summaryLabel;
-        private RadioButton responseRadioButton;
-        private RadioButton defectRadioButton;
-        private TextBox draftNoTextBox;
-        private Button searchButton;
-        private Button chartDrawButton;
-        private Button refreshAllButton;
-        private Button sampleDataButton;
-        private CheckBox preferMemoryCheckBox;
-        private ComboBox knnAlgorithmComboBox;
-        private Panel chartHost;
-        private DataGridView nearestNeighborGrid;
-        private Panel busyOverlayPanel;
-        private Label busyOverlayLabel;
-        private ProgressBar busyProgressBar;
 
         private PcaScatterChart pcaChart;
         private PcaExadataSnapshot currentSnapshot;
@@ -75,6 +57,13 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             busyProgressTimer.Tick += BusyProgressTimer_Tick;
 
             InitializeComponent();
+            InitializeRuntimeControlValues();
+
+            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
+            {
+                return;
+            }
+
             InitializeChart();
             InitializeBusyOverlay();
             BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
@@ -147,6 +136,11 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
                 {
                     busyProgressTimer.Dispose();
                 }
+
+                if (components != null)
+                {
+                    components.Dispose();
+                }
             }
 
             base.Dispose(disposing);
@@ -170,189 +164,17 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             await LoadConvExperimentDataTableCoreAsync(source);
         }
 
-        private void InitializeComponent()
+        private void InitializeRuntimeControlValues()
         {
-            Text = "AccordScatterMain - Accord.NET PCA Scatter";
-            StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(1360, 820);
-            MinimumSize = new Size(1100, 700);
-            BackColor = Color.White;
-            Font = new Font("Malgun Gothic", 9f, FontStyle.Regular);
-
-            rootLayout = new TableLayoutPanel
+            if (knnAlgorithmComboBox.Items.Count == 0)
             {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                ColumnCount = 1,
-                RowCount = 3
-            };
-            rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 86f));
-            rootLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-            rootLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 156f));
+                knnAlgorithmComboBox.Items.Add(KnnSearchAlgorithm.Auto);
+                knnAlgorithmComboBox.Items.Add(KnnSearchAlgorithm.BruteForce);
+                knnAlgorithmComboBox.Items.Add(KnnSearchAlgorithm.KdTree);
+                knnAlgorithmComboBox.Items.Add(KnnSearchAlgorithm.BallTree);
+            }
 
-            commandPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
-                Padding = new Padding(18, 10, 18, 4),
-                BackColor = Color.White
-            };
-
-            titleLabel = new Label
-            {
-                Text = "Accord PCA Scatter",
-                AutoSize = true,
-                Margin = new Padding(0, 6, 28, 0),
-                Font = new Font("Malgun Gothic", 11f, FontStyle.Bold)
-            };
-            commandPanel.Controls.Add(titleLabel);
-
-            commandPanel.Controls.Add(CreateTextLabel("PARAM_TYP"));
-
-            responseRadioButton = new RadioButton
-            {
-                Text = "RESPONSE",
-                Checked = true,
-                AutoSize = true,
-                Margin = new Padding(2, 7, 10, 0)
-            };
-            responseRadioButton.CheckedChanged += ParameterRadioButton_CheckedChanged;
-            commandPanel.Controls.Add(responseRadioButton);
-
-            defectRadioButton = new RadioButton
-            {
-                Text = "DEFECT",
-                AutoSize = true,
-                Margin = new Padding(2, 7, 20, 0)
-            };
-            defectRadioButton.CheckedChanged += ParameterRadioButton_CheckedChanged;
-            commandPanel.Controls.Add(defectRadioButton);
-
-            commandPanel.Controls.Add(CreateTextLabel("DRAFT_NO"));
-
-            draftNoTextBox = new TextBox
-            {
-                Width = 160,
-                Margin = new Padding(0, 4, 10, 0)
-            };
-            commandPanel.Controls.Add(draftNoTextBox);
-
-            searchButton = new Button
-            {
-                Text = "Draft Search",
-                Width = 96,
-                Height = 28,
-                Margin = new Padding(0, 3, 8, 0)
-            };
-            searchButton.Click += SearchButton_Click;
-            commandPanel.Controls.Add(searchButton);
-
-            chartDrawButton = new Button
-            {
-                Text = "Chart Draw",
-                Width = 96,
-                Height = 28,
-                Margin = new Padding(0, 3, 8, 0)
-            };
-            chartDrawButton.Click += ChartDrawButton_Click;
-            commandPanel.Controls.Add(chartDrawButton);
-
-            refreshAllButton = new Button
-            {
-                Text = "Refresh All",
-                Width = 106,
-                Height = 28,
-                Margin = new Padding(0, 3, 8, 0)
-            };
-            refreshAllButton.Click += RefreshAllButton_Click;
-            commandPanel.Controls.Add(refreshAllButton);
-
-            sampleDataButton = new Button
-            {
-                Text = "Virtual Data",
-                Width = 106,
-                Height = 28,
-                Margin = new Padding(0, 3, 8, 0)
-            };
-            sampleDataButton.Click += SampleDataButton_Click;
-            commandPanel.Controls.Add(sampleDataButton);
-
-            commandPanel.Controls.Add(CreateTextLabel("KNN"));
-
-            knnAlgorithmComboBox = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 116,
-                Margin = new Padding(0, 4, 10, 0)
-            };
-            knnAlgorithmComboBox.Items.Add(KnnSearchAlgorithm.Auto);
-            knnAlgorithmComboBox.Items.Add(KnnSearchAlgorithm.BruteForce);
-            knnAlgorithmComboBox.Items.Add(KnnSearchAlgorithm.KdTree);
-            knnAlgorithmComboBox.Items.Add(KnnSearchAlgorithm.BallTree);
             knnAlgorithmComboBox.SelectedItem = KnnSearchAlgorithm.Auto;
-            commandPanel.Controls.Add(knnAlgorithmComboBox);
-
-            preferMemoryCheckBox = new CheckBox
-            {
-                Text = "Memory First",
-                Checked = true,
-                AutoSize = true,
-                Margin = new Padding(0, 7, 20, 0)
-            };
-            commandPanel.Controls.Add(preferMemoryCheckBox);
-
-            summaryLabel = new Label
-            {
-                AutoSize = false,
-                Width = 1120,
-                Height = 28,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Margin = new Padding(130, 4, 0, 0),
-                ForeColor = Color.FromArgb(80, 80, 80),
-                Text = "Ready. This form uses Accord.NET PCA only."
-            };
-            commandPanel.Controls.Add(summaryLabel);
-
-            chartHost = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Color.White,
-                Padding = new Padding(14, 8, 14, 8)
-            };
-
-            nearestNeighborGrid = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                BackgroundColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
-                AllowUserToAddRows = false,
-                AllowUserToDeleteRows = false,
-                AllowUserToResizeRows = false,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None,
-                MultiSelect = false,
-                ReadOnly = true,
-                RowHeadersVisible = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect
-            };
-            nearestNeighborGrid.SelectionChanged += NearestNeighborGrid_SelectionChanged;
-            ConfigureNearestNeighborGrid();
-
-            rootLayout.Controls.Add(commandPanel, 0, 0);
-            rootLayout.Controls.Add(chartHost, 0, 1);
-            rootLayout.Controls.Add(nearestNeighborGrid, 0, 2);
-            Controls.Add(rootLayout);
-        }
-
-        private static Label CreateTextLabel(string text)
-        {
-            return new Label
-            {
-                Text = text,
-                AutoSize = true,
-                Margin = new Padding(0, 8, 8, 0)
-            };
         }
 
         private void InitializeChart()

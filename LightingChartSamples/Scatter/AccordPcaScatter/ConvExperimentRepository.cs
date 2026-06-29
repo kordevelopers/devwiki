@@ -7,9 +7,7 @@ using System.IO;
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 {
     /// <summary>
-    /// Converts caller-supplied CONV_EXPER_CTN service results into PCA source rows.
-    /// DB access is intentionally outside this class. The UI or service layer should
-    /// call the company data service and pass the completed DataTable here.
+    /// 서비스에서 받은 데이터 테이블을 PCA 입력 행으로 변환한다.
     /// </summary>
     public sealed class ConvExperimentQueryOptions
     {
