@@ -135,13 +135,13 @@
     <Compile Include="Scatter\Samples\PcaScatterSampleForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Scatter\Samples\AccordScatterMain.cs">
+    <Compile Include="Scatter\AccordPcaScatter\AccordScatterMain.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Scatter\PcaScatter\ActDataJsonParser.cs" />
     <Compile Include="Scatter\PcaScatter\ActDataRepository.cs" />
     <Compile Include="Scatter\PcaScatter\ConvExperimentRepository.cs" />
-    <Compile Include="Scatter\PcaScatter\Accord\AccordPcaScatterAnalyzer.cs" />
+    <Compile Include="Scatter\AccordPcaScatter\AccordPcaScatterAnalyzer.cs" />
     <Compile Include="Scatter\PcaScatter\PcaExadataService.cs" />
     <Compile Include="Scatter\PcaScatter\PcaExadataSampleDataFactory.cs" />
     <Compile Include="Scatter\PcaScatter\PcaScatterPopupDataProvider.cs" />

@@ -4,8 +4,9 @@ using System.Data;
 using System.Globalization;
 using System.Linq;
 using Accord.Statistics.Analysis;
+using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter;
 
-namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 {
     /// <summary>
     /// Accord.NET 전용 PCA 분석기입니다.

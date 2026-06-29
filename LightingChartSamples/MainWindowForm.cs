@@ -4,6 +4,7 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using LightingChartSamples.Scatter;
+using LightingChartSamples.Scatter.AccordPcaScatter;
 
 namespace LightingChartSamples
 {
