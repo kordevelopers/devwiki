@@ -45,6 +45,10 @@ using (var form = new AccordScatterMain(table))
 }
 ```
 
+The constructor queues the table and loads it after the popup is shown. The
+chart is not drawn immediately after binding. Click `Chart Draw` to run PCA and
+render the scatter chart.
+
 If the form is already visible and you need to reload another table, call
 `LoadConvExperimentDataTableAsync` from the visible form:
 
@@ -56,6 +60,39 @@ Do not call `await form.LoadConvExperimentDataTableAsync(table)` before
 `ShowDialog()`. If you do, the analysis can start before the user sees the
 popup. The constructor `new AccordScatterMain(table)` queues the table and
 loads it after the form is shown, so the progress overlay is visible.
+
+## Draft Search And Memory First
+
+`Draft Search` uses the value in the `DRAFT_NO` textbox.
+
+- `Memory First` checked: search and redraw from the already loaded in-memory
+  snapshot.
+- `Memory First` unchecked: call the injected `IPcaScatterPopupDataProvider`,
+  rebuild the chart from the returned table, and then search the requested
+  `DRAFT_NO`.
+
+If no provider is injected and `Memory First` is unchecked, the popup shows a
+message instead of silently using virtual data.
+
+## Refresh And KNN Algorithm
+
+`Refresh All` does not call the popup data provider again. It refreshes the
+latest `DataTable` passed through `AccordScatterMain(table)` or
+`LoadConvExperimentDataTableAsync(table)`. If the current data came from
+`Virtual Data`, it refreshes that in-memory sample snapshot.
+
+To compare KNN algorithms:
+
+1. Load the popup with a `DataTable`.
+2. Click `Chart Draw`.
+3. Enter `DRAFT_NO`.
+4. Select `Auto`, `BruteForce`, `KdTree`, or `BallTree` in the KNN combo box.
+5. Click `Refresh All`.
+
+The chart is rebuilt from the same table, and the nearest-neighbor grid is
+recalculated for the entered `DRAFT_NO`.
+
+The `Virtual Data` button is only a sample data path.
 
 ## Manual PCA Location
 

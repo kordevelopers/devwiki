@@ -30,6 +30,7 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
         private RadioButton defectRadioButton;
         private TextBox draftNoTextBox;
         private Button searchButton;
+        private Button chartDrawButton;
         private Button refreshAllButton;
         private Button sampleDataButton;
         private CheckBox preferMemoryCheckBox;
@@ -48,15 +49,17 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
         private bool nearestNeighborGridBinding;
         private DataTable pendingSourceTable;
         private bool pendingSourceTableLoadStarted;
+        private DataTable receivedSourceTable;
+        private string currentSourceDescription;
         private string lastFeatureAuditLogPath;
 
         public AccordScatterMain()
-            : this(new PcaScatterVirtualDatabaseDataProvider())
+            : this((IPcaScatterPopupDataProvider)null)
         {
         }
 
         public AccordScatterMain(DataTable sourceTable)
-            : this(new PcaScatterVirtualDatabaseDataProvider())
+            : this((IPcaScatterPopupDataProvider)null)
         {
             pendingSourceTable = sourceTable;
         }
@@ -64,7 +67,7 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
         public AccordScatterMain(IPcaScatterPopupDataProvider popupDataProvider)
         {
             accordAnalyzer = new AccordPcaScatterAnalyzer();
-            this.popupDataProvider = popupDataProvider ?? new PcaScatterVirtualDatabaseDataProvider();
+            this.popupDataProvider = popupDataProvider;
             dataTableOptions = ConvExperimentQueryOptions.FromConfiguration();
             currentRecords = new List<PcaExperimentRecord>();
             gridFont = new Font("Malgun Gothic", 10f, FontStyle.Regular);
@@ -98,9 +101,11 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
 
         private async Task LoadConvExperimentDataTableCoreAsync(DataTable sourceTable)
         {
-            BeginBusy("Loading DataTable and running Accord.NET PCA...");
+            BeginBusy("Loading DataTable...");
             try
             {
+                receivedSourceTable = sourceTable;
+                currentSourceDescription = "Injected DataTable";
                 await AllowBusyOverlayToPaintAsync();
                 currentSnapshot = await Task.Run(delegate
                 {
@@ -111,7 +116,11 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
                 });
 
                 preferMemoryCheckBox.Checked = true;
-                await AnalyzeCurrentSnapshotAsync("Injected DataTable", false);
+                currentAnalysis = null;
+                currentRecords.Clear();
+                pcaChart.Clear();
+                BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
+                summaryLabel.Text = "DataTable loaded. Click Chart Draw to run PCA.";
             }
             finally
             {
@@ -238,6 +247,16 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             };
             searchButton.Click += SearchButton_Click;
             commandPanel.Controls.Add(searchButton);
+
+            chartDrawButton = new Button
+            {
+                Text = "Chart Draw",
+                Width = 96,
+                Height = 28,
+                Margin = new Padding(0, 3, 8, 0)
+            };
+            chartDrawButton.Click += ChartDrawButton_Click;
+            commandPanel.Controls.Add(chartDrawButton);
 
             refreshAllButton = new Button
             {
@@ -384,7 +403,12 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
 
         private async void RefreshAllButton_Click(object sender, EventArgs e)
         {
-            await LoadProviderDataAsync(true);
+            await RefreshCurrentDataAsync();
+        }
+
+        private async void ChartDrawButton_Click(object sender, EventArgs e)
+        {
+            await DrawCurrentChartAsync();
         }
 
         private async void SampleDataButton_Click(object sender, EventArgs e)
@@ -394,7 +418,10 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
 
         private async void ParameterRadioButton_CheckedChanged(object sender, EventArgs e)
         {
-            if (!parameterChangeEnabled || !((RadioButton)sender).Checked || currentSnapshot == null)
+            if (!parameterChangeEnabled
+                || !((RadioButton)sender).Checked
+                || currentSnapshot == null
+                || currentAnalysis == null)
             {
                 return;
             }
@@ -402,31 +429,32 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             await AnalyzeCurrentSnapshotAsync("Memory Snapshot", true);
         }
 
-        private async Task LoadProviderDataAsync(bool forceReload)
+        private async Task<bool> ReloadFromPopupDataProviderAsync()
         {
-            if (!forceReload && preferMemoryCheckBox.Checked && currentSnapshot != null)
+            if (popupDataProvider == null)
             {
-                await AnalyzeCurrentSnapshotAsync("Memory Snapshot", true);
-                return;
+                pcaChart.Clear();
+                currentRecords.Clear();
+                BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
+                summaryLabel.Text = "Data provider is not configured. Use Virtual Data for a sample.";
+                MessageBox.Show(
+                    this,
+                    "Data provider is not configured. Pass a DataTable, inject a provider, or use Virtual Data for a sample.",
+                    "Data Provider",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return false;
             }
 
-            BeginBusy("Loading popup data provider and running Accord.NET PCA...");
-            try
+            DataTable table = await popupDataProvider.LoadAllAsync();
+            receivedSourceTable = table;
+            currentSourceDescription = popupDataProvider.SourceDescription;
+            IList<PcaExadataSourceRow> rows = await Task.Run(delegate
             {
-                await AllowBusyOverlayToPaintAsync();
-                DataTable table = await popupDataProvider.LoadAllAsync();
-                IList<PcaExadataSourceRow> rows = await Task.Run(delegate
-                {
-                    return ConvExperimentRepository.LoadFromDataTable(table, dataTableOptions);
-                });
-                currentSnapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
-                preferMemoryCheckBox.Checked = true;
-                await AnalyzeCurrentSnapshotAsync(popupDataProvider.SourceDescription, false);
-            }
-            finally
-            {
-                EndBusy();
-            }
+                return ConvExperimentRepository.LoadFromDataTable(table, dataTableOptions);
+            });
+            currentSnapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
+            return true;
         }
 
         private async Task LoadVirtualSampleDataAsync()
@@ -434,18 +462,133 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             BeginBusy("Creating virtual data and running Accord.NET PCA...");
             try
             {
+                receivedSourceTable = null;
+                currentSourceDescription = "Virtual Data";
                 await AllowBusyOverlayToPaintAsync();
                 currentSnapshot = await Task.Run(delegate
                 {
                     return new PcaExadataSampleDataFactory(20260629).CreateDefaultSnapshot();
                 });
                 preferMemoryCheckBox.Checked = true;
-                await AnalyzeCurrentSnapshotAsync("Virtual Data", false);
+                await AnalyzeCurrentSnapshotAsync(currentSourceDescription, false);
             }
             finally
             {
                 EndBusy();
             }
+        }
+
+        private async Task DrawCurrentChartAsync()
+        {
+            BeginBusy("Drawing PCA chart...");
+            try
+            {
+                await AllowBusyOverlayToPaintAsync();
+                if (currentSnapshot == null)
+                {
+                    bool loaded = await ReloadFromPopupDataProviderAsync();
+                    if (!loaded)
+                    {
+                        return;
+                    }
+                }
+
+                await AnalyzeCurrentSnapshotForRefreshAsync();
+            }
+            catch (Exception ex)
+            {
+                ShowOperationError(ex, "Accord.NET PCA Chart Draw Failed");
+            }
+            finally
+            {
+                EndBusy();
+            }
+        }
+
+        private async Task RefreshCurrentDataAsync()
+        {
+            BeginBusy("Refreshing current data and running Accord.NET PCA...");
+            try
+            {
+                await AllowBusyOverlayToPaintAsync();
+                if (receivedSourceTable != null)
+                {
+                    IList<PcaExadataSourceRow> rows = await Task.Run(delegate
+                    {
+                        return ConvExperimentRepository.LoadFromDataTable(
+                            receivedSourceTable,
+                            dataTableOptions);
+                    });
+                    currentSnapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
+                    currentSourceDescription = "Injected DataTable";
+                }
+
+                if (currentSnapshot == null)
+                {
+                    pcaChart.Clear();
+                    currentRecords.Clear();
+                    BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
+                    summaryLabel.Text = "No DataTable is loaded. Use Virtual Data for a sample.";
+                    MessageBox.Show(
+                        this,
+                        "No DataTable is loaded. Use Virtual Data for a sample, or pass a DataTable first.",
+                        "Refresh",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                await AnalyzeCurrentSnapshotForRefreshAsync();
+            }
+            catch (Exception ex)
+            {
+                ShowOperationError(ex, "Accord.NET PCA Refresh Failed");
+            }
+            finally
+            {
+                EndBusy();
+            }
+        }
+
+        private async Task AnalyzeCurrentSnapshotForRefreshAsync()
+        {
+            PcaScatterOptions chartOptions = CreateChartOptions();
+            string draftNo = (draftNoTextBox.Text ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(draftNo))
+            {
+                chartOptions.Series.HighlightDraftNo = draftNo;
+            }
+
+            PcaExadataAnalysisResult result = await AnalyzeSnapshotWithAccordAsync(
+                currentSnapshot,
+                GetSelectedParameterType(),
+                chartOptions);
+
+            PcaExperimentRecord target = null;
+            IList<KnnNeighbor> neighbors = null;
+            if (!string.IsNullOrWhiteSpace(draftNo))
+            {
+                target = result.Records.FirstOrDefault(record =>
+                    string.Equals(record.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
+                if (target != null)
+                {
+                    neighbors = result.AnalysisResult.FindNearest(
+                        target.DraftNo,
+                        GetNeighborSearchCount(chartOptions));
+                }
+                else
+                {
+                    chartOptions.Series.HighlightDraftNo = string.Empty;
+                }
+            }
+
+            ApplyAnalysis(result, chartOptions);
+            BindNearestNeighborTable(CreateNearestNeighborTable(target, neighbors));
+            UpdateSummary(
+                result,
+                string.IsNullOrWhiteSpace(currentSourceDescription)
+                    ? "Memory Snapshot"
+                    : currentSourceDescription);
         }
 
         private async Task QueryDraftAsync()
@@ -466,14 +609,28 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             try
             {
                 await AllowBusyOverlayToPaintAsync();
+                if (!preferMemoryCheckBox.Checked)
+                {
+                    bool loaded = await ReloadFromPopupDataProviderAsync();
+                    if (!loaded)
+                    {
+                        return;
+                    }
+                }
+
                 if (currentSnapshot == null)
                 {
-                    DataTable table = await popupDataProvider.LoadAllAsync();
-                    IList<PcaExadataSourceRow> rows = await Task.Run(delegate
-                    {
-                        return ConvExperimentRepository.LoadFromDataTable(table, dataTableOptions);
-                    });
-                    currentSnapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
+                    pcaChart.Clear();
+                    currentRecords.Clear();
+                    BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
+                    summaryLabel.Text = "No DataTable is loaded. Use Virtual Data for a sample.";
+                    MessageBox.Show(
+                        this,
+                        "No DataTable is loaded. Use Virtual Data for a sample, or pass a DataTable first.",
+                        "Draft Search",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
                 }
 
                 PcaScatterOptions chartOptions = CreateChartOptions();
@@ -907,6 +1064,7 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             defectRadioButton.Enabled = enabled;
             draftNoTextBox.Enabled = enabled;
             searchButton.Enabled = enabled;
+            chartDrawButton.Enabled = enabled;
             refreshAllButton.Enabled = enabled;
             sampleDataButton.Enabled = enabled;
             preferMemoryCheckBox.Enabled = enabled;
