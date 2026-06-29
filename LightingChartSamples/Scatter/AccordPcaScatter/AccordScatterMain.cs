@@ -47,6 +47,7 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
         private bool parameterChangeEnabled;
         private bool nearestNeighborGridBinding;
         private DataTable pendingSourceTable;
+        private bool pendingSourceTableLoadStarted;
         private string lastFeatureAuditLogPath;
 
         public AccordScatterMain()
@@ -75,14 +76,32 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             InitializeBusyOverlay();
             BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
 
-            Load += AccordScatterMain_Load;
+            Shown += AccordScatterMain_Shown;
         }
 
         public async Task LoadConvExperimentDataTableAsync(DataTable sourceTable)
         {
+            if (sourceTable == null)
+            {
+                throw new ArgumentNullException("sourceTable");
+            }
+
+            if (!Visible)
+            {
+                pendingSourceTable = sourceTable;
+                pendingSourceTableLoadStarted = false;
+                return;
+            }
+
+            await LoadConvExperimentDataTableCoreAsync(sourceTable);
+        }
+
+        private async Task LoadConvExperimentDataTableCoreAsync(DataTable sourceTable)
+        {
             BeginBusy("Loading DataTable and running Accord.NET PCA...");
             try
             {
+                await AllowBusyOverlayToPaintAsync();
                 currentSnapshot = await Task.Run(delegate
                 {
                     IList<PcaExadataSourceRow> rows = ConvExperimentRepository.LoadFromDataTable(
@@ -124,16 +143,22 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             base.Dispose(disposing);
         }
 
-        private async void AccordScatterMain_Load(object sender, EventArgs e)
+        private async void AccordScatterMain_Shown(object sender, EventArgs e)
         {
-            if (pendingSourceTable == null)
+            await LoadPendingSourceTableAfterShownAsync();
+        }
+
+        private async Task LoadPendingSourceTableAfterShownAsync()
+        {
+            if (pendingSourceTable == null || pendingSourceTableLoadStarted)
             {
                 return;
             }
 
+            pendingSourceTableLoadStarted = true;
             DataTable source = pendingSourceTable;
             pendingSourceTable = null;
-            await LoadConvExperimentDataTableAsync(source);
+            await LoadConvExperimentDataTableCoreAsync(source);
         }
 
         private void InitializeComponent()
@@ -388,6 +413,7 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             BeginBusy("Loading popup data provider and running Accord.NET PCA...");
             try
             {
+                await AllowBusyOverlayToPaintAsync();
                 DataTable table = await popupDataProvider.LoadAllAsync();
                 IList<PcaExadataSourceRow> rows = await Task.Run(delegate
                 {
@@ -408,6 +434,7 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             BeginBusy("Creating virtual data and running Accord.NET PCA...");
             try
             {
+                await AllowBusyOverlayToPaintAsync();
                 currentSnapshot = await Task.Run(delegate
                 {
                     return new PcaExadataSampleDataFactory(20260629).CreateDefaultSnapshot();
@@ -438,6 +465,7 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             BeginBusy("Searching Draft and running Accord.NET PCA...");
             try
             {
+                await AllowBusyOverlayToPaintAsync();
                 if (currentSnapshot == null)
                 {
                     DataTable table = await popupDataProvider.LoadAllAsync();
@@ -499,6 +527,7 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             if (manageBusy)
             {
                 BeginBusy("Filtering memory data and running Accord.NET PCA...");
+                await AllowBusyOverlayToPaintAsync();
             }
 
             try
@@ -903,6 +932,11 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
             busyProgressTimer.Start();
             UpdateBusyOverlayLayout();
             Application.DoEvents();
+        }
+
+        private static Task AllowBusyOverlayToPaintAsync()
+        {
+            return Task.Delay(50);
         }
 
         private void HideBusyOverlay()

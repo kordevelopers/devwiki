@@ -45,13 +45,17 @@ using (var form = new AccordScatterMain(table))
 }
 ```
 
-You can also bind after the form is created:
+If the form is already visible and you need to reload another table, call
+`LoadConvExperimentDataTableAsync` from the visible form:
 
 ```csharp
-var form = new AccordScatterMain();
 await form.LoadConvExperimentDataTableAsync(table);
-form.ShowDialog(owner);
 ```
+
+Do not call `await form.LoadConvExperimentDataTableAsync(table)` before
+`ShowDialog()`. If you do, the analysis can start before the user sees the
+popup. The constructor `new AccordScatterMain(table)` queues the table and
+loads it after the form is shown, so the progress overlay is visible.
 
 ## Manual PCA Location
 
