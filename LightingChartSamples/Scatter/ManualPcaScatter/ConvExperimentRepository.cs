@@ -4,7 +4,7 @@ using System.Data;
 using System.Globalization;
 using System.IO;
 
-namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
     /// <summary>
     /// Converts caller-supplied CONV_EXPER_CTN service results into PCA source rows.

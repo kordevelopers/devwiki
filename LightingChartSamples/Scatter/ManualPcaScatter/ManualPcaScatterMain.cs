@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -10,11 +10,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter;
+using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter;
 
-namespace LightingChartSamples.Scatter
+namespace LightingChartSamples.Scatter.ManualPcaScatter
 {
-    public partial class ScatterMain : Form
+    public partial class ManualPcaScatterMain : Form
     {
         private readonly PcaScatterChart pcaChart;
         private readonly PcaExadataService exadataService;
@@ -33,12 +33,12 @@ namespace LightingChartSamples.Scatter
         private ProgressBar busyOverlayProgressBar;
         private Font nearestNeighborGridFont;
 
-        public ScatterMain()
+        public ManualPcaScatterMain()
             : this(new PcaScatterVirtualDatabaseDataProvider())
         {
         }
 
-        public ScatterMain(IPcaScatterPopupDataProvider popupDataProvider)
+        public ManualPcaScatterMain(IPcaScatterPopupDataProvider popupDataProvider)
         {
             InitializeComponent();
 
@@ -133,11 +133,6 @@ namespace LightingChartSamples.Scatter
         private async void SampleDataButton_Click(object sender, EventArgs e)
         {
             await LoadSampleDataAsync();
-        }
-
-        private async void AccordPcaButton_Click(object sender, EventArgs e)
-        {
-            await RunAccordPcaAsync();
         }
 
         private async void ParameterType_CheckedChanged(object sender, EventArgs e)
@@ -367,15 +362,6 @@ namespace LightingChartSamples.Scatter
                 {
                     SetToolbarEnabled(true);
                 }
-            }
-        }
-
-        private async Task RunAccordPcaAsync()
-        {
-            await Task.Yield();
-            using (var form = new LightingChartSamples.Scatter.AccordPcaScatter.AccordScatterMain())
-            {
-                form.ShowDialog(this);
             }
         }
 
@@ -797,7 +783,6 @@ namespace LightingChartSamples.Scatter
             searchButton.Enabled = enabled;
             refreshAllButton.Enabled = enabled;
             sampleDataButton.Enabled = enabled;
-            accordPcaButton.Enabled = enabled;
             preferMemoryCheckBox.Enabled = enabled;
             nearestNeighborGrid.Enabled = enabled;
             UseWaitCursor = !enabled;

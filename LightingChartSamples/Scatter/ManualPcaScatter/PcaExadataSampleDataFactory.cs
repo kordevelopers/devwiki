@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
     /// <summary>
     /// ?붾㈃ ?쒖뿰??CONV_EXPER_CTN ?됱쓣 ?앹꽦?쒕떎.

@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using LightingChartSamples.Scatter;
-using LightingChartSamples.Scatter.AccordPcaScatter;
+using LightingChartSamples.Scatter.ManualPcaScatter;
 
 namespace LightingChartSamples
 {
@@ -18,7 +17,7 @@ namespace LightingChartSamples
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new AccordScatterMain());
+            Application.Run(new ManualPcaScatterMain());
         }
     }
 }

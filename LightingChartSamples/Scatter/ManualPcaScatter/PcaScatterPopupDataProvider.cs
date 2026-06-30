@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.Data;
 using System.Globalization;
 using System.Threading.Tasks;
 
-namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
     public interface IPcaScatterPopupDataProvider
     {

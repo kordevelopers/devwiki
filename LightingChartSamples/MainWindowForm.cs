@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using LightingChartSamples.Scatter;
 using LightingChartSamples.Scatter.AccordPcaScatter;
+using LightingChartSamples.Scatter.ManualPcaScatter;
 
 namespace LightingChartSamples
 {
@@ -110,7 +111,7 @@ namespace LightingChartSamples
 
         private void btnScatterMain_Click(object sender, EventArgs e)
         {
-            using (var form = new ScatterMain())
+            using (var form = new ManualPcaScatterMain())
             {
                 form.ShowDialog(this);
             }
@@ -280,7 +281,7 @@ namespace LightingChartSamples
                 Name = "btnScatterMain",
                 Size = new Size(456, 46),
                 TabIndex = 11,
-                Text = "ScatterMain 열기 (LightningChart 8)",
+                Text = "Manual PCA Scatter 열기",
                 UseVisualStyleBackColor = false
             };
 

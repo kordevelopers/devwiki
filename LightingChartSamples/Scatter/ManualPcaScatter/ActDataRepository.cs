@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 
-namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
     #region ACT_DATA DataTable Options
 

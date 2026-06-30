@@ -7,7 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
     public enum PcaParameterType
     {

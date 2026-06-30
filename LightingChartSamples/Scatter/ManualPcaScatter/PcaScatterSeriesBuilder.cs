@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Linq;
 using LightingChartSamples.Scatter;
 
-namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
     public sealed class PcaScatterSeriesBuilder
     {

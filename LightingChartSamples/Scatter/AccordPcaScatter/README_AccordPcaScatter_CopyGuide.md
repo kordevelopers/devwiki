@@ -1,8 +1,8 @@
-# AccordPcaScatter Copy Guide
+﻿# AccordPcaScatter Copy Guide
 
 This folder is the Accord.NET-only PCA Scatter module. It does not use the
 manual PCA pipeline. When moving the feature into another project, copy the
-whole `Scatter/AccordPcaScatter` folder as one unit.
+whole `Scatter/AccordPcaScatter` folder with `Scatter/Common/LightningScatter.cs`.
 
 ## Included Files
 
@@ -16,7 +16,7 @@ whole `Scatter/AccordPcaScatter` folder as one unit.
 - `PcaScatterOptions.cs`: PCA/chart/legend/tooltip/no-data/image options.
 - `PcaScatterSeriesBuilder.cs`: converts PCA result rows into Lightning Scatter series.
 - `PcaExadataSampleDataFactory.cs`, `ScatterSampleData.cs`, `PcaScatterPopupDataProvider.cs`: sample data and popup data provider examples.
-- `LightningScatter.cs`: LightningChart 8 based general scatter wrapper.
+- `Scatter/Common/LightningScatter.cs`: LightningChart 8 based general scatter wrapper.
 
 ## External References
 
@@ -96,6 +96,5 @@ The `Virtual Data` button is only a sample data path.
 
 ## Manual PCA Location
 
-The previous manual PCA implementation has been moved to
-`Scatter/LegacyManualPcaScatter`. It is not required when copying the
-Accord.NET-only module.
+The manual PCA implementation is separated under `Scatter/ManualPcaScatter`.
+It is not required when copying the Accord.NET-only module.

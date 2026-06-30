@@ -5,7 +5,7 @@ using System.Data;
 using System.Globalization;
 using System.Linq;
 
-namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
     #region Analysis Result Models
 
@@ -1080,8 +1080,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
         public int[] Iterations { get; private set; }
         public StandardScalerModel Scaler { get; private set; }
 
-        // Accord.NET 경로에서 계산된 component를 기존 차트/진단 DTO에 담기 위한 어댑터입니다.
-        // 이 메서드는 covariance/eigenvector를 계산하지 않으므로 수동 PCA 로직을 실행하지 않습니다.
+        // 외부에서 계산한 component를 기존 차트/진단 DTO에 담기 위한 어댑터입니다.
+        // 기본 수동 PCA 흐름에서는 Fit 메서드가 covariance/eigenvector를 직접 계산합니다.
         internal static PcaProjectionModel FromComponents(
             double[][] components,
             double[] eigenValues,

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Windows.Forms;
 using LightingChartSamples.Scatter;
 
-namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PcaScatter
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
     public sealed class PcaScatterSampleClickedEventArgs : EventArgs
     {
