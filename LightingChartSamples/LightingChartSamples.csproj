@@ -156,7 +156,6 @@
     <Compile Include="Scatter\ManualPcaScatter\ActDataRepository.cs" />
     <Compile Include="Scatter\ManualPcaScatter\ConvExperimentRepository.cs" />
     <Compile Include="Scatter\ManualPcaScatter\PcaExadataService.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\PcaExadataSampleDataFactory.cs" />
     <Compile Include="Scatter\ManualPcaScatter\PcaScatterPopupDataProvider.cs" />
     <Compile Include="Scatter\ManualPcaScatter\PcaAnalysisPipeline.cs" />
     <Compile Include="Scatter\ManualPcaScatter\PcaJsonUtility.cs" />

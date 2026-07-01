@@ -1,4 +1,4 @@
-# 수동 PCA Scatter 복사 가이드
+﻿# 수동 PCA Scatter 복사 가이드
 
 이 폴더는 `Accord.NET`을 사용하지 않는 PCA Scatter 모듈입니다.
 회사 프로젝트에서 Accord DLL을 사용할 수 없는 경우 이 폴더의 코드와 공통 Scatter 컨트롤만 복사해서 사용합니다.
@@ -23,7 +23,6 @@
 - `Scatter/ManualPcaScatter/ManualPcaScatterMain.Designer.cs`
 - `Scatter/ManualPcaScatter/ManualPcaScatterMain.resx`
 - `Scatter/ManualPcaScatter/PcaAnalysisPipeline.cs`
-- `Scatter/ManualPcaScatter/PcaExadataSampleDataFactory.cs`
 - `Scatter/ManualPcaScatter/PcaExadataService.cs`
 - `Scatter/ManualPcaScatter/PcaJsonUtility.cs`
 - `Scatter/ManualPcaScatter/PcaScatterChart.cs`
