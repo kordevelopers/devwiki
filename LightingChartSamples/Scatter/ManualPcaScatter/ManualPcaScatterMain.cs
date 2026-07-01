@@ -44,6 +44,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             InitializeComponent();
 
             this.popupDataProvider = popupDataProvider;
+            MinimumNumericCoveragePercent = 90d;
             currentSamples = new List<ScatterSampleData>();
             currentRecords = new List<PcaExperimentRecord>();
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
@@ -71,6 +72,12 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             parameterChangeEnabled = true;
             SetToolbarEnabled(true);
         }
+
+        /// <summary>
+        /// 수치형 feature로 인정할 최소 데이터 보유율이다.
+        /// 90을 넣으면 90%, 0.9를 넣으면 90%로 처리한다.
+        /// </summary>
+        public double MinimumNumericCoveragePercent { get; set; }
 
         private void ConfigureNearestNeighborGrid()
         {
@@ -1363,9 +1370,11 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 18);
         }
 
-        private static PcaScatterOptions CreateChartOptions()
+        private PcaScatterOptions CreateChartOptions()
         {
             PcaScatterOptions options = PcaScatterOptions.CreateDefault600x400();
+            options.Analysis.MinimumNumericFeatureCoverageRatio =
+                ConvertCoveragePercentToRatio(MinimumNumericCoveragePercent);
             options.Display.ShowTitle = false;
             options.Display.XAxisTitle = "X1";
             options.Display.YAxisTitle = "X2";
@@ -1383,6 +1392,21 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.NoData.Text = "PCA Scatter 데이터가 없습니다.";
             options.NoData.ShowWhenAllValuesZero = false;
             return options;
+        }
+
+        private static double ConvertCoveragePercentToRatio(double value)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value))
+            {
+                return 0.9d;
+            }
+
+            if (value > 1d)
+            {
+                return Math.Min(100d, Math.Max(0d, value)) / 100d;
+            }
+
+            return Math.Min(1d, Math.Max(0d, value));
         }
 
         private void UpdateSummary(PcaExadataAnalysisResult result, string sourceDescription)

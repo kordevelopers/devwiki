@@ -1098,6 +1098,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             // 공분산 행렬은 정규화된 feature들이 함께 증가/감소하는 방향을 찾기 위한 입력이다.
             double[,] covariance = BuildCovarianceMatrix(standardizedMatrix);
             double totalVariance = Enumerable.Range(0, featureCount).Sum(index => covariance[index, index]);
+            if (featureCount == 2)
+            {
+                return FitTwoFeatureProjection(covariance, totalVariance, safeComponentCount, scaler);
+            }
+
             var components = new List<double[]>();
             var eigenValues = new List<double>();
             var iterations = new List<int>();
@@ -1116,6 +1121,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 iterations.Add(pair.Iterations);
             }
 
+            ReconcileFullComponentEigenValues(eigenValues, totalVariance, safeComponentCount, featureCount);
             double[] ratios = eigenValues
                 .Select(value => totalVariance <= 0d ? 0d : value / totalVariance)
                 .ToArray();
@@ -1125,6 +1131,78 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 ratios,
                 iterations.ToArray(),
                 scaler);
+        }
+
+        private static PcaProjectionModel FitTwoFeatureProjection(double[,] covariance, double totalVariance, int componentCount, StandardScalerModel scaler)
+        {
+            double a = covariance[0, 0];
+            double b = covariance[0, 1];
+            double c = covariance[1, 1];
+            double trace = a + c;
+            double root = Math.Sqrt(((a - c) * (a - c)) + (4d * b * b));
+            double firstValue = Math.Max(0d, (trace + root) / 2d);
+            double secondValue = Math.Max(0d, (trace - root) / 2d);
+            double[] firstVector = ResolveTwoFeatureEigenVector(a, b, c, firstValue);
+            double[] secondVector = new[] { -firstVector[1], firstVector[0] };
+            CanonicalizeSign(firstVector);
+            CanonicalizeSign(secondVector);
+
+            var components = new List<double[]> { firstVector };
+            var eigenValues = new List<double> { firstValue };
+            if (componentCount > 1)
+            {
+                components.Add(secondVector);
+                eigenValues.Add(secondValue);
+            }
+
+            ReconcileFullComponentEigenValues(eigenValues, totalVariance, componentCount, 2);
+            double[] ratios = eigenValues
+                .Select(value => totalVariance <= 0d ? 0d : value / totalVariance)
+                .ToArray();
+            return new PcaProjectionModel(
+                components.ToArray(),
+                eigenValues.ToArray(),
+                ratios,
+                Enumerable.Repeat(0, components.Count).ToArray(),
+                scaler);
+        }
+
+        private static double[] ResolveTwoFeatureEigenVector(double a, double b, double c, double eigenValue)
+        {
+            double[] vector;
+            if (Math.Abs(b) > 1e-14d || Math.Abs(eigenValue - a) > 1e-14d)
+            {
+                vector = new[] { b, eigenValue - a };
+            }
+            else
+            {
+                vector = a >= c ? new[] { 1d, 0d } : new[] { 0d, 1d };
+            }
+
+            if (Math.Sqrt(Dot(vector, vector)) <= 1e-14d)
+            {
+                vector = new[] { eigenValue - c, b };
+            }
+
+            Normalize(vector);
+            return vector;
+        }
+
+        private static void ReconcileFullComponentEigenValues(IList<double> eigenValues, double totalVariance, int componentCount, int featureCount)
+        {
+            if (eigenValues == null || eigenValues.Count == 0 || totalVariance <= 0d || componentCount != featureCount)
+            {
+                return;
+            }
+
+            // 모든 feature를 component로 표시하는 경우 마지막 고유값은 전체 분산에서 앞선 고유값을 뺀 잔여 분산이다.
+            double previous = 0d;
+            for (int index = 0; index < eigenValues.Count - 1; index++)
+            {
+                previous += Math.Max(0d, eigenValues[index]);
+            }
+
+            eigenValues[eigenValues.Count - 1] = Math.Max(0d, totalVariance - previous);
         }
 
         public double[][] Transform(double[][] standardizedMatrix)

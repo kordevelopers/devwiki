@@ -68,6 +68,7 @@ using (var form = new ManualPcaScatterMain())
 using (var form = new ManualPcaScatterMain())
 {
     form.Show(owner);
+    form.MinimumNumericCoveragePercent = 90d;
 
     DataTable sourceTable = await LoadCompanyDataAsync();
     await form.LoadConvExperimentDataTableAsync(sourceTable);
@@ -80,6 +81,7 @@ using (var form = new ManualPcaScatterMain())
 ```csharp
 using (var form = new ManualPcaScatterMain())
 {
+    form.MinimumNumericCoveragePercent = 90d;
     form.Shown += async delegate
     {
         await form.LoadConvExperimentDataTableAsync(sourceTable);
