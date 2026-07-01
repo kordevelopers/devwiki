@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -79,9 +79,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             return result;
         }
 
-        private static ScatterSampleData ResolveHighlightedSample(
-            IEnumerable<ScatterSampleData> samples,
-            PcaScatterSeriesOptions options)
+        private static ScatterSampleData ResolveHighlightedSample(IEnumerable<ScatterSampleData> samples, PcaScatterSeriesOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.HighlightDraftNo))
             {
@@ -94,9 +92,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
                 && string.Equals(item.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
         }
 
-        private static ScatterSampleData ResolveSelectedSample(
-            IEnumerable<ScatterSampleData> samples,
-            PcaScatterSeriesOptions options)
+        private static ScatterSampleData ResolveSelectedSample(IEnumerable<ScatterSampleData> samples, PcaScatterSeriesOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.SelectedDraftNo))
             {
@@ -109,14 +105,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
                 && string.Equals(item.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
         }
 
-        private static LightningScatterSeries CreateSinglePointSeries(
-            ScatterSampleData sample,
-            string seriesName,
-            Color fillColor,
-            Color borderColor,
-            float pointSize,
-            float borderWidth,
-            bool showInLegend)
+        private static LightningScatterSeries CreateSinglePointSeries(ScatterSampleData sample, string seriesName, Color fillColor, Color borderColor,
+            float pointSize, float borderWidth, bool showInLegend)
         {
             return new LightningScatterSeries
             {
@@ -211,4 +201,3 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
         }
     }
 }
-

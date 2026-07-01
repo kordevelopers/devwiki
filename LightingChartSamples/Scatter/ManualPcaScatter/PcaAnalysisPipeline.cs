@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Data;
@@ -22,7 +22,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public PcaAnalysisOptions()
         {
             ConstantVarianceThreshold = 1e-10d;
-            MinimumNumericCoverageRatio = 0.90d;
+            MinimumNumericFeatureCoverageRatio = 0.90d;
             MeanImputationEnabled = true;
             ComponentCount = 2;
             MaxIterations = 2000;
@@ -32,7 +32,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         }
 
         public double ConstantVarianceThreshold { get; set; }
-        public double MinimumNumericCoverageRatio { get; set; }
+        public double MinimumNumericFeatureCoverageRatio { get; set; }
         public bool MeanImputationEnabled { get; set; }
         public int ComponentCount { get; set; }
         public int MaxIterations { get; set; }
@@ -80,10 +80,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public string KnnAlgorithmReason { get; private set; }
         public string CompactText { get; private set; }
 
-        public static PcaAnalysisDiagnosticReport Create(
-            PcaAnalysisResult analysisResult,
-            int rowCount,
-            int missingExperimentCount)
+        public static PcaAnalysisDiagnosticReport Create(PcaAnalysisResult analysisResult, int rowCount, int missingExperimentCount)
         {
             int featureCount = analysisResult == null || analysisResult.FeatureNames == null
                 ? 0
@@ -163,11 +160,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return ratio * 100d;
         }
 
-        private static string ResolveShapeCode(
-            int rowCount,
-            int featureCount,
-            double pc1Percent,
-            double pc2Percent)
+        private static string ResolveShapeCode(int rowCount, int featureCount, double pc1Percent, double pc2Percent)
         {
             if (rowCount < 3)
             {
@@ -263,9 +256,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         private readonly ReadOnlyCollection<string> includedFeatureNames;
         private readonly ReadOnlyCollection<string> excludedFeatureNames;
 
-        private PcaFeatureSelectionReport(
-            int rowCount,
-            IEnumerable<PcaFeatureSelectionDetail> detailItems)
+        private PcaFeatureSelectionReport(int rowCount, IEnumerable<PcaFeatureSelectionDetail> detailItems)
         {
             RowCount = rowCount;
             details = new ReadOnlyCollection<PcaFeatureSelectionDetail>(
@@ -384,10 +375,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return table;
         }
 
-        internal static PcaFeatureSelectionReport CreateFromSourceRows(
-            IList<PcaSourceRow> rows,
-            IEnumerable<string> includedFeatureNames,
-            double varianceThreshold)
+        internal static PcaFeatureSelectionReport CreateFromSourceRows(IList<PcaSourceRow> rows, IEnumerable<string> includedFeatureNames, double varianceThreshold)
         {
             IEnumerable<FeatureSelectionAuditRow> auditRows = (rows ?? new List<PcaSourceRow>())
                 .Select(row => new FeatureSelectionAuditRow
@@ -464,11 +452,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return new PcaFeatureSelectionReport(rows.Count, details);
         }
 
-        private static PcaFeatureSelectionDetail CreateDetail(
-            IList<FeatureSelectionAuditRow> rows,
-            string featureName,
-            ISet<string> includedFeatureNames,
-            double varianceThreshold)
+        private static PcaFeatureSelectionDetail CreateDetail(IList<FeatureSelectionAuditRow> rows, string featureName, ISet<string> includedFeatureNames, double varianceThreshold)
         {
             int rowCount = rows.Count;
             int presentCount = 0;
@@ -558,9 +542,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return PcaFeatureSelectionReason.ConstantOrLowVariance;
         }
 
-        private static void ApplyStatistics(
-            PcaFeatureSelectionDetail detail,
-            IList<double> numericValues)
+        private static void ApplyStatistics(PcaFeatureSelectionDetail detail, IList<double> numericValues)
         {
             if (numericValues == null || numericValues.Count == 0)
             {
@@ -676,8 +658,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         /// Service DataTable??CONV_EXPER_CTN JSON 諛곗뿴??媛쒕퀎 ?ㅽ뿕 ?됱쑝濡??쇱퀜 遺꾩꽍?쒕떎.
         /// ?꾩껜 ?곗씠?곌? ?섎굹???ㅻ깄?룹쑝濡??쒖??붾릺硫?PCA? KNN??媛숈? 寃곌낵瑜??ъ슜?쒕떎.
         /// </summary>
-        public PcaAnalysisResult AnalyzeConvExperimentDocuments(
-            IEnumerable<string> convExperimentDocuments)
+        public PcaAnalysisResult AnalyzeConvExperimentDocuments(IEnumerable<string> convExperimentDocuments)
         {
             var parser = new ActDataJsonParser();
             IList<string> experimentRows = parser.ExpandDocuments(
@@ -811,11 +792,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return rows;
         }
 
-        private static string GetRequiredText(
-            IDictionary<string, object> dictionary,
-            IEnumerable<string> aliases,
-            string displayName,
-            int rowIndex)
+        private static string GetRequiredText(IDictionary<string, object> dictionary, IEnumerable<string> aliases, string displayName, int rowIndex)
         {
             foreach (string alias in aliases)
             {
@@ -865,14 +842,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return !double.IsNaN(numericValue) && !double.IsInfinity(numericValue);
         }
 
-        private static FeatureMatrixResult BuildFeatureMatrix(
-            IList<PcaSourceRow> rows,
-            PcaAnalysisOptions analysisOptions)
+        private static FeatureMatrixResult BuildFeatureMatrix(IList<PcaSourceRow> rows, PcaAnalysisOptions analysisOptions)
         {
             PcaAnalysisOptions effectiveOptions = analysisOptions ?? new PcaAnalysisOptions();
             double varianceThreshold = Math.Max(0d, effectiveOptions.ConstantVarianceThreshold);
             double minimumNumericCoverageRatio = NormalizeCoverageRatio(
-                effectiveOptions.MinimumNumericCoverageRatio);
+                effectiveOptions.MinimumNumericFeatureCoverageRatio);
             string[] allFields = rows
                 .SelectMany(row => row.DataFieldNames)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -1060,12 +1035,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
     public sealed class PcaProjectionModel
     {
-        private PcaProjectionModel(
-            double[][] components,
-            double[] eigenValues,
-            double[] ratios,
-            int[] iterations,
-            StandardScalerModel scaler)
+        private PcaProjectionModel(double[][] components, double[] eigenValues, double[] ratios, int[] iterations, StandardScalerModel scaler)
         {
             Components = components;
             EigenValues = eigenValues;
@@ -1082,11 +1052,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
         // 외부에서 계산한 component를 기존 차트/진단 DTO에 담기 위한 어댑터입니다.
         // 기본 수동 PCA 흐름에서는 Fit 메서드가 covariance/eigenvector를 직접 계산합니다.
-        internal static PcaProjectionModel FromComponents(
-            double[][] components,
-            double[] eigenValues,
-            double[] ratios,
-            StandardScalerModel scaler)
+        internal static PcaProjectionModel FromComponents(double[][] components, double[] eigenValues, double[] ratios, StandardScalerModel scaler)
         {
             if (components == null || components.Length == 0)
             {
@@ -1101,11 +1067,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 scaler);
         }
 
-        public static PcaProjectionModel Fit(
-            double[][] standardizedMatrix,
-            int componentCount,
-            int maxIterations,
-            double tolerance)
+        public static PcaProjectionModel Fit(double[][] standardizedMatrix, int componentCount, int maxIterations, double tolerance)
         {
             return Fit(
                 standardizedMatrix,
@@ -1115,12 +1077,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 null);
         }
 
-        public static PcaProjectionModel Fit(
-            double[][] standardizedMatrix,
-            int componentCount,
-            int maxIterations,
-            double tolerance,
-            StandardScalerModel scaler)
+        public static PcaProjectionModel Fit(double[][] standardizedMatrix, int componentCount, int maxIterations, double tolerance, StandardScalerModel scaler)
         {
             if (standardizedMatrix == null || standardizedMatrix.Length < 3)
             {
@@ -1201,12 +1158,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return covariance;
         }
 
-        private static EigenPair FindDominantEigenPair(
-            double[,] matrix,
-            IList<double[]> previousComponents,
-            int componentIndex,
-            int maxIterations,
-            double tolerance)
+        private static EigenPair FindDominantEigenPair(double[,] matrix, IList<double[]> previousComponents, int componentIndex, int maxIterations, double tolerance)
         {
             int size = matrix.GetLength(0);
             double[] vector = Enumerable.Range(0, size)
@@ -1360,19 +1312,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         {
         }
 
-        public KnnSimilarityService(
-            string[] draftNos,
-            double[][] standardizedMatrix,
-            StandardScalerModel scaler)
+        public KnnSimilarityService(string[] draftNos, double[][] standardizedMatrix, StandardScalerModel scaler)
             : this(draftNos, standardizedMatrix, scaler, KnnSearchAlgorithm.Auto)
         {
         }
 
-        public KnnSimilarityService(
-            string[] draftNos,
-            double[][] standardizedMatrix,
-            StandardScalerModel scaler,
-            KnnSearchAlgorithm requestedAlgorithm)
+        public KnnSimilarityService(string[] draftNos, double[][] standardizedMatrix, StandardScalerModel scaler, KnnSearchAlgorithm requestedAlgorithm)
         {
             if (draftNos == null || standardizedMatrix == null || draftNos.Length != standardizedMatrix.Length)
             {
@@ -1451,11 +1396,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             }
         }
 
-        private static KnnSearchAlgorithm ResolveAlgorithm(
-            KnnSearchAlgorithm requestedAlgorithm,
-            int rowCount,
-            int dimensionCount,
-            out string reason)
+        private static KnnSearchAlgorithm ResolveAlgorithm(KnnSearchAlgorithm requestedAlgorithm, int rowCount, int dimensionCount, out string reason)
         {
             if (requestedAlgorithm != KnnSearchAlgorithm.Auto)
             {
@@ -1505,10 +1446,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return KnnSearchAlgorithm.BruteForce;
         }
 
-        private static IKnnSearchIndex CreateSearchIndex(
-            KnnSearchAlgorithm algorithm,
-            double[][] matrix,
-            string[] draftNos)
+        private static IKnnSearchIndex CreateSearchIndex(KnnSearchAlgorithm algorithm, double[][] matrix, string[] draftNos)
         {
             switch (algorithm)
             {
@@ -1535,10 +1473,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return squaredDistance;
         }
 
-        private static int CompareCandidate(
-            NeighborCandidate left,
-            NeighborCandidate right,
-            string[] draftNumbers)
+        private static int CompareCandidate(NeighborCandidate left, NeighborCandidate right, string[] draftNumbers)
         {
             int distanceCompare = left.DistanceSquared.CompareTo(right.DistanceSquared);
             if (distanceCompare != 0)
@@ -1728,11 +1663,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 return bestAxis;
             }
 
-            private void Search(
-                KdNode node,
-                int targetIndex,
-                double[] target,
-                NeighborCandidateQueue queue)
+            private void Search(KdNode node, int targetIndex, double[] target, NeighborCandidateQueue queue)
             {
                 if (node == null)
                 {
@@ -1854,11 +1785,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 return bestAxis;
             }
 
-            private void Search(
-                BallNode node,
-                int targetIndex,
-                double[] target,
-                NeighborCandidateQueue queue)
+            private void Search(BallNode node, int targetIndex, double[] target, NeighborCandidateQueue queue)
             {
                 if (node == null)
                 {

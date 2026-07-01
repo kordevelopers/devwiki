@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
@@ -57,9 +57,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         {
         }
 
-        public ConvExperimentRepository(
-            DataTable sourceTable,
-            ConvExperimentQueryOptions options)
+        public ConvExperimentRepository(DataTable sourceTable, ConvExperimentQueryOptions options)
         {
             this.sourceTable = sourceTable;
             this.options = options ?? ConvExperimentQueryOptions.FromConfiguration();
@@ -80,9 +78,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return LoadFromDataTable(table, ConvExperimentQueryOptions.FromConfiguration());
         }
 
-        public static IList<PcaExadataSourceRow> LoadFromDataTable(
-            DataTable table,
-            ConvExperimentQueryOptions options)
+        public static IList<PcaExadataSourceRow> LoadFromDataTable(DataTable table, ConvExperimentQueryOptions options)
         {
             if (table == null)
             {
@@ -146,10 +142,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return rows;
         }
 
-        private static DataColumn FindColumn(
-            DataTable table,
-            string columnName,
-            params string[] fallbackColumnNames)
+        private static DataColumn FindColumn(DataTable table, string columnName, params string[] fallbackColumnNames)
         {
             var candidates = new List<string>();
             if (!string.IsNullOrWhiteSpace(columnName))
@@ -192,10 +185,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 "The DataTable does not contain required column '" + string.Join("' or '", candidates.ToArray()) + "'.");
         }
 
-        private static string ReadRequiredText(
-            DataRow row,
-            DataColumn column,
-            int rowIndex)
+        private static string ReadRequiredText(DataRow row, DataColumn column, int rowIndex)
         {
             object value = row[column];
             if (value == null || value == DBNull.Value)

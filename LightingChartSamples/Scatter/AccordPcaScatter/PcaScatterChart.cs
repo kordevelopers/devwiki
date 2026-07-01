@@ -9,10 +9,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 {
     public sealed class PcaScatterSampleClickedEventArgs : EventArgs
     {
-        public PcaScatterSampleClickedEventArgs(
-            ScatterSampleData sample,
-            IList<KnnNeighbor> neighbors,
-            LightningScatterPointClickEventArgs sourceEventArgs)
+        public PcaScatterSampleClickedEventArgs(ScatterSampleData sample, IList<KnnNeighbor> neighbors, LightningScatterPointClickEventArgs sourceEventArgs)
         {
             Sample = sample;
             Neighbors = neighbors == null ? new List<KnnNeighbor>() : neighbors.ToList();

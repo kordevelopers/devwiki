@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
@@ -55,9 +55,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
         {
         }
 
-        public ConvExperimentRepository(
-            DataTable sourceTable,
-            ConvExperimentQueryOptions options)
+        public ConvExperimentRepository(DataTable sourceTable, ConvExperimentQueryOptions options)
         {
             this.sourceTable = sourceTable;
             this.options = options ?? ConvExperimentQueryOptions.FromConfiguration();
@@ -78,9 +76,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             return LoadFromDataTable(table, ConvExperimentQueryOptions.FromConfiguration());
         }
 
-        public static IList<PcaExadataSourceRow> LoadFromDataTable(
-            DataTable table,
-            ConvExperimentQueryOptions options)
+        public static IList<PcaExadataSourceRow> LoadFromDataTable(DataTable table, ConvExperimentQueryOptions options)
         {
             if (table == null)
             {
@@ -119,12 +115,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
                 PcaParameterType parameterType;
                 if (!PcaParameterTypeParser.TryParse(parameterTypeText, out parameterType))
                 {
-                    throw new InvalidOperationException(
-                        string.Format(
-                            CultureInfo.InvariantCulture,
-                            "PARAM_TYP[{0}] value '{1}' is not supported.",
-                            rowIndex,
-                            parameterTypeText));
+                    throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
+                        "PARAM_TYP[{0}] value '{1}' is not supported.", rowIndex, parameterTypeText));
                 }
 
                 rows.Add(new PcaExadataSourceRow(
@@ -144,10 +136,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             return rows;
         }
 
-        private static DataColumn FindColumn(
-            DataTable table,
-            string columnName,
-            params string[] fallbackColumnNames)
+        private static DataColumn FindColumn(DataTable table, string columnName, params string[] fallbackColumnNames)
         {
             var candidates = new List<string>();
             if (!string.IsNullOrWhiteSpace(columnName))
@@ -190,31 +179,20 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
                 "The DataTable does not contain required column '" + string.Join("' or '", candidates.ToArray()) + "'.");
         }
 
-        private static string ReadRequiredText(
-            DataRow row,
-            DataColumn column,
-            int rowIndex)
+        private static string ReadRequiredText(DataRow row, DataColumn column, int rowIndex)
         {
             object value = row[column];
             if (value == null || value == DBNull.Value)
             {
-                throw new InvalidOperationException(
-                    string.Format(
-                        CultureInfo.InvariantCulture,
-                        "DataTable column {0}[{1}] is NULL.",
-                        column.ColumnName,
-                        rowIndex));
+                throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
+                    "DataTable column {0}[{1}] is NULL.", column.ColumnName, rowIndex));
             }
 
             string text = Convert.ToString(value, CultureInfo.InvariantCulture);
             if (string.IsNullOrWhiteSpace(text))
             {
-                throw new InvalidOperationException(
-                    string.Format(
-                        CultureInfo.InvariantCulture,
-                        "DataTable column {0}[{1}] is empty.",
-                        column.ColumnName,
-                        rowIndex));
+                throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture,
+                    "DataTable column {0}[{1}] is empty.", column.ColumnName, rowIndex));
             }
 
             return text.Trim();
@@ -238,4 +216,3 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
         }
     }
 }
-

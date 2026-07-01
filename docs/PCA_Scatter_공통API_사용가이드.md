@@ -174,7 +174,7 @@ PcaScatterOptions options = PcaScatterOptions.CreateDefault600x400();
 
 options.Analysis.NeighborCount = 3;
 options.Analysis.ConstantVarianceThreshold = 1e-10d;
-options.Analysis.MinimumNumericCoverageRatio = 0.90d;
+options.Analysis.MinimumNumericFeatureCoverageRatio = 0.90d;
 options.Analysis.MeanImputationEnabled = true;
 
 options.Display.XAxisTitle = "X1";
@@ -278,7 +278,7 @@ DataTable survivingPopulation = analysis.CreateSurvivingPopulationDataTable();
 기본 분석 옵션은 feature별 숫자 데이터가 전체 row의 90% 이상이면 PCA 입력에 포함합니다. 숫자가 아닌 일부 row는 해당 feature의 평균값으로 보정합니다. 예를 들어 2260건 중 2118건이 숫자인 feature는 약 93.7% 커버리지이므로 포함됩니다.
 
 ```csharp
-options.Analysis.MinimumNumericCoverageRatio = 0.90d;
+options.Analysis.MinimumNumericFeatureCoverageRatio = 0.90d;
 options.Analysis.MeanImputationEnabled = true;
 options.Analysis.KnnSearchAlgorithm = KnnSearchAlgorithm.Auto;
 ```

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -44,8 +44,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return FromActDataJson(new[] { actDataDocument });
         }
 
-        public static PcaScatterDataSource FromConvExperimentJson(
-            IEnumerable<string> convExperimentDocuments)
+        public static PcaScatterDataSource FromConvExperimentJson(IEnumerable<string> convExperimentDocuments)
         {
             return new PcaScatterDataSource(
                 PcaScatterDataSourceKind.ConvExperimentJsonDocuments,

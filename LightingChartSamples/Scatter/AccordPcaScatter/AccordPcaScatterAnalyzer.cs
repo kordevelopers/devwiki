@@ -190,7 +190,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             PcaAnalysisOptions effectiveOptions = options ?? new PcaAnalysisOptions();
             double varianceThreshold = Math.Max(0d, effectiveOptions.ConstantVarianceThreshold);
             double coverageThreshold = NormalizeCoverageRatio(
-                effectiveOptions.MinimumNumericCoverageRatio);
+                effectiveOptions.MinimumNumericFeatureCoverageRatio);
             string[] allFeatureNames = parsed
                 .SelectMany(item => item.FlattenedValues == null
                     ? Enumerable.Empty<string>()
@@ -471,4 +471,3 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
         }
     }
 }
-

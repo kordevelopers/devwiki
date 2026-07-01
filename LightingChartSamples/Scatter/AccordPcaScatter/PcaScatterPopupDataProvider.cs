@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Globalization;
 using System.Threading.Tasks;
@@ -47,11 +47,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             return Task.Run(delegate
             {
                 PcaExadataSnapshot snapshot = new PcaExadataSampleDataFactory(seed)
-                    .CreateDatabaseLikeSnapshot(
-                        ResponseCount,
-                        DefectCount,
-                        EpmCount,
-                        ProbeCount);
+                    .CreateDatabaseLikeSnapshot(ResponseCount, DefectCount, EpmCount, ProbeCount);
                 return ToDataTable(snapshot);
             });
         }
@@ -85,4 +81,3 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
         }
     }
 }
-

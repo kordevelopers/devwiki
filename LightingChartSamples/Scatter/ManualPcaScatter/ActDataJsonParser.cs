@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -153,11 +153,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 string.Equals(key, alias, StringComparison.OrdinalIgnoreCase)));
         }
 
-        private static void FlattenDictionary(
-            IDictionary<string, object> source,
-            IDictionary<string, object> target,
-            string prefix,
-            int depth)
+        private static void FlattenDictionary(IDictionary<string, object> source, IDictionary<string, object> target, string prefix, int depth)
         {
             if (depth > 64)
             {

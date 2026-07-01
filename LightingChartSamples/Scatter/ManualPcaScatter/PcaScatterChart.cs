@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
@@ -10,10 +10,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
     public sealed class PcaScatterSampleClickedEventArgs : EventArgs
     {
-        public PcaScatterSampleClickedEventArgs(
-            ScatterSampleData sample,
-            IList<KnnNeighbor> neighbors,
-            LightningScatterPointClickEventArgs sourceEventArgs)
+        public PcaScatterSampleClickedEventArgs(ScatterSampleData sample, IList<KnnNeighbor> neighbors, LightningScatterPointClickEventArgs sourceEventArgs)
         {
             Sample = sample;
             Neighbors = neighbors == null ? new List<KnnNeighbor>() : neighbors.ToList();
@@ -172,17 +169,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             BindFromDatabase(sourceTable, PcaScatterDatabaseOptions.CreateDefault(), options);
         }
 
-        public void BindFromDatabase(
-            DataTable sourceTable,
-            PcaScatterDatabaseOptions databaseOptions)
+        public void BindFromDatabase(DataTable sourceTable, PcaScatterDatabaseOptions databaseOptions)
         {
             BindFromDatabase(sourceTable, databaseOptions, options);
         }
 
-        public void BindFromDatabase(
-            DataTable sourceTable,
-            PcaScatterDatabaseOptions databaseOptions,
-            PcaScatterOptions newOptions)
+        public void BindFromDatabase(DataTable sourceTable, PcaScatterDatabaseOptions databaseOptions, PcaScatterOptions newOptions)
         {
             PcaScatterDatabaseOptions effectiveDatabaseOptions =
                 databaseOptions ?? PcaScatterDatabaseOptions.CreateDefault();
@@ -203,9 +195,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                         "BindFromDatabase requires a DataTable. Load data in the UI/service layer and pass it to the chart.");
                 }
 
-                ActDataRepository repository = new ActDataRepository(
-                    effectiveDatabaseOptions.SourceTable,
-                    effectiveDatabaseOptions.ToActDataQueryOptions());
+                ActDataRepository repository = new ActDataRepository(effectiveDatabaseOptions.SourceTable, effectiveDatabaseOptions.ToActDataQueryOptions());
                 IList<string> actDataDocuments = repository.LoadActData();
                 PcaAnalysisResult result = PcaScatterDataSource
                     .FromActDataJson(actDataDocuments)
@@ -229,17 +219,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             BindFromExadata(sourceTable, PcaScatterExadataOptions.CreateDefault(), options);
         }
 
-        public void BindFromExadata(
-            DataTable sourceTable,
-            PcaScatterExadataOptions exadataOptions)
+        public void BindFromExadata(DataTable sourceTable, PcaScatterExadataOptions exadataOptions)
         {
             BindFromExadata(sourceTable, exadataOptions, options);
         }
 
-        public void BindFromExadata(
-            DataTable sourceTable,
-            PcaScatterExadataOptions exadataOptions,
-            PcaScatterOptions newOptions)
+        public void BindFromExadata(DataTable sourceTable, PcaScatterExadataOptions exadataOptions, PcaScatterOptions newOptions)
         {
             PcaScatterExadataOptions effectiveOptions =
                 exadataOptions ?? PcaScatterExadataOptions.CreateDefault();
@@ -247,9 +232,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             BindFromExadata(effectiveOptions, newOptions);
         }
 
-        public void BindFromExadata(
-            PcaScatterExadataOptions exadataOptions,
-            PcaScatterOptions newOptions)
+        public void BindFromExadata(PcaScatterExadataOptions exadataOptions, PcaScatterOptions newOptions)
         {
             PcaScatterExadataOptions effectiveOptions =
                 exadataOptions ?? PcaScatterExadataOptions.CreateDefault();
@@ -264,16 +247,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                         "BindFromExadata requires a DataTable. Load data in the UI/service layer and pass it to the chart.");
                 }
 
-                var repository = new ConvExperimentRepository(
-                    effectiveOptions.SourceTable,
-                    effectiveOptions.ToQueryOptions());
+                var repository = new ConvExperimentRepository(effectiveOptions.SourceTable, effectiveOptions.ToQueryOptions());
                 IList<PcaExadataSourceRow> rows = repository.LoadAll();
                 var snapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
                 var service = new PcaExadataService(repository);
-                PcaExadataAnalysisResult result = service.AnalyzeSnapshot(
-                    snapshot,
-                    effectiveOptions.ParameterType,
-                    nextOptions.Analysis);
+                PcaExadataAnalysisResult result = service.AnalyzeSnapshot(snapshot, effectiveOptions.ParameterType, nextOptions.Analysis);
                 Bind(result.AnalysisResult, nextOptions);
             }
             catch (Exception ex)

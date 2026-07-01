@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
@@ -20,7 +20,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
         public PcaAnalysisOptions()
         {
             ConstantVarianceThreshold = 1e-10d;
-            MinimumNumericCoverageRatio = 0.90d;
+            MinimumNumericFeatureCoverageRatio = 0.90d;
             MeanImputationEnabled = true;
             ComponentCount = 2;
             MaxIterations = 2000;
@@ -30,7 +30,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
         }
 
         public double ConstantVarianceThreshold { get; set; }
-        public double MinimumNumericCoverageRatio { get; set; }
+        public double MinimumNumericFeatureCoverageRatio { get; set; }
         public bool MeanImputationEnabled { get; set; }
         public int ComponentCount { get; set; }
         public int MaxIterations { get; set; }

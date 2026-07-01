@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -304,11 +304,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 });
                 ApplyAnalysis(result, chartOptions);
                 BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
-                UpdateSummary(
-                    result,
-                    string.Format(
-                        "서비스 DataTable ({0:N0}행)",
-                        result.Snapshot.Rows.Count));
+                UpdateSummary(result, string.Format("서비스 DataTable ({0:N0}행)", result.Snapshot.Rows.Count));
             }
             catch (Exception ex)
             {
@@ -325,9 +321,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             await AnalyzeCurrentSnapshotAsync(snapshot, true);
         }
 
-        private async Task AnalyzeCurrentSnapshotAsync(
-            PcaExadataSnapshot snapshot,
-            bool manageToolbar)
+        private async Task AnalyzeCurrentSnapshotAsync(PcaExadataSnapshot snapshot, bool manageToolbar)
         {
             if (manageToolbar)
             {
@@ -343,10 +337,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 PcaScatterOptions chartOptions = CreateChartOptions();
                 PcaExadataAnalysisResult result = await Task.Run(delegate
                 {
-                    return exadataService.AnalyzeSnapshot(
-                        snapshot,
-                        parameterType,
-                        chartOptions.Analysis);
+                    return exadataService.AnalyzeSnapshot(snapshot, parameterType, chartOptions.Analysis);
                 });
                 ApplyAnalysis(result, chartOptions);
                 BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
@@ -365,9 +356,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             }
         }
 
-        private void ApplyAnalysis(
-            PcaExadataAnalysisResult result,
-            PcaScatterOptions chartOptions)
+        private void ApplyAnalysis(PcaExadataAnalysisResult result, PcaScatterOptions chartOptions)
         {
             if (result == null || result.AnalysisResult == null)
             {
@@ -380,9 +369,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             WriteFeatureSelectionAuditLog(result, chartOptions);
         }
 
-        private void WriteFeatureSelectionAuditLog(
-            PcaExadataAnalysisResult result,
-            PcaScatterOptions chartOptions)
+        private void WriteFeatureSelectionAuditLog(PcaExadataAnalysisResult result, PcaScatterOptions chartOptions)
         {
             if (result == null || result.FeatureSelectionReport == null)
             {
@@ -412,27 +399,15 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
 #endif
         }
 
-        private string BuildFeatureSelectionAuditText(
-            PcaExadataAnalysisResult result,
-            PcaScatterOptions chartOptions,
-            bool includeFullDetails)
+        private string BuildFeatureSelectionAuditText(PcaExadataAnalysisResult result, PcaScatterOptions chartOptions, bool includeFullDetails)
         {
             PcaFeatureSelectionReport report = result.FeatureSelectionReport;
             DataTable survivingPopulation = result.CreateSurvivingPopulationDataTable();
             var builder = new StringBuilder();
             builder.AppendLine("PCA Feature Selection Audit");
-            builder.AppendLine(string.Format(
-                CultureInfo.InvariantCulture,
-                "CreatedAt: {0:yyyy-MM-dd HH:mm:ss.fff}",
-                DateTime.Now));
-            builder.AppendLine(string.Format(
-                CultureInfo.InvariantCulture,
-                "ParameterType: {0}",
-                PcaParameterTypeParser.ToDatabaseValue(result.ParameterType)));
-            builder.AppendLine(string.Format(
-                CultureInfo.InvariantCulture,
-                "LogMode: {0}",
-                includeFullDetails ? "Detailed" : "Summary"));
+            builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "CreatedAt: {0:yyyy-MM-dd HH:mm:ss.fff}", DateTime.Now));
+            builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "ParameterType: {0}", PcaParameterTypeParser.ToDatabaseValue(result.ParameterType)));
+            builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "LogMode: {0}", includeFullDetails ? "Detailed" : "Summary"));
             builder.AppendLine();
             if (result.Diagnostic != null)
             {
@@ -450,7 +425,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 "Numeric coverage threshold: {0:P1}",
                 (chartOptions == null || chartOptions.Analysis == null)
                     ? 1d
-                    : chartOptions.Analysis.MinimumNumericCoverageRatio));
+                    : chartOptions.Analysis.MinimumNumericFeatureCoverageRatio));
             builder.AppendLine(string.Format(
                 CultureInfo.InvariantCulture,
                 "Mean imputation: {0}",
@@ -470,34 +445,19 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             builder.AppendLine();
 
             AppendExcludedReasonSummary(builder, report);
-            AppendFeatureNameSummary(
-                builder,
-                includeFullDetails ? "Included features" : "Included features",
-                report.IncludedFeatureNames,
-                includeFullDetails ? int.MaxValue : 20);
-            AppendExcludedFeatureSamples(
-                builder,
-                report,
-                includeFullDetails ? int.MaxValue : 15);
+            AppendFeatureNameSummary(builder, includeFullDetails ? "Included features" : "Included features", report.IncludedFeatureNames, includeFullDetails ? int.MaxValue : 20);
+            AppendExcludedFeatureSamples(builder, report, includeFullDetails ? int.MaxValue : 15);
 
             if (includeFullDetails)
             {
-                AppendFeatureDetailTable(
-                    builder,
-                    "Included feature details",
-                    report.Details.Where(detail => detail.Included));
-                AppendFeatureDetailTable(
-                    builder,
-                    "Excluded feature details",
-                    report.Details.Where(detail => !detail.Included));
+                AppendFeatureDetailTable(builder, "Included feature details", report.Details.Where(detail => detail.Included));
+                AppendFeatureDetailTable(builder, "Excluded feature details", report.Details.Where(detail => !detail.Included));
             }
 
             return builder.ToString();
         }
 
-        private static string SaveFeatureSelectionAuditLog(
-            PcaExadataAnalysisResult result,
-            string logText)
+        private static string SaveFeatureSelectionAuditLog(PcaExadataAnalysisResult result, string logText)
         {
             try
             {
@@ -540,9 +500,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             return safeValue;
         }
 
-        private static void AppendExcludedReasonSummary(
-            StringBuilder builder,
-            PcaFeatureSelectionReport report)
+        private static void AppendExcludedReasonSummary(StringBuilder builder, PcaFeatureSelectionReport report)
         {
             builder.AppendLine("Excluded reason summary:");
             var groups = report.Details
@@ -569,11 +527,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             builder.AppendLine();
         }
 
-        private static void AppendFeatureNameSummary(
-            StringBuilder builder,
-            string title,
-            IEnumerable<string> featureNames,
-            int maxCount)
+        private static void AppendFeatureNameSummary(StringBuilder builder, string title, IEnumerable<string> featureNames, int maxCount)
         {
             int safeMaxCount = maxCount <= 0 ? int.MaxValue : maxCount;
             string[] names = (featureNames ?? Enumerable.Empty<string>()).Take(safeMaxCount).ToArray();
@@ -595,10 +549,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             builder.AppendLine();
         }
 
-        private static void AppendExcludedFeatureSamples(
-            StringBuilder builder,
-            PcaFeatureSelectionReport report,
-            int maxCount)
+        private static void AppendExcludedFeatureSamples(StringBuilder builder, PcaFeatureSelectionReport report, int maxCount)
         {
             int safeMaxCount = maxCount <= 0 ? int.MaxValue : maxCount;
             builder.AppendLine(safeMaxCount == int.MaxValue
@@ -632,10 +583,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             }
         }
 
-        private static void AppendFeatureDetailTable(
-            StringBuilder builder,
-            string title,
-            IEnumerable<PcaFeatureSelectionDetail> details)
+        private static void AppendFeatureDetailTable(StringBuilder builder, string title, IEnumerable<PcaFeatureSelectionDetail> details)
         {
             builder.AppendLine();
             builder.AppendLine(title + ":");
@@ -924,9 +872,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             return options;
         }
 
-        private void UpdateSummary(
-            PcaExadataAnalysisResult result,
-            string sourceDescription)
+        private void UpdateSummary(PcaExadataAnalysisResult result, string sourceDescription)
         {
             if (result == null || result.AnalysisResult == null)
             {
@@ -981,9 +927,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             UpdateSelectedNeighborHighlight();
         }
 
-        private DataTable CreateNearestNeighborTable(
-            PcaExperimentRecord target,
-            IEnumerable<KnnNeighbor> neighbors)
+        private DataTable CreateNearestNeighborTable(PcaExperimentRecord target, IEnumerable<KnnNeighbor> neighbors)
         {
             DataTable table = new DataTable();
             table.Columns.Add("DRAFT_NO", typeof(string));

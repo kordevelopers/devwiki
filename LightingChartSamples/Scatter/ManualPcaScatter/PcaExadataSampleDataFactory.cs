@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 
@@ -27,11 +27,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return new PcaExadataSnapshot(rows, DateTime.UtcNow);
         }
 
-        public PcaExadataSnapshot CreateDatabaseLikeSnapshot(
-            int responseCount,
-            int defectCount,
-            int epmCount,
-            int probeCount)
+        public PcaExadataSnapshot CreateDatabaseLikeSnapshot(int responseCount, int defectCount, int epmCount, int probeCount)
         {
             var rows = new List<PcaExadataSourceRow>();
             AddRows(rows, PcaParameterType.Response, "DRAFT", Math.Max(0, responseCount), -0.9d);
@@ -41,12 +37,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return new PcaExadataSnapshot(rows, DateTime.UtcNow);
         }
 
-        private void AddRows(
-            IList<PcaExadataSourceRow> rows,
-            PcaParameterType parameterType,
-            string draftPrefix,
-            int count,
-            double typeOffset)
+        private void AddRows(IList<PcaExadataSourceRow> rows, PcaParameterType parameterType, string draftPrefix, int count, double typeOffset)
         {
             for (int rowIndex = 0; rowIndex < count; rowIndex++)
             {

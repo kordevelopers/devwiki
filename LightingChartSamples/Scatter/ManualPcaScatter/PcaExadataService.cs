@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -60,12 +60,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
     public sealed class PcaExadataSourceRow
     {
-        public PcaExadataSourceRow(
-            int sourceRowIndex,
-            string draftNo,
-            PcaParameterType parameterType,
-            string labelY,
-            string rawConvExperimentJson)
+        public PcaExadataSourceRow(int sourceRowIndex, string draftNo, PcaParameterType parameterType, string labelY, string rawConvExperimentJson)
         {
             SourceRowIndex = sourceRowIndex;
             DraftNo = (draftNo ?? string.Empty).Trim();
@@ -83,9 +78,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
     public sealed class PcaExadataSnapshot
     {
-        public PcaExadataSnapshot(
-            IEnumerable<PcaExadataSourceRow> rows,
-            DateTime loadedAtUtc)
+        public PcaExadataSnapshot(IEnumerable<PcaExadataSourceRow> rows, DateTime loadedAtUtc)
         {
             Rows = new ReadOnlyCollection<PcaExadataSourceRow>(
                 (rows ?? Enumerable.Empty<PcaExadataSourceRow>()).ToList());
@@ -258,11 +251,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
     public sealed class PcaDraftQueryResult
     {
-        internal PcaDraftQueryResult(
-            PcaExadataAnalysisResult analysis,
-            PcaExperimentRecord target,
-            IList<KnnNeighbor> neighbors,
-            bool usedMemorySnapshot)
+        internal PcaDraftQueryResult(PcaExadataAnalysisResult analysis, PcaExperimentRecord target, IList<KnnNeighbor> neighbors, bool usedMemorySnapshot)
         {
             Analysis = analysis;
             Target = target;
@@ -402,11 +391,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return result;
         }
 
-        private static void Flatten(
-            IDictionary<string, object> source,
-            IDictionary<string, object> target,
-            string prefix,
-            int depth)
+        private static void Flatten(IDictionary<string, object> source, IDictionary<string, object> target, string prefix, int depth)
         {
             if (depth > 64)
             {
@@ -543,9 +528,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         {
         }
 
-        public PcaExadataService(
-            DataTable sourceTable,
-            ConvExperimentQueryOptions tableOptions)
+        public PcaExadataService(DataTable sourceTable, ConvExperimentQueryOptions tableOptions)
             : this(new ConvExperimentRepository(sourceTable, tableOptions))
         {
         }
@@ -566,8 +549,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         {
         }
 
-        private static Func<IList<PcaExadataSourceRow>> ValidateRowLoader(
-            Func<IList<PcaExadataSourceRow>> rowLoader)
+        private static Func<IList<PcaExadataSourceRow>> ValidateRowLoader(Func<IList<PcaExadataSourceRow>> rowLoader)
         {
             if (rowLoader == null)
             {
@@ -606,9 +588,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return SetDataTable(sourceTable, ConvExperimentQueryOptions.FromConfiguration());
         }
 
-        public PcaExadataSnapshot SetDataTable(
-            DataTable sourceTable,
-            ConvExperimentQueryOptions tableOptions)
+        public PcaExadataSnapshot SetDataTable(DataTable sourceTable, ConvExperimentQueryOptions tableOptions)
         {
             IList<PcaExadataSourceRow> rows = ConvExperimentRepository.LoadFromDataTable(
                 sourceTable,
@@ -640,9 +620,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 ConvExperimentQueryOptions.FromConfiguration());
         }
 
-        public Task<PcaExadataSnapshot> LoadFromDataTableAsync(
-            DataTable sourceTable,
-            ConvExperimentQueryOptions tableOptions)
+        public Task<PcaExadataSnapshot> LoadFromDataTableAsync(DataTable sourceTable, ConvExperimentQueryOptions tableOptions)
         {
             return Task.Run(delegate
             {
@@ -650,9 +628,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             });
         }
 
-        public Task<PcaExadataAnalysisResult> RefreshAndAnalyzeAsync(
-            PcaParameterType parameterType,
-            PcaScatterAnalysisOptions analysisOptions)
+        public Task<PcaExadataAnalysisResult> RefreshAndAnalyzeAsync(PcaParameterType parameterType, PcaScatterAnalysisOptions analysisOptions)
         {
             return Task.Run(delegate
             {
@@ -673,10 +649,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             });
         }
 
-        public Task<PcaExadataAnalysisResult> AnalyzeDataTableAsync(
-            DataTable sourceTable,
-            PcaParameterType parameterType,
-            PcaScatterAnalysisOptions analysisOptions)
+        public Task<PcaExadataAnalysisResult> AnalyzeDataTableAsync(DataTable sourceTable, PcaParameterType parameterType, PcaScatterAnalysisOptions analysisOptions)
         {
             return AnalyzeDataTableAsync(
                 sourceTable,
@@ -698,10 +671,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             });
         }
 
-        public Task<PcaDraftQueryResult> QueryDraftAsync(
-            string draftNo,
-            PcaParameterType parameterType,
-            PcaExadataRefreshMode refreshMode)
+        public Task<PcaDraftQueryResult> QueryDraftAsync(string draftNo, PcaParameterType parameterType, PcaExadataRefreshMode refreshMode)
         {
             return QueryDraftAsync(
                 draftNo,
@@ -829,10 +799,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             });
         }
 
-        public PcaExadataAnalysisResult AnalyzeSnapshot(
-            PcaExadataSnapshot snapshot,
-            PcaParameterType parameterType,
-            PcaScatterAnalysisOptions analysisOptions)
+        public PcaExadataAnalysisResult AnalyzeSnapshot(PcaExadataSnapshot snapshot, PcaParameterType parameterType, PcaScatterAnalysisOptions analysisOptions)
         {
             if (snapshot == null)
             {
@@ -855,9 +822,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             }
         }
 
-        private PcaExadataSnapshot ResolveSnapshot(
-            PcaExadataRefreshMode refreshMode,
-            out bool usedMemorySnapshot)
+        private PcaExadataSnapshot ResolveSnapshot(PcaExadataRefreshMode refreshMode, out bool usedMemorySnapshot)
         {
             if (refreshMode == PcaExadataRefreshMode.PreferMemorySnapshot)
             {
@@ -876,9 +841,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return new PcaExadataSnapshot(rows, DateTime.UtcNow);
         }
 
-        private static IList<PcaExadataSourceRow> FilterPopulation(
-            PcaExadataSnapshot snapshot,
-            PcaParameterType parameterType)
+        private static IList<PcaExadataSourceRow> FilterPopulation(PcaExadataSnapshot snapshot, PcaParameterType parameterType)
         {
             List<PcaExadataSourceRow> population = snapshot.Rows
                 .Where(row => row != null && row.ParameterType == parameterType)

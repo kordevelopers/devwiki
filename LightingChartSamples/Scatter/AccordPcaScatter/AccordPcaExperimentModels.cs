@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -59,12 +59,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 
     public sealed class PcaExadataSourceRow
     {
-        public PcaExadataSourceRow(
-            int sourceRowIndex,
-            string draftNo,
-            PcaParameterType parameterType,
-            string labelY,
-            string rawConvExperimentJson)
+        public PcaExadataSourceRow(int sourceRowIndex, string draftNo, PcaParameterType parameterType, string labelY, string rawConvExperimentJson)
         {
             SourceRowIndex = sourceRowIndex;
             DraftNo = (draftNo ?? string.Empty).Trim();
@@ -82,9 +77,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 
     public sealed class PcaExadataSnapshot
     {
-        public PcaExadataSnapshot(
-            IEnumerable<PcaExadataSourceRow> rows,
-            DateTime loadedAtUtc)
+        public PcaExadataSnapshot(IEnumerable<PcaExadataSourceRow> rows, DateTime loadedAtUtc)
         {
             Rows = new ReadOnlyCollection<PcaExadataSourceRow>(
                 (rows ?? Enumerable.Empty<PcaExadataSourceRow>()).ToList());
@@ -99,13 +92,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
     {
         private readonly double[] standardizedVector;
 
-        internal PcaExperimentRecord(
-            PcaExadataSourceRow source,
-            IDictionary<string, object> flattenedValues,
-            IDictionary<string, double> numericFeatures,
-            double[] standardizedVector,
-            double x1,
-            double x2)
+        internal PcaExperimentRecord(PcaExadataSourceRow source, IDictionary<string, object> flattenedValues, IDictionary<string, double> numericFeatures,
+            double[] standardizedVector, double x1, double x2)
         {
             SourceRowIndex = source.SourceRowIndex;
             DraftNo = source.DraftNo;
@@ -144,13 +132,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 
     public sealed class PcaExadataAnalysisResult
     {
-        internal PcaExadataAnalysisResult(
-            PcaExadataSnapshot snapshot,
-            PcaParameterType parameterType,
-            PcaAnalysisResult analysisResult,
-            IList<PcaExperimentRecord> records,
-            int missingExperimentCount,
-            PcaFeatureSelectionReport featureSelectionReport)
+        internal PcaExadataAnalysisResult(PcaExadataSnapshot snapshot, PcaParameterType parameterType, PcaAnalysisResult analysisResult,
+            IList<PcaExperimentRecord> records, int missingExperimentCount, PcaFeatureSelectionReport featureSelectionReport)
         {
             Snapshot = snapshot;
             ParameterType = parameterType;
@@ -257,11 +240,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 
     public sealed class PcaDraftQueryResult
     {
-        internal PcaDraftQueryResult(
-            PcaExadataAnalysisResult analysis,
-            PcaExperimentRecord target,
-            IList<KnnNeighbor> neighbors,
-            bool usedMemorySnapshot)
+        internal PcaDraftQueryResult(PcaExadataAnalysisResult analysis, PcaExperimentRecord target, IList<KnnNeighbor> neighbors, bool usedMemorySnapshot)
         {
             Analysis = analysis;
             Target = target;
@@ -317,13 +296,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             }
             catch (Exception ex) when (PcaJsonUtility.IsJsonException(ex))
             {
-                throw new FormatException(
-                    string.Format(
-                        "CONV_EXPER_CTN[{0}] JSON parsing failed. DRAFT_NO={1}: {2}",
-                        source.SourceRowIndex,
-                        source.DraftNo,
-                        ex.Message),
-                    ex);
+                throw new FormatException(string.Format("CONV_EXPER_CTN[{0}] JSON parsing failed. DRAFT_NO={1}: {2}",
+                    source.SourceRowIndex, source.DraftNo, ex.Message), ex);
             }
 
             IList<object> items = ToObjectList(root);
@@ -334,22 +308,15 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 
             if (items.Count != 1)
             {
-                throw new FormatException(
-                    string.Format(
-                        "CONV_EXPER_CTN[{0}] must contain exactly one experiment object. DRAFT_NO={1}, Count={2}",
-                        source.SourceRowIndex,
-                        source.DraftNo,
-                        items.Count));
+                throw new FormatException(string.Format("CONV_EXPER_CTN[{0}] must contain exactly one experiment object. DRAFT_NO={1}, Count={2}",
+                    source.SourceRowIndex, source.DraftNo, items.Count));
             }
 
             var dictionary = items[0] as IDictionary<string, object>;
             if (dictionary == null)
             {
-                throw new FormatException(
-                    string.Format(
-                        "CONV_EXPER_CTN[{0}] array item is not a JSON object. DRAFT_NO={1}",
-                        source.SourceRowIndex,
-                        source.DraftNo));
+                throw new FormatException(string.Format("CONV_EXPER_CTN[{0}] array item is not a JSON object. DRAFT_NO={1}",
+                    source.SourceRowIndex, source.DraftNo));
             }
 
             var flattened = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
@@ -401,11 +368,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             return result;
         }
 
-        private static void Flatten(
-            IDictionary<string, object> source,
-            IDictionary<string, object> target,
-            string prefix,
-            int depth)
+        private static void Flatten(IDictionary<string, object> source, IDictionary<string, object> target, string prefix, int depth)
         {
             if (depth > 64)
             {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -55,33 +55,21 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             if (highlightedSample != null)
             {
                 result.Add(CreateSinglePointSeries(
-                    highlightedSample,
-                    highlightedSample.DraftNo.Trim(),
-                    options.HighlightColor,
-                    options.HighlightColor,
-                    Math.Max(1f, options.HighlightPointSize),
-                    1.8f,
-                    true));
+                    highlightedSample, highlightedSample.DraftNo.Trim(), options.HighlightColor, options.HighlightColor,
+                    Math.Max(1f, options.HighlightPointSize), 1.8f, true));
             }
 
             if (selectedSample != null && !object.ReferenceEquals(selectedSample, highlightedSample))
             {
                 result.Add(CreateSinglePointSeries(
-                    selectedSample,
-                    selectedSample.DraftNo.Trim(),
-                    options.SelectedPointColor,
-                    options.SelectedPointBorderColor,
-                    Math.Max(1f, options.SelectedPointSize),
-                    Math.Max(0f, options.SelectedPointBorderWidth),
-                    false));
+                    selectedSample, selectedSample.DraftNo.Trim(), options.SelectedPointColor, options.SelectedPointBorderColor,
+                    Math.Max(1f, options.SelectedPointSize), Math.Max(0f, options.SelectedPointBorderWidth), false));
             }
 
             return result;
         }
 
-        private static ScatterSampleData ResolveHighlightedSample(
-            IEnumerable<ScatterSampleData> samples,
-            PcaScatterSeriesOptions options)
+        private static ScatterSampleData ResolveHighlightedSample(IEnumerable<ScatterSampleData> samples, PcaScatterSeriesOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.HighlightDraftNo))
             {
@@ -94,9 +82,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 && string.Equals(item.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
         }
 
-        private static ScatterSampleData ResolveSelectedSample(
-            IEnumerable<ScatterSampleData> samples,
-            PcaScatterSeriesOptions options)
+        private static ScatterSampleData ResolveSelectedSample(IEnumerable<ScatterSampleData> samples, PcaScatterSeriesOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.SelectedDraftNo))
             {
@@ -110,13 +96,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         }
 
         private static LightningScatterSeries CreateSinglePointSeries(
-            ScatterSampleData sample,
-            string seriesName,
-            Color fillColor,
-            Color borderColor,
-            float pointSize,
-            float borderWidth,
-            bool showInLegend)
+            ScatterSampleData sample, string seriesName, Color fillColor, Color borderColor,
+            float pointSize, float borderWidth, bool showInLegend)
         {
             return new LightningScatterSeries
             {

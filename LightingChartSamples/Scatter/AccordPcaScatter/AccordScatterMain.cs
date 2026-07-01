@@ -1052,7 +1052,7 @@ namespace LightingChartSamples.Scatter.AccordPcaScatter
                 "Numeric coverage threshold: {0:P1}",
                 chartOptions == null || chartOptions.Analysis == null
                     ? 1d
-                    : chartOptions.Analysis.MinimumNumericCoverageRatio));
+                    : chartOptions.Analysis.MinimumNumericFeatureCoverageRatio));
             builder.AppendLine(string.Format(
                 CultureInfo.InvariantCulture,
                 "Mean imputation: {0}",

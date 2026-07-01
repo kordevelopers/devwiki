@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -11,7 +11,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
         public PcaScatterAnalysisOptions()
         {
             ConstantVarianceThreshold = 1e-10d;
-            MinimumNumericCoverageRatio = 0.90d;
+            MinimumNumericFeatureCoverageRatio = 0.90d;
             MeanImputationEnabled = true;
             ComponentCount = 2;
             MaxIterations = 2000;
@@ -21,7 +21,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
         }
 
         public double ConstantVarianceThreshold { get; set; }
-        public double MinimumNumericCoverageRatio { get; set; }
+        public double MinimumNumericFeatureCoverageRatio { get; set; }
         public bool MeanImputationEnabled { get; set; }
         public int ComponentCount { get; set; }
         public int MaxIterations { get; set; }
@@ -34,7 +34,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             return new PcaAnalysisOptions
             {
                 ConstantVarianceThreshold = ConstantVarianceThreshold,
-                MinimumNumericCoverageRatio = MinimumNumericCoverageRatio,
+                MinimumNumericFeatureCoverageRatio = MinimumNumericFeatureCoverageRatio,
                 MeanImputationEnabled = MeanImputationEnabled,
                 ComponentCount = ComponentCount,
                 MaxIterations = MaxIterations,
@@ -305,10 +305,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             return scatterOptions;
         }
 
-        private static void ApplyAxisOptions(
-            LightningScatterOptions scatterOptions,
-            PcaAnalysisResult analysisResult,
-            PcaScatterDisplayOptions display)
+        private static void ApplyAxisOptions(LightningScatterOptions scatterOptions, PcaAnalysisResult analysisResult, PcaScatterDisplayOptions display)
         {
             AxisRange xRange = CalculateRange(
                 analysisResult == null ? null : analysisResult.ScatterData.Select(item => item.X1),
@@ -380,4 +377,3 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
         }
     }
 }
-

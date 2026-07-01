@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -989,19 +989,13 @@ namespace LightingChartSamples.Scatter
 
             double xMin;
             double xMax;
-            ResolveRange(
-                currentSeries.SelectMany(item => item.Points == null ? Enumerable.Empty<LightningScatterPoint>() : item.Points).Select(point => point.X),
-                currentOptions.XAxis,
-                out xMin,
-                out xMax);
+            ResolveRange(currentSeries.SelectMany(item => item.Points == null ? Enumerable.Empty<LightningScatterPoint>() : item.Points).Select(point => point.X),
+                currentOptions.XAxis, out xMin, out xMax);
 
             double yMin;
             double yMax;
-            ResolveRange(
-                currentSeries.SelectMany(item => item.Points == null ? Enumerable.Empty<LightningScatterPoint>() : item.Points).Select(point => point.Y),
-                currentOptions.YAxis,
-                out yMin,
-                out yMax);
+            ResolveRange(currentSeries.SelectMany(item => item.Points == null ? Enumerable.Empty<LightningScatterPoint>() : item.Points).Select(point => point.Y),
+                currentOptions.YAxis, out yMin, out yMax);
 
             xAxis.SetRange(xMin, xMax);
             yAxis.SetRange(yMin, yMax);
@@ -1562,13 +1556,8 @@ namespace LightingChartSamples.Scatter
             }
 
             Rectangle textRect = new Rectangle(markerRect.Right + 6, e.Bounds.Top + 2, e.Bounds.Width - markerRect.Right - 10, e.Bounds.Height - 4);
-            TextRenderer.DrawText(
-                e.Graphics,
-                e.ToolTipText ?? string.Empty,
-                e.Font ?? SystemFonts.DefaultFont,
-                textRect,
-                SystemColors.InfoText,
-                TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.NoPrefix);
+            TextRenderer.DrawText(e.Graphics, e.ToolTipText ?? string.Empty, e.Font ?? SystemFonts.DefaultFont, textRect,
+                SystemColors.InfoText, TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.NoPrefix);
         }
 
         private void Chart_Resize(object sender, EventArgs e)
@@ -1695,9 +1684,7 @@ namespace LightingChartSamples.Scatter
             }
 
             Bitmap clone = new Bitmap(image);
-            clone.SetResolution(
-                Math.Max(1f, image.HorizontalResolution),
-                Math.Max(1f, image.VerticalResolution));
+            clone.SetResolution(Math.Max(1f, image.HorizontalResolution), Math.Max(1f, image.VerticalResolution));
             return clone;
         }
 
