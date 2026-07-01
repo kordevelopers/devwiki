@@ -43,6 +43,7 @@
             this.draftNoLabel = new System.Windows.Forms.Label();
             this.draftNoTextBox = new System.Windows.Forms.TextBox();
             this.searchButton = new System.Windows.Forms.Button();
+            this.drawChartButton = new System.Windows.Forms.Button();
             this.refreshAllButton = new System.Windows.Forms.Button();
             this.analysisLogButton = new System.Windows.Forms.Button();
             this.preferMemoryCheckBox = new System.Windows.Forms.CheckBox();
@@ -125,6 +126,7 @@
             this.commandPanel.Controls.Add(this.draftNoLabel);
             this.commandPanel.Controls.Add(this.draftNoTextBox);
             this.commandPanel.Controls.Add(this.searchButton);
+            this.commandPanel.Controls.Add(this.drawChartButton);
             this.commandPanel.Controls.Add(this.refreshAllButton);
             this.commandPanel.Controls.Add(this.analysisLogButton);
             this.commandPanel.Controls.Add(this.preferMemoryCheckBox);
@@ -202,24 +204,35 @@
             this.searchButton.UseVisualStyleBackColor = true;
             this.searchButton.Click += new System.EventHandler(this.SearchButton_Click);
             //
+            // drawChartButton
+            //
+            this.drawChartButton.Location = new System.Drawing.Point(588, 1);
+            this.drawChartButton.Margin = new System.Windows.Forms.Padding(0, 1, 4, 1);
+            this.drawChartButton.Name = "drawChartButton";
+            this.drawChartButton.Size = new System.Drawing.Size(104, 28);
+            this.drawChartButton.TabIndex = 6;
+            this.drawChartButton.Text = "차트 그리기";
+            this.drawChartButton.UseVisualStyleBackColor = true;
+            this.drawChartButton.Click += new System.EventHandler(this.DrawChartButton_Click);
+            //
             // refreshAllButton
             //
-            this.refreshAllButton.Location = new System.Drawing.Point(588, 1);
+            this.refreshAllButton.Location = new System.Drawing.Point(696, 1);
             this.refreshAllButton.Margin = new System.Windows.Forms.Padding(0, 1, 8, 1);
             this.refreshAllButton.Name = "refreshAllButton";
             this.refreshAllButton.Size = new System.Drawing.Size(120, 28);
-            this.refreshAllButton.TabIndex = 6;
+            this.refreshAllButton.TabIndex = 7;
             this.refreshAllButton.Text = "전체 새로고침";
             this.refreshAllButton.UseVisualStyleBackColor = true;
             this.refreshAllButton.Click += new System.EventHandler(this.RefreshAllButton_Click);
             //
             // analysisLogButton
             //
-            this.analysisLogButton.Location = new System.Drawing.Point(716, 1);
+            this.analysisLogButton.Location = new System.Drawing.Point(824, 1);
             this.analysisLogButton.Margin = new System.Windows.Forms.Padding(0, 1, 8, 1);
             this.analysisLogButton.Name = "analysisLogButton";
             this.analysisLogButton.Size = new System.Drawing.Size(104, 28);
-            this.analysisLogButton.TabIndex = 7;
+            this.analysisLogButton.TabIndex = 8;
             this.analysisLogButton.Text = "로그 열기";
             this.analysisLogButton.UseVisualStyleBackColor = true;
             this.analysisLogButton.Click += new System.EventHandler(this.AnalysisLogButton_Click);
@@ -227,11 +240,11 @@
             // preferMemoryCheckBox
             //
             this.preferMemoryCheckBox.AutoSize = true;
-            this.preferMemoryCheckBox.Location = new System.Drawing.Point(832, 6);
+            this.preferMemoryCheckBox.Location = new System.Drawing.Point(940, 6);
             this.preferMemoryCheckBox.Margin = new System.Windows.Forms.Padding(4, 6, 0, 0);
             this.preferMemoryCheckBox.Name = "preferMemoryCheckBox";
             this.preferMemoryCheckBox.Size = new System.Drawing.Size(129, 19);
-            this.preferMemoryCheckBox.TabIndex = 7;
+            this.preferMemoryCheckBox.TabIndex = 9;
             this.preferMemoryCheckBox.Text = "메모리 데이터 우선";
             this.preferMemoryCheckBox.UseVisualStyleBackColor = true;
             //
@@ -299,6 +312,7 @@
         private System.Windows.Forms.Label draftNoLabel;
         private System.Windows.Forms.TextBox draftNoTextBox;
         private System.Windows.Forms.Button searchButton;
+        private System.Windows.Forms.Button drawChartButton;
         private System.Windows.Forms.Button refreshAllButton;
         private System.Windows.Forms.Button analysisLogButton;
         private System.Windows.Forms.CheckBox preferMemoryCheckBox;

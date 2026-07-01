@@ -59,12 +59,33 @@ using (var form = new ManualPcaScatterMain())
 }
 ```
 
+`LoadConvExperimentDataTableAsync`는 DataTable만 화면에 전달하고 차트를 즉시 그리지 않습니다.
+사용자가 화면의 `차트 그리기` 버튼을 누르면 PCA 분석과 차트 렌더링이 비동기로 실행되고 진행 상태가 표시됩니다.
+
+코드에서 바로 그려야 하는 경우에도 폼을 먼저 보여준 뒤 호출합니다.
+
+```csharp
+using (var form = new ManualPcaScatterMain())
+{
+    form.Show(owner);
+
+    DataTable sourceTable = await LoadCompanyDataAsync();
+    await form.LoadConvExperimentDataTableAsync(sourceTable);
+    await form.DrawChartAsync();
+}
+```
+
 모달 팝업으로 사용할 때는 데이터를 먼저 가지고 있는 경우에만 아래처럼 사용합니다.
 
 ```csharp
 using (var form = new ManualPcaScatterMain())
 {
-    await form.LoadConvExperimentDataTableAsync(sourceTable);
+    form.Shown += async delegate
+    {
+        await form.LoadConvExperimentDataTableAsync(sourceTable);
+        await form.DrawChartAsync();
+    };
+
     form.ShowDialog(owner);
 }
 ```

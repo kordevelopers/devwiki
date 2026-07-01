@@ -23,6 +23,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
 
         private PcaAnalysisResult analysisResult;
         private PcaExadataAnalysisResult exadataAnalysis;
+        private DataTable pendingSourceTable;
         private IList<ScatterSampleData> currentSamples;
         private IList<PcaExperimentRecord> currentRecords;
         private bool parameterChangeEnabled;
@@ -99,20 +100,46 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             nearestNeighborGrid.AlternatingRowsDefaultCellStyle.Font = nearestNeighborGridFont;
         }
 
-        public async Task LoadConvExperimentDataTableAsync(DataTable sourceTable)
+        public Task LoadConvExperimentDataTableAsync(DataTable sourceTable)
         {
             if (sourceTable == null)
             {
                 throw new ArgumentNullException("sourceTable");
             }
 
+            pendingSourceTable = sourceTable;
+            exadataRepository.SetSourceTable(sourceTable);
+            exadataService.ClearSnapshot();
+            analysisResult = null;
+            exadataAnalysis = null;
+            currentSamples = new List<ScatterSampleData>();
+            currentRecords = new List<PcaExperimentRecord>();
+            pcaChart.Clear();
+            BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
+            preferMemoryCheckBox.Checked = true;
+            summaryLabel.Text = string.Format(
+                CultureInfo.InvariantCulture,
+                "DataTable {0:N0}행을 받았습니다. 차트 그리기 버튼을 눌러 PCA 분석을 실행하세요.",
+                sourceTable.Rows.Count);
+            SetToolbarEnabled(true);
+            UpdateAnalysisLogButtonState();
+            return Task.FromResult(0);
+        }
+
+        public Task DrawChartAsync()
+        {
+            return DrawLoadedDataAsync();
+        }
+
+        private async Task DrawLoadedDataAsync()
+        {
             SetToolbarEnabled(false);
-            ShowBusyOverlay("전달받은 DataTable 메모리 적재 및 PCA 분석 중...");
+            ShowBusyOverlay("DataTable 변환 및 PCA 차트 그리기 중...");
             try
             {
-                exadataRepository.SetSourceTable(sourceTable);
-                PcaExadataSnapshot snapshot = await exadataService.LoadAllAsync();
+                PcaExadataSnapshot snapshot = await LoadCurrentSourceSnapshotAsync();
                 preferMemoryCheckBox.Checked = true;
+                UpdateBusyMessage("메모리 데이터 PCA 분석 및 차트 렌더링 중...");
                 await AnalyzeCurrentSnapshotAsync(snapshot, false);
             }
             finally
@@ -124,6 +151,18 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         private async void SearchButton_Click(object sender, EventArgs e)
         {
             await QueryDraftAsync();
+        }
+
+        private async void DrawChartButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                await DrawLoadedDataAsync();
+            }
+            catch (Exception ex)
+            {
+                ShowOperationError(ex, "PCA 차트 그리기 실패");
+            }
         }
 
         private async void RefreshAllButton_Click(object sender, EventArgs e)
@@ -196,7 +235,13 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             {
                 if (exadataService.CurrentSnapshot == null)
                 {
-                    await LoadPopupDatabaseSnapshotAsync();
+                    MessageBox.Show(
+                        this,
+                        "먼저 차트 그리기 버튼을 눌러 PCA 분석을 실행하세요.",
+                        "PCA 분석 필요",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
                 }
 
                 if (exadataService.CurrentSnapshot != null)
@@ -246,6 +291,20 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             return snapshot;
         }
 
+        private async Task<PcaExadataSnapshot> LoadCurrentSourceSnapshotAsync()
+        {
+            if (pendingSourceTable != null)
+            {
+                UpdateBusyMessage("전달받은 DataTable을 PCA 메모리 스냅샷으로 변환 중...");
+                exadataRepository.SetSourceTable(pendingSourceTable);
+                PcaExadataSnapshot snapshot = await exadataService.LoadFromDataTableAsync(pendingSourceTable);
+                preferMemoryCheckBox.Checked = true;
+                return snapshot;
+            }
+
+            return await LoadPopupDatabaseSnapshotAsync();
+        }
+
         private async Task RefreshAllAsync()
         {
             SetToolbarEnabled(false);
@@ -255,7 +314,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
 
             try
             {
-                PcaExadataSnapshot snapshot = await LoadPopupDatabaseSnapshotAsync();
+                PcaExadataSnapshot snapshot = await LoadCurrentSourceSnapshotAsync();
                 PcaScatterOptions chartOptions = CreateChartOptions();
                 PcaExadataAnalysisResult result = await Task.Run(delegate
                 {
@@ -1127,6 +1186,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             defectRadioButton.Enabled = enabled;
             draftNoTextBox.Enabled = enabled;
             searchButton.Enabled = enabled;
+            drawChartButton.Enabled = enabled && HasRenderableDataSource();
             refreshAllButton.Enabled = enabled;
             preferMemoryCheckBox.Enabled = enabled;
             nearestNeighborGrid.Enabled = enabled;
@@ -1142,6 +1202,13 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                     ? "처리 중입니다. 잠시만 기다려 주세요."
                     : summaryLabel.Text);
             }
+        }
+
+        private bool HasRenderableDataSource()
+        {
+            return pendingSourceTable != null
+                || popupDataProvider != null
+                || (exadataService != null && exadataService.CurrentSnapshot != null);
         }
 
         private void UpdateAnalysisLogButtonState()
