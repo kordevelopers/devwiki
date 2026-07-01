@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Data;
@@ -621,7 +621,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
     #region JSON Parsing and Numeric Feature Selection
 
     /// <summary>
-    /// JSON ?ㅽ뿕 ?곗씠?곗뿉???앸퀎?먯? ?섏튂 ?뱀쭠??遺꾨━?섍퀬 遺꾩꽍 ?됰젹??留뚮뱺??
+    /// JSON 실험 데이터에서 메타데이터와 수치 feature를 분리하고 PCA 분석 행렬을 만든다.
     /// </summary>
     public sealed class PcaAnalysisPipeline
     {
@@ -644,8 +644,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         }
 
         /// <summary>
-        /// DB ACT_DATA 而щ읆?먯꽌 ?쎌? JSON 臾몄꽌瑜?Dict/List 援ъ“濡??뚯떛?섍퀬,
-        /// ?대????ㅽ뿕 媛앹껜瑜?媛쒕퀎 JSON ?됱쑝濡??쇱튇 ???꾩껜 遺꾩꽍???ㅽ뻾?쒕떎.
+        /// DB ACT_DATA 컬럼에서 읽은 JSON 문서를 Dict/List 구조로 파싱하고,
+        /// 내부 실험 객체를 개별 JSON 행으로 펼친 뒤 전체 분석을 수행한다.
         /// </summary>
         public PcaAnalysisResult AnalyzeActDataDocuments(IEnumerable<string> actDataDocuments)
         {
@@ -655,22 +655,20 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         }
 
         /// <summary>
-        /// Service DataTable??CONV_EXPER_CTN JSON 諛곗뿴??媛쒕퀎 ?ㅽ뿕 ?됱쑝濡??쇱퀜 遺꾩꽍?쒕떎.
-        /// ?꾩껜 ?곗씠?곌? ?섎굹???ㅻ깄?룹쑝濡??쒖??붾릺硫?PCA? KNN??媛숈? 寃곌낵瑜??ъ슜?쒕떎.
+        /// Service DataTable의 CONV_EXPER_CTN JSON 배열을 개별 실험 행으로 펼쳐 분석한다.
+        /// 전체 데이터가 하나의 모집단으로 표준화되며 PCA와 KNN은 같은 결과를 공유한다.
         /// </summary>
         public PcaAnalysisResult AnalyzeConvExperimentDocuments(IEnumerable<string> convExperimentDocuments)
         {
             var parser = new ActDataJsonParser();
-            IList<string> experimentRows = parser.ExpandDocuments(
-                convExperimentDocuments,
-                "CONV_EXPER_CTN");
+            IList<string> experimentRows = parser.ExpandDocuments(convExperimentDocuments, "CONV_EXPER_CTN");
             return Analyze(experimentRows);
         }
 
         /// <summary>
-        /// ?꾩껜 遺꾩꽍 ?쒖꽌瑜???怨녹뿉??蹂댁옣?쒕떎.
-        /// JSON 異붿텧 -> ?遺꾩궛 ?쒓굅 -> StandardScaler -> PCA -> KNN -> 寃利??쒖꽌??
-        /// PCA? KNN? 媛숈? StandardizedMatrix瑜?怨듭쑀?섎?濡??뱀쭠 ?쒖꽌媛 ?щ씪吏????녿떎.
+        /// 전체 분석 순서를 한 곳에서 보장한다.
+        /// JSON 추출 -> 저분산 제거 -> StandardScaler -> PCA -> KNN -> 검증 순서다.
+        /// PCA와 KNN은 같은 StandardizedMatrix를 공유하므로 특징 좌표계가 달라지지 않는다.
         /// </summary>
         public PcaAnalysisResult Analyze(IEnumerable<string> jsonSamples)
         {
@@ -884,7 +882,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                     return difference * difference;
                 });
 
-                // 遺꾩궛??1e-10 ?댄븯??而щ읆? ?뺣낫?됱씠 ?녾퀬 ?쒖?????0?쇰줈 ?섎늻寃??섎?濡??쒓굅?쒕떎.
+                // 분산이 기준값 이하인 컬럼은 정보량이 거의 없고 표준화 시 0으로 나누게 되므로 제거한다.
                 if (variance <= varianceThreshold)
                 {
                     excluded.Add(fieldName);
@@ -1005,7 +1003,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 transformed[row] = new double[Means.Length];
                 for (int column = 0; column < Means.Length; column++)
                 {
-                    // StandardScaler 怨듭떇: z = (?먮낯媛?- ?숈뒿 ?됯퇏) / ?숈뒿 ?쒖??몄감
+                    // StandardScaler 공식: z = (원본값 - 학습 평균) / 학습 표준편차
                     transformed[row][column] = (matrix[row][column] - Means[column])
                         / StandardDeviations[column];
                 }
@@ -1050,8 +1048,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public int[] Iterations { get; private set; }
         public StandardScalerModel Scaler { get; private set; }
 
-        // 외부에서 계산한 component를 기존 차트/진단 DTO에 담기 위한 어댑터입니다.
-        // 기본 수동 PCA 흐름에서는 Fit 메서드가 covariance/eigenvector를 직접 계산합니다.
+        // 외부에서 계산한 component를 기존 차트/진단 DTO에 담기 위한 어댑터다.
+        // 기본 수동 PCA 흐름에서는 Fit 메서드가 covariance/eigenvector를 직접 계산한다.
         internal static PcaProjectionModel FromComponents(double[][] components, double[] eigenValues, double[] ratios, StandardScalerModel scaler)
         {
             if (components == null || components.Length == 0)
@@ -1124,7 +1122,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 scores[row] = new double[Components.Length];
                 for (int component = 0; component < Components.Length; component++)
                 {
-                    // 媛??쒖???踰≫꽣瑜?怨좎쑀踰≫꽣???댁쟻?섎㈃ ?대떦 二쇱꽦遺?醫뚰몴媛 ?쒕떎.
+                    // 표준화 벡터를 고유벡터에 내적하면 해당 주성분 좌표가 된다.
                     scores[row][component] = Dot(standardizedMatrix[row], Components[component]);
                 }
             }
@@ -1171,11 +1169,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             for (iteration = 1; iteration <= maxIterations; iteration++)
             {
                 double[] next = Multiply(matrix, vector);
-                // ??踰덉㎏ ?깅텇? 泥?踰덉㎏ ?깅텇怨?吏곴탳?섎룄濡?Gram-Schmidt 蹂댁젙?쒕떎.
+                // 두 번째 성분 이후는 이전 성분과 직교하도록 Gram-Schmidt 보정을 적용한다.
                 Orthogonalize(next, previousComponents);
                 Normalize(next);
 
-                // 怨좎쑀踰≫꽣 遺?몃뒗 ?꾩쓽?대?濡??댁쟾 踰≫꽣? 媛숈? 諛⑺뼢?쇰줈 留욎텣 ???섎졃 ?ㅼ감瑜?怨꾩궛?쒕떎.
+                // 고유벡터 부호는 임의이므로 이전 벡터와 같은 방향으로 맞춘 뒤 차이를 계산한다.
                 if (Dot(next, vector) < 0d)
                 {
                     MultiplyInPlace(next, -1d);
@@ -1356,7 +1354,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             int targetIndex;
             if (string.IsNullOrWhiteSpace(draftNo) || !indexByDraftNo.TryGetValue(draftNo.Trim(), out targetIndex))
             {
-                throw new KeyNotFoundException("議댁옱?섏? ?딅뒗 Draft_NO?낅땲?? " + (draftNo ?? string.Empty));
+                throw new KeyNotFoundException("존재하지 않는 Draft_NO입니다. " + (draftNo ?? string.Empty));
             }
 
             int safeCount = Math.Max(0, count);

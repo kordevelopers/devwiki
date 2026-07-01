@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
@@ -847,7 +847,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             int targetIndex;
             if (string.IsNullOrWhiteSpace(draftNo) || !indexByDraftNo.TryGetValue(draftNo.Trim(), out targetIndex))
             {
-                throw new KeyNotFoundException("議댁옱?섏? ?딅뒗 Draft_NO?낅땲?? " + (draftNo ?? string.Empty));
+                throw new KeyNotFoundException("존재하지 않는 Draft_NO입니다. " + (draftNo ?? string.Empty));
             }
 
             int safeCount = Math.Max(0, count);

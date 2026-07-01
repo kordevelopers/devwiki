@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,8 +8,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
     #region ACT_DATA Dict/List JSON Expansion
 
     /// <summary>
-    /// DB??ACT_DATA 臾몄옄?댁쓣 Dictionary/List 援ъ“濡??뚯떛?????ㅽ뿕 JSON 媛앹껜 紐⑸줉?쇰줈 ?뺢퇋?뷀븳??
-    /// ?⑥씪 媛앹껜, 理쒖긽??諛곗뿴, wrapper 媛앹껜??items/data 紐⑸줉, ?댁쨷 ?몄퐫??JSON 臾몄옄?댁쓣 泥섎━?쒕떎.
+    /// DB의 ACT_DATA 문자열을 Dictionary/List 구조로 파싱하고 실험 JSON 객체 목록으로 정규화한다.
+    /// 단일 객체, 최상위 배열, wrapper 객체의 items/data 목록, 이중 인코딩 JSON 문자열을 처리한다.
     /// </summary>
     public sealed class ActDataJsonParser
     {
@@ -30,9 +30,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 : jsonDocuments.ToArray();
             if (source.Length == 0)
             {
-                throw new ArgumentException(
-                    resolvedSourceName + " JSON 臾몄옄?댁씠 ?놁뒿?덈떎.",
-                    "jsonDocuments");
+                throw new ArgumentException(resolvedSourceName + " JSON 문서가 비어 있습니다.", "jsonDocuments");
             }
 
             var normalizedRows = new List<string>();
@@ -40,40 +38,26 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             {
                 if (string.IsNullOrWhiteSpace(source[documentIndex]))
                 {
-                    throw new FormatException(
-                        string.Format("{0}[{1}] JSON 臾몄옄?댁씠 鍮꾩뼱 ?덉뒿?덈떎.", resolvedSourceName, documentIndex));
+                    throw new FormatException(string.Format("{0}[{1}] JSON 문자열이 비어 있습니다.", resolvedSourceName, documentIndex));
                 }
 
                 object root;
                 try
                 {
-                    root = PcaJsonUtility.DeserializeObject(
-                        PcaJsonUtility.RemoveBom(source[documentIndex].Trim()));
+                    root = PcaJsonUtility.DeserializeObject(PcaJsonUtility.RemoveBom(source[documentIndex].Trim()));
                 }
                 catch (Exception ex) when (PcaJsonUtility.IsJsonException(ex))
                 {
-                    throw new FormatException(
-                        string.Format(
-                            "{0}[{1}] JSON ?뚯떛???ㅽ뙣?덉뒿?덈떎: {2}",
-                            resolvedSourceName,
-                            documentIndex,
-                            ex.Message),
-                        ex);
+                    throw new FormatException(string.Format("{0}[{1}] JSON 파싱에 실패했습니다: {2}",
+                        resolvedSourceName, documentIndex, ex.Message), ex);
                 }
 
                 int beforeCount = normalizedRows.Count;
-                CollectExperimentRows(
-                    root,
-                    normalizedRows,
-                    resolvedSourceName + "[" + documentIndex + "]",
-                    0);
+                CollectExperimentRows(root, normalizedRows, resolvedSourceName + "[" + documentIndex + "]", 0);
                 if (normalizedRows.Count == beforeCount)
                 {
-                    throw new FormatException(
-                        string.Format(
-                            "{0}[{1}]?먯꽌 Draft_NO瑜?媛吏??ㅽ뿕 媛앹껜瑜?李얠? 紐삵뻽?듬땲??",
-                            resolvedSourceName,
-                            documentIndex));
+                    throw new FormatException(string.Format("{0}[{1}]에서 Draft_NO를 가진 실험 객체를 찾지 못했습니다.",
+                        resolvedSourceName, documentIndex));
                 }
             }
 
@@ -89,7 +73,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
             if (depth > 64)
             {
-                throw new FormatException(path + "??JSON 以묒꺽 源딆씠媛 ?덉슜 踰붿쐞瑜?珥덇낵?덉뒿?덈떎.");
+                throw new FormatException(path + "의 JSON 중첩 깊이가 허용 범위를 초과했습니다.");
             }
 
             var dictionary = node as IDictionary<string, object>;
@@ -97,8 +81,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             {
                 if (ContainsDraftNo(dictionary))
                 {
-                    // 以묒꺽 媛앹껜/?レ옄 諛곗뿴? ???쒓린 諛?[index] ?쒓린濡??됲깂?뷀븳??
-                    // ?댄썑 PCA ?뚯씠?꾨씪?몄? ?됲깂?붾맂 ?ъ쟾???섏튂 leaf 媛믩쭔 ?뱀쭠?쇰줈 ?ъ슜?쒕떎.
+                    // 중첩 객체와 숫자 배열은 점 표기와 [index] 표기로 평탄화한다.
+                    // 이후 PCA 파이프라인은 평탄화된 사전의 수치 leaf 값만 특징으로 사용한다.
                     var flattened = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                     FlattenDictionary(dictionary, flattened, string.Empty, 0);
                     rows.Add(PcaJsonUtility.SerializeObject(flattened));
@@ -119,15 +103,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 try
                 {
                     CollectExperimentRows(
-                        PcaJsonUtility.DeserializeObject(
-                            PcaJsonUtility.RemoveBom(nestedJson.Trim())),
+                        PcaJsonUtility.DeserializeObject(PcaJsonUtility.RemoveBom(nestedJson.Trim())),
                         rows,
                         path + "(json-string)",
                         depth + 1);
                 }
                 catch (Exception ex) when (PcaJsonUtility.IsJsonException(ex))
                 {
-                    throw new FormatException(path + "??以묒꺽 JSON 臾몄옄???뚯떛???ㅽ뙣?덉뒿?덈떎.", ex);
+                    throw new FormatException(path + "의 중첩 JSON 문자열 파싱에 실패했습니다.", ex);
                 }
 
                 return;
@@ -157,7 +140,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         {
             if (depth > 64)
             {
-                throw new FormatException("?ㅽ뿕 JSON 媛앹껜??以묒꺽 源딆씠媛 ?덉슜 踰붿쐞瑜?珥덇낵?덉뒿?덈떎.");
+                throw new FormatException("실험 JSON 객체의 중첩 깊이가 허용 범위를 초과했습니다.");
             }
 
             foreach (KeyValuePair<string, object> pair in source)

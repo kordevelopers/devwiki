@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -131,7 +131,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
     {
         public PcaScatterDisplayOptions()
         {
-            FontName = "留묒? 怨좊뵓";
+            FontName = "맑은 고딕";
             ShowTitle = false;
             Title = string.Empty;
             BackgroundColor = Color.White;
@@ -281,7 +281,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             LightningScatterOptions scatterOptions = LightningScatterOptions.CreateDefaultBubble();
             PcaScatterDisplayOptions display = snapshot.Display ?? new PcaScatterDisplayOptions();
 
-            scatterOptions.FontName = string.IsNullOrWhiteSpace(display.FontName) ? "留묒? 怨좊뵓" : display.FontName.Trim();
+            scatterOptions.FontName = string.IsNullOrWhiteSpace(display.FontName) ? "맑은 고딕" : display.FontName.Trim();
             scatterOptions.ShowTitle = display.ShowTitle;
             scatterOptions.Title = display.Title ?? string.Empty;
             scatterOptions.BackgroundColor = display.BackgroundColor;

@@ -1,12 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
     /// <summary>
-    /// ?붾㈃ ?쒖뿰??CONV_EXPER_CTN ?됱쓣 ?앹꽦?쒕떎.
-    /// ?댁쁺 DataTable怨?媛숈? PcaExadataSourceRow/PcaExadataService 寃쎈줈瑜??ъ슜?쒕떎.
+    /// 화면 시연용 CONV_EXPER_CTN 샘플 행을 생성한다.
+    /// 운영 DataTable과 같은 PcaExadataSourceRow/PcaExadataService 경로를 사용한다.
     /// </summary>
     public sealed class PcaExadataSampleDataFactory
     {
@@ -41,16 +41,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         {
             for (int rowIndex = 0; rowIndex < count; rowIndex++)
             {
-                string draftNo = string.Format(
-                    CultureInfo.InvariantCulture,
-                    "{0}-{1:000}",
-                    draftPrefix,
-                    rowIndex + 1);
+                string draftNo = string.Format(CultureInfo.InvariantCulture, "{0}-{1:000}", draftPrefix, rowIndex + 1);
                 bool isPass = rowIndex < (count * 2 / 3);
                 string labelY = isPass ? "PASS" : "FAIL";
-                double qualityFactor = typeOffset
-                    + (isPass ? -0.7d : 1.0d)
-                    + NextGaussian(0d, 0.35d);
+                double qualityFactor = typeOffset + (isPass ? -0.7d : 1.0d) + NextGaussian(0d, 0.35d);
                 double processFactor = NextGaussian(0d, 0.8d);
 
                 var experiment = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
@@ -66,19 +60,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                         + (qualityFactor * (0.7d + Math.Sin(featureNumber * 0.19d)) * 4.5d)
                         + (processFactor * Math.Cos(featureNumber * 0.13d) * 2.2d)
                         + NextGaussian(0d, 0.45d);
-                    experiment[string.Format(
-                        CultureInfo.InvariantCulture,
-                        "FEATURE_{0:000}",
-                        featureNumber)] = Math.Round(value, 6);
+                    experiment[string.Format(CultureInfo.InvariantCulture, "FEATURE_{0:000}", featureNumber)] = Math.Round(value, 6);
                 }
 
                 string json = PcaJsonUtility.SerializeObject(new[] { experiment });
-                rows.Add(new PcaExadataSourceRow(
-                    rows.Count,
-                    draftNo,
-                    parameterType,
-                    labelY,
-                    json));
+                rows.Add(new PcaExadataSourceRow(rows.Count, draftNo, parameterType, labelY, json));
             }
         }
 
@@ -86,8 +72,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         {
             double u1 = 1d - random.NextDouble();
             double u2 = 1d - random.NextDouble();
-            double normal = Math.Sqrt(-2d * Math.Log(u1))
-                * Math.Sin(2d * Math.PI * u2);
+            double normal = Math.Sqrt(-2d * Math.Log(u1)) * Math.Sin(2d * Math.PI * u2);
             return mean + (standardDeviation * normal);
         }
     }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -274,7 +274,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
     public sealed class PcaExperimentDataMissingException : InvalidOperationException
     {
         public PcaExperimentDataMissingException(string draftNo)
-            : base("DRAFT_NO '" + (draftNo ?? string.Empty) + "'???ㅽ뿕 ?곗씠?곌? ?놁뒿?덈떎.")
+            : base("DRAFT_NO '" + (draftNo ?? string.Empty) + "'의 실험 데이터가 없습니다.")
         {
             DraftNo = draftNo ?? string.Empty;
         }
@@ -309,7 +309,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             {
                 throw new FormatException(
                     string.Format(
-                        "CONV_EXPER_CTN[{0}] JSON ?뚯떛???ㅽ뙣?덉뒿?덈떎. DRAFT_NO={1}: {2}",
+                        "CONV_EXPER_CTN[{0}] JSON 파싱에 실패했습니다. DRAFT_NO={1}: {2}",
                         source.SourceRowIndex,
                         source.DraftNo,
                         ex.Message),
@@ -326,7 +326,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             {
                 throw new FormatException(
                     string.Format(
-                        "CONV_EXPER_CTN[{0}]?먮뒗 ?ㅽ뿕 媛앹껜媛 ??嫄댁씠?댁빞 ?⑸땲?? DRAFT_NO={1}, Count={2}",
+                        "CONV_EXPER_CTN[{0}]에는 실험 객체가 한 건이어야 합니다. DRAFT_NO={1}, Count={2}",
                         source.SourceRowIndex,
                         source.DraftNo,
                         items.Count));
@@ -337,7 +337,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             {
                 throw new FormatException(
                     string.Format(
-                        "CONV_EXPER_CTN[{0}]??諛곗뿴 ?먯냼媛 JSON 媛앹껜媛 ?꾨떃?덈떎. DRAFT_NO={1}",
+                        "CONV_EXPER_CTN[{0}]의 배열 요소가 JSON 객체가 아닙니다. DRAFT_NO={1}",
                         source.SourceRowIndex,
                         source.DraftNo));
             }
@@ -395,7 +395,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         {
             if (depth > 64)
             {
-                throw new FormatException("CONV_EXPER_CTN??JSON 以묒꺽 源딆씠媛 ?덉슜 踰붿쐞瑜?珥덇낵?덉뒿?덈떎.");
+                throw new FormatException("CONV_EXPER_CTN의 JSON 중첩 깊이가 허용 범위를 초과했습니다.");
             }
 
             foreach (KeyValuePair<string, object> pair in source)
@@ -689,7 +689,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             string resolvedDraftNo = (draftNo ?? string.Empty).Trim();
             if (resolvedDraftNo.Length == 0)
             {
-                throw new ArgumentException("議고쉶??DRAFT_NO瑜??낅젰?댁빞 ?⑸땲??", "draftNo");
+                throw new ArgumentException("조회할 DRAFT_NO를 입력해야 합니다.", "draftNo");
             }
 
             return Task.Run(delegate
@@ -703,7 +703,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 {
                     throw new KeyNotFoundException(
                         string.Format(
-                            "?좏깮??PARAM_TYP '{0}'??DRAFT_NO '{1}'媛 ?놁뒿?덈떎.",
+                            "선택한 PARAM_TYP '{0}'에 DRAFT_NO '{1}'가 없습니다.",
                             PcaParameterTypeParser.ToDatabaseValue(parameterType),
                             resolvedDraftNo));
                 }
@@ -759,7 +759,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             string resolvedDraftNo = (draftNo ?? string.Empty).Trim();
             if (resolvedDraftNo.Length == 0)
             {
-                throw new ArgumentException("議고쉶??DRAFT_NO瑜??낅젰?댁빞 ?⑸땲??", "draftNo");
+                throw new ArgumentException("조회할 DRAFT_NO를 입력해야 합니다.", "draftNo");
             }
 
             return Task.Run(delegate
@@ -772,7 +772,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 {
                     throw new KeyNotFoundException(
                         string.Format(
-                            "?좏깮??PARAM_TYP '{0}'??DRAFT_NO '{1}'媛 ?놁뒿?덈떎.",
+                            "선택한 PARAM_TYP '{0}'에 DRAFT_NO '{1}'가 없습니다.",
                             PcaParameterTypeParser.ToDatabaseValue(parameterType),
                             resolvedDraftNo));
                 }
@@ -849,8 +849,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             if (population.Count == 0)
             {
                 throw new InvalidOperationException(
-                    "?좏깮??PARAM_TYP '" + PcaParameterTypeParser.ToDatabaseValue(parameterType)
-                    + "'??PCA ?곗씠?곌? ?놁뒿?덈떎.");
+                    "선택한 PARAM_TYP '" + PcaParameterTypeParser.ToDatabaseValue(parameterType)
+                    + "'의 PCA 데이터가 없습니다.");
             }
 
             string duplicateDraft = population
@@ -861,7 +861,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             if (!string.IsNullOrEmpty(duplicateDraft))
             {
                 throw new InvalidOperationException(
-                    "?좏깮??PARAM_TYP?먯꽌 DRAFT_NO媛 以묐났?섏뿀?듬땲?? " + duplicateDraft);
+                    "선택한 PARAM_TYP에서 DRAFT_NO가 중복되었습니다. " + duplicateDraft);
             }
 
             return population;
@@ -907,7 +907,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             if (parsed.Count < 3)
             {
                 throw new InvalidOperationException(
-                    "PCA 遺꾩꽍?먮뒗 ?ㅽ뿕 ?곗씠?곌? ?덈뒗 ?됱씠 理쒖냼 3嫄??꾩슂?⑸땲??");
+                    "PCA 분석에는 실험 데이터가 있는 행이 최소 3건 필요합니다.");
             }
 
             IList<string> normalizedRows = parsed.Select(item =>
