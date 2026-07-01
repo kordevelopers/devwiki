@@ -57,8 +57,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             PointSize = 15f;
             ShowLine = false;
             ShowPoints = true;
-            PassResultName = PcaJsonSampleDataFactory.PassResult;
-            ReviewResultName = PcaJsonSampleDataFactory.ReviewResult;
+            PassResultName = "Pass";
+            ReviewResultName = "Review";
             PassColor = Color.FromArgb(151, 211, 169);
             ReviewColor = Color.FromArgb(238, 171, 210);
             DefaultColor = Color.FromArgb(129, 178, 231);

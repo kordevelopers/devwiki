@@ -667,14 +667,17 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
         /// <summary>
         /// 전체 분석 순서를 한 곳에서 보장한다.
-        /// JSON 추출 -> 저분산 제거 -> StandardScaler -> PCA -> KNN -> 검증 순서다.
+        /// JSON 파싱 -> 수치 feature 행렬 생성 -> 정규화 -> PCA 2차원 좌표 생성 -> KNN 거리 인덱스 생성 -> 검증 순서다.
         /// PCA와 KNN은 같은 StandardizedMatrix를 공유하므로 특징 좌표계가 달라지지 않는다.
         /// </summary>
         public PcaAnalysisResult Analyze(IEnumerable<string> jsonSamples)
         {
+            // rows: Draft별 원본 JSON에서 식별자/라벨과 수치 후보를 분리한 중간 데이터다.
             List<PcaSourceRow> rows = ParseRows(jsonSamples);
+            // features.Matrix: 행은 Draft, 열은 살아남은 수치 feature인 PCA 입력 수치행렬이다.
             FeatureMatrixResult features = BuildFeatureMatrix(rows, options);
             StandardScalerModel scaler = StandardScalerModel.Fit(features.Matrix, features.FeatureNames);
+            // standardized: 각 feature별 평균을 빼고 표준편차로 나눈 정규화 행렬이다.
             double[][] standardized = scaler.Transform(features.Matrix);
             PcaProjectionModel pca = PcaProjectionModel.Fit(
                 standardized,
@@ -682,6 +685,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 options.MaxIterations,
                 options.ConvergenceTolerance,
                 scaler);
+            // scores[row][0]이 X1, scores[row][1]이 X2가 되며 차트 좌표로 사용된다.
             double[][] scores = pca.Transform(standardized);
 
             var scatterData = new List<ScatterSampleData>(rows.Count);
@@ -765,6 +769,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 var fieldNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (KeyValuePair<string, object> pair in dictionary)
                 {
+                    // Draft_NO와 AI_RSLT_Val은 검색/라벨용 데이터라 PCA 계산 feature에서는 제외한다.
                     if (MetadataNames.Contains(pair.Key))
                     {
                         continue;
@@ -840,6 +845,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return !double.IsNaN(numericValue) && !double.IsInfinity(numericValue);
         }
 
+        /// <summary>
+        /// 모든 Draft에서 사용할 수 있는 수치 feature만 골라 PCA 입력 행렬을 만든다.
+        /// 누락이 있더라도 옵션 기준을 통과하면 feature 평균값으로 보정한다.
+        /// </summary>
         private static FeatureMatrixResult BuildFeatureMatrix(IList<PcaSourceRow> rows, PcaAnalysisOptions analysisOptions)
         {
             PcaAnalysisOptions effectiveOptions = analysisOptions ?? new PcaAnalysisOptions();
@@ -902,6 +911,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 .Select(row => included.Select(feature =>
                 {
                     double value;
+                    // 누락된 값은 feature 평균으로 채워 행렬의 모든 row가 같은 열 구조를 갖게 한다.
                     return row.NumericValues.TryGetValue(feature, out value)
                         ? value
                         : imputationMeans[feature];
@@ -970,6 +980,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             var standardDeviations = new double[columnCount];
             for (int column = 0; column < columnCount; column++)
             {
+                // feature별 평균과 표준편차는 전체 모집단 기준으로 한 번만 계산한다.
                 means[column] = matrix.Average(row => row[column]);
                 double variance = matrix.Average(row =>
                 {
@@ -1003,7 +1014,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 transformed[row] = new double[Means.Length];
                 for (int column = 0; column < Means.Length; column++)
                 {
-                    // StandardScaler 공식: z = (원본값 - 학습 평균) / 학습 표준편차
+                    // 정규화 공식: 현재 값에서 모집단 평균을 빼고 모집단 표준편차로 나눈다.
                     transformed[row][column] = (matrix[row][column] - Means[column])
                         / StandardDeviations[column];
                 }
@@ -1084,6 +1095,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
             int featureCount = standardizedMatrix[0].Length;
             int safeComponentCount = Math.Min(Math.Max(1, componentCount), Math.Min(featureCount, 2));
+            // 공분산 행렬은 정규화된 feature들이 함께 증가/감소하는 방향을 찾기 위한 입력이다.
             double[,] covariance = BuildCovarianceMatrix(standardizedMatrix);
             double totalVariance = Enumerable.Range(0, featureCount).Sum(index => covariance[index, index]);
             var components = new List<double[]>();
@@ -1092,6 +1104,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
             for (int componentIndex = 0; componentIndex < safeComponentCount; componentIndex++)
             {
+                // 가장 큰 분산 방향부터 차례로 찾는다. 첫 번째가 X1, 두 번째가 X2 축 방향이다.
                 EigenPair pair = FindDominantEigenPair(
                     covariance,
                     components,
@@ -1122,7 +1135,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 scores[row] = new double[Components.Length];
                 for (int component = 0; component < Components.Length; component++)
                 {
-                    // 표준화 벡터를 고유벡터에 내적하면 해당 주성분 좌표가 된다.
+                    // 표준화 벡터와 PC 가중치 벡터를 내적한 값이 차트 좌표 X1/X2다.
                     scores[row][component] = Dot(standardizedMatrix[row], Components[component]);
                 }
             }
@@ -1464,6 +1477,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             double squaredDistance = 0d;
             for (int index = 0; index < left.Length; index++)
             {
+                // KNN 거리는 정규화된 전체 feature 벡터의 차이를 제곱합으로 누적한다.
                 double difference = left[index] - right[index];
                 squaredDistance += difference * difference;
             }

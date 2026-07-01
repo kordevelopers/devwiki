@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-
-namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
+﻿namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
     #region PCA Scatter Output Contract
 
@@ -27,97 +23,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return string.IsNullOrWhiteSpace(TooltipText)
                 ? DraftNo ?? string.Empty
                 : TooltipText;
-        }
-    }
-
-    #endregion
-
-    #region JSON Sample Data Generation
-
-    /// <summary>
-    /// 회사 데이터 구조를 흉내 낸 PCA 테스트 JSON 생성기다.
-    /// 기본값은 실험 80건이며, 각 JSON에는 수치 feature 80개와 문자열/상수 컬럼이 함께 들어간다.
-    /// 전처리의 문자열 제외, 상수 feature 제외, 숫자 문자열 변환을 검증하기 위한 데이터다.
-    /// </summary>
-    public sealed class PcaJsonSampleDataFactory
-    {
-        public const string PassResult = "Pass";
-        public const string ReviewResult = "Review";
-        public const int DefaultSampleCount = 80;
-        public const int DefaultFeatureCount = 80;
-
-        private readonly Random random;
-
-        public PcaJsonSampleDataFactory(int seed)
-        {
-            random = new Random(seed);
-        }
-
-        /// <summary>
-        /// 품질/공정/설비 인자를 조합해서 서로 상관관계가 있는 80개 feature를 만든다.
-        /// PCA가 여러 원본 feature의 공통 변화 방향을 X1/X2로 축약하는 과정을 검증하기 위한 데이터다.
-        /// </summary>
-        public IList<string> CreateDefaultJsonSamples()
-        {
-            var result = new List<string>(DefaultSampleCount);
-
-            for (int sampleIndex = 0; sampleIndex < DefaultSampleCount; sampleIndex++)
-            {
-                bool isPass = sampleIndex < 52;
-                string aiResult = isPass ? PassResult : ReviewResult;
-
-                // 클래스 차이를 만들기 위해 품질 인자는 라벨에 따라 분리하고, 공정/설비 인자는 노이즈처럼 섞는다.
-                double qualityFactor = (isPass ? -1.05d : 1.25d) + NextGaussian(0d, 0.38d);
-                double processFactor = NextGaussian(0d, 1d);
-                double equipmentFactor = NextGaussian(0d, 0.75d);
-
-                var row = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
-                {
-                    { "Draft_NO", string.Format("DRAFT-{0:000}", sampleIndex + 1) },
-                    { "AI_RSLT_Val", aiResult },
-                    { "LOT_ID", string.Format("LOT-{0:0000}", 1000 + sampleIndex) },
-                    { "TEXT_NOTE", isPass ? "stable" : "review-required" }
-                };
-
-                for (int featureIndex = 0; featureIndex < DefaultFeatureCount; featureIndex++)
-                {
-                    int featureNumber = featureIndex + 1;
-                    string featureName = string.Format("Feature_{0:000}", featureNumber);
-                    double qualityLoading = 0.55d + Math.Sin(featureNumber * 0.37d);
-                    double processLoading = Math.Cos(featureNumber * 0.23d);
-                    double equipmentLoading = Math.Sin(featureNumber * 0.11d);
-                    double baseline = 50d + (featureNumber * 0.65d);
-                    double measurementNoise = NextGaussian(0d, 0.55d + ((featureNumber % 5) * 0.06d));
-                    double value = baseline
-                        + (qualityFactor * qualityLoading * 5.5d)
-                        + (processFactor * processLoading * 2.8d)
-                        + (equipmentFactor * equipmentLoading * 2.2d)
-                        + measurementNoise;
-                    value = Math.Round(value, 6);
-
-                    // 일부 feature는 실제 JSON에서 자주 보이는 숫자 문자열 형태로 넣는다.
-                    // 전처리 단계가 숫자와 숫자 문자열을 동일하게 수치화하는지 검증한다.
-                    row[featureName] = featureNumber % 10 == 0
-                        ? (object)value.ToString("0.######", CultureInfo.InvariantCulture)
-                        : value;
-                }
-
-                // 모든 행에서 값이 같으므로 분산 기준 필터에서 반드시 제거되어야 한다.
-                row["CONST_ZERO"] = 0d;
-                row["CONST_ONE"] = 1d;
-                result.Add(PcaJsonUtility.SerializeObject(row));
-            }
-
-            return result;
-        }
-
-        private double NextGaussian(double mean, double standardDeviation)
-        {
-            // Box-Muller 변환으로 표준 정규분포 난수를 생성한다.
-            double u1 = 1d - random.NextDouble();
-            double u2 = 1d - random.NextDouble();
-            double standardNormal = Math.Sqrt(-2d * Math.Log(u1)) * Math.Sin(2d * Math.PI * u2);
-            return mean + (standardDeviation * standardNormal);
         }
     }
 

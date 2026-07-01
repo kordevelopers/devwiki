@@ -291,6 +291,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
     internal sealed class ConvExperimentRowParser
     {
+        /// <summary>
+        /// CONV_EXPER_CTN JSON 한 건을 PCA가 사용할 수 있는 원본값 사전과 수치 feature 사전으로 바꾼다.
+        /// </summary>
         public bool TryParse(PcaExadataSourceRow source, out ParsedPcaExperiment experiment)
         {
             experiment = null;
@@ -302,6 +305,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             object root;
             try
             {
+                // Newtonsoft 기반 유틸로 JSON 문자열을 Dictionary/List 구조로 변환한다.
                 root = PcaJsonUtility.DeserializeObject(
                     source.RawConvExperimentJson.Trim().TrimStart('\uFEFF'));
             }
@@ -343,11 +347,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             }
 
             var flattened = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            // 중첩 객체와 배열은 "부모.자식", "배열[0]" 형태의 key로 펼쳐 feature 후보를 잃지 않게 한다.
             Flatten(dictionary, flattened, string.Empty, 0);
             var numeric = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             foreach (KeyValuePair<string, object> pair in flattened)
             {
                 double value;
+                // 메타데이터와 문자열 설명값은 제외하고, 유한한 숫자로 바뀌는 값만 PCA feature가 된다.
                 if (!IsMetadataFeature(pair.Key)
                     && TryConvertFiniteNumber(pair.Value, out value))
                 {
@@ -874,6 +880,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             PcaScatterAnalysisOptions analysisOptions,
             string requiredDraftNo)
         {
+            // 1단계: DB 행의 CONV_EXPER_CTN JSON을 파싱해 Draft별 실험 객체와 수치 feature 사전을 만든다.
             var parser = new ConvExperimentRowParser();
             var parsed = new List<ParsedPcaExperiment>();
             int missingCount = 0;
@@ -910,6 +917,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                     "PCA 분석에는 실험 데이터가 있는 행이 최소 3건 필요합니다.");
             }
 
+            // 2단계: 파싱된 수치 feature를 PCA 파이프라인이 받는 JSON row 형식으로 정규화한다.
+            // Draft_NO와 AI_RSLT_Val은 식별/라벨로만 쓰고, 실제 PCA feature에서는 제외된다.
             IList<string> normalizedRows = parsed.Select(item =>
             {
                 var row = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
@@ -927,6 +936,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
             PcaAnalysisOptions pipelineOptions =
                 (analysisOptions ?? new PcaScatterAnalysisOptions()).ToPipelineOptions();
+            // 3단계: 수치 feature 선택, 정규화, PCA 좌표 생성, KNN 인덱스 생성을 한 번에 수행한다.
             PcaAnalysisResult analysis = new PcaAnalysisPipeline(pipelineOptions).Analyze(normalizedRows);
             PcaFeatureSelectionReport featureSelectionReport =
                 PcaFeatureSelectionReport.CreateFromParsedExperiments(
@@ -939,6 +949,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             {
                 ScatterSampleData sample = analysis.ScatterData[index];
                 ParsedPcaExperiment source = parsed[index];
+                // 4단계: 화면 좌표(X1/X2), 원본 feature, 정규화 벡터를 한 record에 묶어 클릭/로그/그리드에서 재사용한다.
                 var record = new PcaExperimentRecord(
                     source.Source,
                     source.FlattenedValues,

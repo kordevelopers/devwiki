@@ -31,6 +31,7 @@
 - `Scatter/ManualPcaScatter/PcaScatterPopupDataProvider.cs`
 - `Scatter/ManualPcaScatter/PcaScatterSeriesBuilder.cs`
 - `Scatter/ManualPcaScatter/ScatterSampleData.cs`
+- `Scatter/ManualPcaScatter/PCA_PROCESS_GUIDE.md`
 - `Scatter/Common/LightningScatter.cs`
 
 ## 필요한 외부 참조

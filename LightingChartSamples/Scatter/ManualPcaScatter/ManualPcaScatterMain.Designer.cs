@@ -44,6 +44,7 @@
             this.draftNoTextBox = new System.Windows.Forms.TextBox();
             this.searchButton = new System.Windows.Forms.Button();
             this.refreshAllButton = new System.Windows.Forms.Button();
+            this.analysisLogButton = new System.Windows.Forms.Button();
             this.preferMemoryCheckBox = new System.Windows.Forms.CheckBox();
             this.chartHost = new System.Windows.Forms.Panel();
             this.nearestNeighborGrid = new System.Windows.Forms.DataGridView();
@@ -125,6 +126,7 @@
             this.commandPanel.Controls.Add(this.draftNoTextBox);
             this.commandPanel.Controls.Add(this.searchButton);
             this.commandPanel.Controls.Add(this.refreshAllButton);
+            this.commandPanel.Controls.Add(this.analysisLogButton);
             this.commandPanel.Controls.Add(this.preferMemoryCheckBox);
             this.commandPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.commandPanel.Location = new System.Drawing.Point(12, 38);
@@ -211,10 +213,21 @@
             this.refreshAllButton.UseVisualStyleBackColor = true;
             this.refreshAllButton.Click += new System.EventHandler(this.RefreshAllButton_Click);
             //
+            // analysisLogButton
+            //
+            this.analysisLogButton.Location = new System.Drawing.Point(716, 1);
+            this.analysisLogButton.Margin = new System.Windows.Forms.Padding(0, 1, 8, 1);
+            this.analysisLogButton.Name = "analysisLogButton";
+            this.analysisLogButton.Size = new System.Drawing.Size(104, 28);
+            this.analysisLogButton.TabIndex = 7;
+            this.analysisLogButton.Text = "로그 열기";
+            this.analysisLogButton.UseVisualStyleBackColor = true;
+            this.analysisLogButton.Click += new System.EventHandler(this.AnalysisLogButton_Click);
+            //
             // preferMemoryCheckBox
             //
             this.preferMemoryCheckBox.AutoSize = true;
-            this.preferMemoryCheckBox.Location = new System.Drawing.Point(720, 6);
+            this.preferMemoryCheckBox.Location = new System.Drawing.Point(832, 6);
             this.preferMemoryCheckBox.Margin = new System.Windows.Forms.Padding(4, 6, 0, 0);
             this.preferMemoryCheckBox.Name = "preferMemoryCheckBox";
             this.preferMemoryCheckBox.Size = new System.Drawing.Size(129, 19);
@@ -287,6 +300,7 @@
         private System.Windows.Forms.TextBox draftNoTextBox;
         private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.Button refreshAllButton;
+        private System.Windows.Forms.Button analysisLogButton;
         private System.Windows.Forms.CheckBox preferMemoryCheckBox;
         private System.Windows.Forms.Panel chartHost;
         private System.Windows.Forms.DataGridView nearestNeighborGrid;
