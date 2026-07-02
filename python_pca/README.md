@@ -59,6 +59,8 @@ PCA_ORACLE_PORT=1521
 PCA_ORACLE_SERVICE_NAME=EXADATA_SERVICE
 PCA_ORACLE_USER=your_user
 PCA_ORACLE_PASSWORD=your_password
+PCA_SQL_FILE=queries/exadata_pca.sql
+PCA_PARAM_TYP=RESPONSE
 ```
 
 접속만 먼저 확인하려면 VS Code 작업 `Test Oracle oracledb connection`을 실행합니다.
@@ -114,8 +116,28 @@ ODBC 접속 확인은 VS Code 작업 `Test Oracle ODBC connection`으로 실행�
 쿼리 결과에는 아래 컬럼이 필요합니다.
 
 - `DRAFT_NO`
+- `ENGR_RSLT_VAL` 또는 `LABEL_Y`
+- `RSLT_CD`
 - `PARAM_TYP`
-- `LABEL_Y`
 - `CONV_EXPER_CTN`
+
+여러 줄 SQL은 `.env`에 직접 넣지 말고 `PCA_SQL_FILE`로 지정한 `.sql` 파일에 넣습니다.
+기본 샘플 파일은 `queries/exadata_pca.sql`입니다.
+
+```sql
+SELECT
+    M.DRAFT_NO,
+    J.ENGR_RSLT_VAL,
+    J.RSLT_CD,
+    M.PARAM_TYP,
+    M.CONV_EXPER_CTN
+FROM TASADM.PCCB_INFER_RSLT_INF M
+JOIN TASADM.PCCB_JUDGE_RSLT_INF J
+    ON M.DRAFT_NO = J.DRAFT_NO
+   AND M.PARAM_TYP = J.PARAM_TYP
+WHERE M.CHG_TM > SYSDATE - 10
+  AND J.ENGR_RSLT_VAL IS NOT NULL
+  AND M.CONV_EXPER_CTN IS NOT NULL
+```
 
 `CONV_EXPER_CTN`은 JSON 객체 또는 객체 1개를 담은 JSON 배열이어야 합니다. 중첩 객체/배열은 `A.B`, `A[0]` 형태로 펼친 뒤 숫자 feature만 PCA에 사용합니다.

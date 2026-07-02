@@ -29,7 +29,7 @@ class PcaResult:
 
 
 def run_pca(feature_frame: pd.DataFrame, variance_threshold: float = 1e-10) -> PcaResult:
-    metadata_columns = {"DRAFT_NO", "LABEL_Y"}
+    metadata_columns = {"DRAFT_NO", "LABEL_Y", "RSLT_CD"}
     candidates = [column for column in feature_frame.columns if column not in metadata_columns]
     numeric = feature_frame[candidates].apply(pd.to_numeric, errors="coerce")
     numeric = numeric.dropna(axis=1, how="all")
@@ -66,6 +66,9 @@ def run_pca(feature_frame: pd.DataFrame, variance_threshold: float = 1e-10) -> P
         {
             "DRAFT_NO": feature_frame["DRAFT_NO"].astype(str).values,
             "LABEL_Y": feature_frame["LABEL_Y"].astype(str).values,
+            "RSLT_CD": feature_frame["RSLT_CD"].astype(str).values
+            if "RSLT_CD" in feature_frame.columns
+            else "",
             "X1": coordinates[:, 0],
             "X2": coordinates[:, 1],
         }

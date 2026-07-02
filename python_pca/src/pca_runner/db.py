@@ -9,6 +9,7 @@ from .sample_data import build_sample_rows
 
 
 REQUIRED_COLUMNS = {"DRAFT_NO", "PARAM_TYP", "LABEL_Y", "CONV_EXPER_CTN"}
+OPTIONAL_COLUMNS = ["RSLT_CD"]
 
 
 def load_source_rows(config: AppConfig) -> pd.DataFrame:
@@ -24,15 +25,28 @@ def load_source_rows(config: AppConfig) -> pd.DataFrame:
 def normalize_source_columns(frame: pd.DataFrame) -> pd.DataFrame:
     renamed = {name: str(name).upper() for name in frame.columns}
     result = frame.rename(columns=renamed)
+    result = _normalize_label_column(result)
     missing = REQUIRED_COLUMNS.difference(result.columns)
     if missing:
         raise ValueError(f"Source query is missing required columns: {sorted(missing)}")
-    result = result[list(REQUIRED_COLUMNS)].copy()
+    selected_columns = ["DRAFT_NO", "PARAM_TYP", "LABEL_Y", "CONV_EXPER_CTN"]
+    selected_columns.extend(column for column in OPTIONAL_COLUMNS if column in result.columns)
+    result = result[selected_columns].copy()
     result["DRAFT_NO"] = result["DRAFT_NO"].astype(str).str.strip()
     result["PARAM_TYP"] = result["PARAM_TYP"].astype(str).str.strip().str.upper()
     result["LABEL_Y"] = result["LABEL_Y"].astype(str).str.strip()
     result["CONV_EXPER_CTN"] = result["CONV_EXPER_CTN"].map(_to_json_text)
+    if "RSLT_CD" in result.columns:
+        result["RSLT_CD"] = result["RSLT_CD"].astype(str).str.strip()
     return result
+
+
+def _normalize_label_column(frame: pd.DataFrame) -> pd.DataFrame:
+    if "LABEL_Y" in frame.columns:
+        return frame
+    if "ENGR_RSLT_VAL" in frame.columns:
+        return frame.rename(columns={"ENGR_RSLT_VAL": "LABEL_Y"})
+    return frame
 
 
 def _load_with_odbc(config: AppConfig) -> pd.DataFrame:

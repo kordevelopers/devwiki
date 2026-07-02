@@ -36,6 +36,8 @@ def build_feature_frame(source: pd.DataFrame, param_type: str) -> pd.DataFrame:
             continue
         numeric["DRAFT_NO"] = row["DRAFT_NO"]
         numeric["LABEL_Y"] = row["LABEL_Y"]
+        if "RSLT_CD" in row:
+            numeric["RSLT_CD"] = row["RSLT_CD"]
         records.append(numeric)
 
     if len(records) < 3:

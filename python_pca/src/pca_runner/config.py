@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -21,6 +22,7 @@ class AppConfig:
     param_type: str
     target_draft_no: str
     sql: str
+    sql_file: str
     oracle_host: str
     oracle_port: str
     oracle_service_name: str
@@ -39,11 +41,13 @@ def load_config(mode_override: str | None = None, target_override: str | None = 
     load_dotenv()
     mode = mode_override or os.getenv("PCA_DB_MODE", "sample")
     target = target_override if target_override is not None else os.getenv("PCA_TARGET_DRAFT_NO", "")
+    sql_file = os.getenv("PCA_SQL_FILE", "").strip()
     return AppConfig(
         mode=mode.strip().lower(),
         param_type=os.getenv("PCA_PARAM_TYP", "RESPONSE").strip().upper(),
         target_draft_no=target.strip(),
-        sql=os.getenv("PCA_SQL", DEFAULT_SQL),
+        sql=_load_sql(sql_file, os.getenv("PCA_SQL", DEFAULT_SQL)),
+        sql_file=sql_file,
         oracle_host=os.getenv("PCA_ORACLE_HOST", "").strip(),
         oracle_port=os.getenv("PCA_ORACLE_PORT", "1521").strip(),
         oracle_service_name=os.getenv("PCA_ORACLE_SERVICE_NAME", "").strip(),
@@ -57,3 +61,19 @@ def load_config(mode_override: str | None = None, target_override: str | None = 
         oracle_password=os.getenv("PCA_ORACLE_PASSWORD", ""),
         oracle_dsn=os.getenv("PCA_ORACLE_DSN", "").strip(),
     )
+
+
+def _load_sql(sql_file: str, fallback_sql: str) -> str:
+    if not sql_file:
+        return fallback_sql
+    path = Path(sql_file)
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    if not path.exists():
+        raise FileNotFoundError(f"PCA_SQL_FILE was not found: {path}")
+    sql = path.read_text(encoding="utf-8-sig").strip()
+    if sql.endswith(";"):
+        sql = sql[:-1].strip()
+    if not sql:
+        raise ValueError(f"PCA_SQL_FILE is empty: {path}")
+    return sql
