@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run PCA sample",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pca_runner",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "args": ["--mode", "sample"]
+    },
+    {
+      "name": "Run PCA from .env",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pca_runner",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "args": []
+    }
+  ]
+}
