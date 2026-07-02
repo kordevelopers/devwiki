@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 from pathlib import Path
+import sys
 
 from dotenv import load_dotenv
 
@@ -38,15 +39,16 @@ class AppConfig:
 
 
 def load_config(mode_override: str | None = None, target_override: str | None = None) -> AppConfig:
-    load_dotenv()
+    _load_dotenv_files()
     mode = mode_override or os.getenv("PCA_DB_MODE", "sample")
+    normalized_mode = mode.strip().lower()
     target = target_override if target_override is not None else os.getenv("PCA_TARGET_DRAFT_NO", "")
     sql_file = os.getenv("PCA_SQL_FILE", "").strip()
     return AppConfig(
-        mode=mode.strip().lower(),
+        mode=normalized_mode,
         param_type=os.getenv("PCA_PARAM_TYP", "RESPONSE").strip().upper(),
         target_draft_no=target.strip(),
-        sql=_load_sql(sql_file, os.getenv("PCA_SQL", DEFAULT_SQL)),
+        sql=DEFAULT_SQL if normalized_mode == "sample" else _load_sql(sql_file, os.getenv("PCA_SQL", DEFAULT_SQL)),
         sql_file=sql_file,
         oracle_host=os.getenv("PCA_ORACLE_HOST", "").strip(),
         oracle_port=os.getenv("PCA_ORACLE_PORT", "1521").strip(),
@@ -66,9 +68,7 @@ def load_config(mode_override: str | None = None, target_override: str | None = 
 def _load_sql(sql_file: str, fallback_sql: str) -> str:
     if not sql_file:
         return fallback_sql
-    path = Path(sql_file)
-    if not path.is_absolute():
-        path = Path.cwd() / path
+    path = _resolve_external_path(sql_file)
     if not path.exists():
         raise FileNotFoundError(f"PCA_SQL_FILE was not found: {path}")
     sql = path.read_text(encoding="utf-8-sig").strip()
@@ -77,3 +77,30 @@ def _load_sql(sql_file: str, fallback_sql: str) -> str:
     if not sql:
         raise ValueError(f"PCA_SQL_FILE is empty: {path}")
     return sql
+
+
+def _load_dotenv_files() -> None:
+    cwd_env = Path.cwd() / ".env"
+    app_env = _application_dir() / ".env"
+    if cwd_env.exists():
+        load_dotenv(cwd_env)
+    elif app_env.exists():
+        load_dotenv(app_env)
+    else:
+        load_dotenv()
+
+
+def _resolve_external_path(path_text: str) -> Path:
+    path = Path(path_text)
+    if path.is_absolute():
+        return path
+    cwd_path = Path.cwd() / path
+    if cwd_path.exists():
+        return cwd_path
+    return _application_dir() / path
+
+
+def _application_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path.cwd()

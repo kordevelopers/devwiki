@@ -32,6 +32,27 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup_python.ps1
 .\.venv\Scripts\python.exe -m pca_runner --mode sample --no-show-chart
 ```
 
+## EXE 빌드
+
+다른 사람에게 Python 설치 없이 전달하려면 PyInstaller로 one-dir EXE 배포 폴더를 만듭니다.
+
+```powershell
+cd python_pca
+powershell -ExecutionPolicy Bypass -File .\scripts\build_exe.ps1 -Clean
+```
+
+결과는 `dist/HynixTasPca` 폴더에 생성됩니다. 다른 사람에게는 `.exe` 파일 하나만 주지 말고 이 폴더 전체를 전달해야 합니다.
+
+배포받은 사용자는 `dist/HynixTasPca` 폴더에서:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+.\HynixTasPca.exe
+```
+
+EXE는 실행 파일 옆의 `.env`와 `queries\*.sql`을 읽습니다.
+
 ## 차트 표시
 
 차트는 `matplotlib.pyplot as plt`를 사용합니다.

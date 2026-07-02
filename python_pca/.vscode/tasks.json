@@ -35,6 +35,14 @@
       "command": ".\\.venv\\Scripts\\python.exe .\\scripts\\test_oracle_connection.py --mode odbc",
       "dependsOn": "Setup Python and packages",
       "problemMatcher": []
+    },
+    {
+      "label": "Build EXE",
+      "type": "shell",
+      "command": "powershell -ExecutionPolicy Bypass -File .\\scripts\\build_exe.ps1 -Clean",
+      "dependsOn": "Setup Python and packages",
+      "group": "build",
+      "problemMatcher": []
     }
   ]
 }
