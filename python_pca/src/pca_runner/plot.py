@@ -1,6 +1,15 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+import matplotlib
+
+if not os.environ.get("MPLBACKEND"):
+    try:
+        matplotlib.use("TkAgg")
+    except Exception:
+        pass
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -61,7 +70,8 @@ def save_scatter(
     fig.tight_layout()
     fig.savefig(output_path, dpi=150)
     if show_chart:
-        plt.show()
+        print(f"Opening PCA chart with matplotlib backend: {plt.get_backend()}")
+        plt.show(block=True)
     else:
         plt.close(fig)
 

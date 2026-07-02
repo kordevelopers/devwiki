@@ -1,6 +1,7 @@
 param(
     [string]$ExeName = "HynixTasPca",
-    [switch]$Clean
+    [switch]$Clean,
+    [switch]$SkipZip
 )
 
 $ErrorActionPreference = "Stop"
@@ -62,6 +63,25 @@ Example:
 The executable reads .env and queries\*.sql from this folder.
 "@
     $readme | Set-Content -LiteralPath (Join-Path $distDir "RUN_EXE_README.txt") -Encoding UTF8
+
+    if (-not $SkipZip) {
+        $zipPath = Join-Path ".\dist" "$ExeName.zip"
+        if (Test-Path -LiteralPath $zipPath) {
+            Remove-Item -LiteralPath $zipPath -Force
+        }
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        [System.IO.Compression.ZipFile]::CreateFromDirectory(
+            (Resolve-Path $distDir).Path,
+            (Join-Path (Resolve-Path ".\dist").Path "$ExeName.zip"),
+            [System.IO.Compression.CompressionLevel]::Optimal,
+            $false
+        )
+        if (-not (Test-Path -LiteralPath $zipPath)) {
+            throw "ZIP package was not created: $zipPath"
+        }
+        Write-Host "ZIP package:"
+        Write-Host (Resolve-Path $zipPath)
+    }
 
     Write-Host ""
     Write-Host "EXE build completed:"

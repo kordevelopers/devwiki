@@ -51,10 +51,11 @@ def run_pca(feature_frame: pd.DataFrame, variance_threshold: float = 1e-10) -> P
     pca = PCA(n_components=2, random_state=20260622)
     coordinates = pca.fit_transform(standardized)
 
+    knn_algorithm = "auto"
     nn = NearestNeighbors(
         n_neighbors=min(4, len(feature_frame)),
         metric="euclidean",
-        algorithm="auto",
+        algorithm=knn_algorithm,
     )
     nn.fit(standardized)
 
@@ -82,7 +83,7 @@ def run_pca(feature_frame: pd.DataFrame, variance_threshold: float = 1e-10) -> P
         excluded_count=len(excluded),
         pca=pca,
         standardized=standardized,
-        neighbor_algorithm=nn.algorithm,
+        neighbor_algorithm=knn_algorithm,
     )
     return PcaResult(
         points=points,
