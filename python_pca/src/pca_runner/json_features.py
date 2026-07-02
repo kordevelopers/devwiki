@@ -35,6 +35,7 @@ def build_feature_frame(source: pd.DataFrame, param_type: str) -> pd.DataFrame:
         if not numeric:
             continue
         numeric["DRAFT_NO"] = row["DRAFT_NO"]
+        numeric["PARAM_TYP"] = row["PARAM_TYP"]
         numeric["LABEL_Y"] = row["LABEL_Y"]
         if "RSLT_CD" in row:
             numeric["RSLT_CD"] = row["RSLT_CD"]

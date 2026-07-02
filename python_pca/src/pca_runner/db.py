@@ -10,6 +10,7 @@ from .sample_data import build_sample_rows
 
 REQUIRED_COLUMNS = {"DRAFT_NO", "PARAM_TYP", "LABEL_Y", "CONV_EXPER_CTN"}
 OPTIONAL_COLUMNS = ["RSLT_CD"]
+SUPPORTED_PARAMETER_TYPES = {"RESPONSE", "DEFECT", "EPM", "PROBE"}
 
 
 def load_source_rows(config: AppConfig) -> pd.DataFrame:
@@ -38,6 +39,9 @@ def normalize_source_columns(frame: pd.DataFrame) -> pd.DataFrame:
     result["CONV_EXPER_CTN"] = result["CONV_EXPER_CTN"].map(_to_json_text)
     if "RSLT_CD" in result.columns:
         result["RSLT_CD"] = result["RSLT_CD"].astype(str).str.strip()
+    unsupported = sorted(set(result["PARAM_TYP"]).difference(SUPPORTED_PARAMETER_TYPES))
+    if unsupported:
+        raise ValueError(f"Unsupported PARAM_TYP values: {unsupported}")
     return result
 
 

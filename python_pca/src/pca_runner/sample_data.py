@@ -31,6 +31,7 @@ def build_sample_rows(row_count: int = 80, feature_count: int = 80) -> list[dict
                 "DRAFT_NO": f"DRAFT-{index + 1:03d}",
                 "PARAM_TYP": param_type,
                 "LABEL_Y": label,
+                "RSLT_CD": "R" if label == "Review" else "P",
                 "CONV_EXPER_CTN": json.dumps([experiment], ensure_ascii=False),
             }
         )

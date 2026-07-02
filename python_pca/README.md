@@ -25,6 +25,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup_python.ps1
 ```
 
 실행하면 `outputs/pca_points.csv`, `outputs/knn_neighbors.csv`, `outputs/pca_scatter.png`가 저장되고 PCA 차트 창이 표시됩니다.
+또한 기존 C# `ManualPcaScatter` 흐름과 맞춰 feature 선별 감사, 생존 population, 진단 JSON도 함께 저장합니다.
 차트 창 없이 파일만 저장하려면 `--no-show-chart`를 추가합니다.
 
 ```powershell
@@ -36,9 +37,22 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup_python.ps1
 차트는 `matplotlib.pyplot as plt`를 사용합니다.
 
 - X축은 `X1`, Y축은 `X2`입니다.
-- 각 축은 실제 PCA 좌표 범위의 시작부터 끝까지 눈금 라벨을 표시합니다.
+- 각 축 라벨은 실제 PCA 좌표의 최소/최대 범위를 표시합니다.
 - 원점 `(0, 0)` 기준선도 함께 표시합니다.
 - 선택된 `DRAFT_NO`는 별표로 강조합니다.
+- 차트 창에서 포인트를 클릭하면 표준화 feature 공간의 유클리드 거리 기준 최근접 3개 포인트가 노란색으로 강조됩니다.
+
+## ManualPcaScatter 호환 출력
+
+Python 실행 결과는 C# `ManualPcaScatter`의 핵심 데이터 흐름을 따릅니다.
+
+- `outputs/pca_points.csv`: `DRAFT_NO`, `PARAM_TYP`, `LABEL_Y`, `RSLT_CD`, `X1`, `X2`
+- `outputs/knn_neighbors.csv`: 선택 Draft 기준 최근접 Draft 3건
+- `outputs/feature_selection_audit.csv`: feature별 포함 여부와 제외 사유
+- `outputs/surviving_population.csv`: PCA에 살아남은 feature와 좌표
+- `outputs/diagnostic.json`: row/feature 수, 제외 feature 수, 설명분산, shape code, 표준화 검증값
+
+KNN 거리는 C#과 동일하게 PCA 2차원 좌표가 아니라 `StandardScaler`가 만든 전체 표준화 feature 공간에서 계산합니다.
 
 ## Oracle 접속 방식
 
