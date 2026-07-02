@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using LightingChartSamples.Scatter;
+using SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {

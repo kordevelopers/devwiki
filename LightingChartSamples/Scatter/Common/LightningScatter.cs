@@ -11,7 +11,7 @@ using Arction.WinForms.Charting.Axes;
 using Arction.WinForms.Charting.SeriesXY;
 using Arction.WinForms.Charting.Views.ViewXY;
 
-namespace LightingChartSamples.Scatter
+namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
 {
     public enum LightningScatterLegendPosition
     {

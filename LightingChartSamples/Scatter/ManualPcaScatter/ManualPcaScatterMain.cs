@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter;
+using SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common;
 
 namespace LightingChartSamples.Scatter.ManualPcaScatter
 {

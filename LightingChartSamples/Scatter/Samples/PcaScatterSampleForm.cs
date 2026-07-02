@@ -4,6 +4,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common;
 
 namespace LightingChartSamples.Scatter
 {
