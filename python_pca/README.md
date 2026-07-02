@@ -47,6 +47,19 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup_python.ps1
 - `PCA_DB_MODE=odbc`: Windows ODBC DSN 또는 전체 ODBC 연결 문자열 사용
 - `PCA_DB_MODE=oracledb`: `python-oracledb` thin 모드 사용, Oracle Client 설치 불필요
 
+IP/Port/계정정보가 있고 Service Name을 알고 있으면 `oracledb` 모드가 가장 단순합니다.
+
+```env
+PCA_DB_MODE=oracledb
+PCA_ORACLE_HOST=10.0.0.10
+PCA_ORACLE_PORT=1521
+PCA_ORACLE_SERVICE_NAME=EXADATA_SERVICE
+PCA_ORACLE_USER=your_user
+PCA_ORACLE_PASSWORD=your_password
+```
+
+접속만 먼저 확인하려면 VS Code 작업 `Test Oracle oracledb connection`을 실행합니다.
+
 ODBC는 Oracle Client 전체 설치가 없어도 Oracle Instant Client Basic/Basic Lite + ODBC 패키지로 등록할 수 있습니다.
 압축 해제 후 관리자 PowerShell에서 다음을 실행합니다.
 
@@ -57,6 +70,41 @@ ODBC는 Oracle Client 전체 설치가 없어도 Oracle Instant Client Basic/Bas
 
 Oracle ODBC 드라이버 등록 후 Windows "ODBC Data Sources (64-bit)"에서 DSN을 만들거나,
 `.env`의 `PCA_ODBC_CONNECTION_STRING`에 전체 연결 문자열을 넣으면 됩니다.
+DSN을 스크립트로 만들려면 다음을 실행합니다.
+
+```powershell
+.\scripts\create_oracle_odbc_dsn.ps1 `
+  -DsnName HYNIX_TAS_EXADATA `
+  -DriverName "Oracle in instantclient_23_8" `
+  -Host 10.0.0.10 `
+  -Port 1521 `
+  -ServiceName EXADATA_SERVICE
+```
+
+ODBC DSN을 사용하는 `.env` 예시는 다음과 같습니다.
+
+```env
+PCA_DB_MODE=odbc
+PCA_ODBC_DSN=HYNIX_TAS_EXADATA
+PCA_ODBC_USER=your_user
+PCA_ODBC_PASSWORD=your_password
+```
+
+DSN 없이 ODBC 드라이버 이름과 IP/Port/Service로 바로 연결할 수도 있습니다.
+
+```env
+PCA_DB_MODE=odbc
+PCA_ODBC_DRIVER=Oracle in instantclient_23_8
+PCA_ORACLE_HOST=10.0.0.10
+PCA_ORACLE_PORT=1521
+PCA_ORACLE_SERVICE_NAME=EXADATA_SERVICE
+PCA_ODBC_USER=your_user
+PCA_ODBC_PASSWORD=your_password
+```
+
+ODBC 접속 확인은 VS Code 작업 `Test Oracle ODBC connection`으로 실행합니다.
+
+주의: Oracle Instant Client DLL/ODBC DLL은 저장소에 포함하지 않습니다. Oracle 배포 파일은 로컬 PC에 설치 또는 압축 해제한 뒤 `install_oracle_odbc_driver.ps1`로 Windows ODBC 드라이버에 등록합니다.
 
 ## 입력 쿼리 컬럼
 

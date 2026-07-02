@@ -38,11 +38,7 @@ def normalize_source_columns(frame: pd.DataFrame) -> pd.DataFrame:
 def _load_with_odbc(config: AppConfig) -> pd.DataFrame:
     import pyodbc
 
-    connection_string = config.odbc_connection_string.strip()
-    if not connection_string:
-        if not config.odbc_dsn:
-            raise ValueError("PCA_ODBC_DSN or PCA_ODBC_CONNECTION_STRING is required for ODBC mode.")
-        connection_string = f"DSN={config.odbc_dsn};UID={config.odbc_user};PWD={config.odbc_password}"
+    connection_string = _build_odbc_connection_string(config)
     with pyodbc.connect(connection_string) as connection:
         return pd.read_sql(config.sql, connection)
 
@@ -50,14 +46,56 @@ def _load_with_odbc(config: AppConfig) -> pd.DataFrame:
 def _load_with_oracledb(config: AppConfig) -> pd.DataFrame:
     import oracledb
 
-    if not (config.oracle_user and config.oracle_password and config.oracle_dsn):
-        raise ValueError("PCA_ORACLE_USER, PCA_ORACLE_PASSWORD, and PCA_ORACLE_DSN are required.")
+    dsn = _build_oracle_dsn(config)
+    if not (config.oracle_user and config.oracle_password and dsn):
+        raise ValueError(
+            "PCA_ORACLE_USER, PCA_ORACLE_PASSWORD, and Oracle DSN values are required. "
+            "Set PCA_ORACLE_DSN or PCA_ORACLE_HOST/PCA_ORACLE_PORT/PCA_ORACLE_SERVICE_NAME."
+        )
     with oracledb.connect(
         user=config.oracle_user,
         password=config.oracle_password,
-        dsn=config.oracle_dsn,
+        dsn=dsn,
     ) as connection:
         return pd.read_sql(config.sql, connection)
+
+
+def _build_odbc_connection_string(config: AppConfig) -> str:
+    if config.odbc_connection_string.strip():
+        return config.odbc_connection_string.strip()
+    if config.odbc_dsn.strip():
+        return f"DSN={config.odbc_dsn};UID={config.odbc_user};PWD={config.odbc_password}"
+
+    host_descriptor = _build_host_descriptor(config)
+    if not (config.odbc_driver and host_descriptor and config.odbc_user and config.odbc_password):
+        raise ValueError(
+            "ODBC mode requires one of PCA_ODBC_CONNECTION_STRING, PCA_ODBC_DSN, or "
+            "PCA_ODBC_DRIVER plus PCA_ORACLE_HOST/PCA_ORACLE_PORT/PCA_ORACLE_SERVICE_NAME "
+            "and PCA_ODBC_USER/PCA_ODBC_PASSWORD."
+        )
+    return (
+        f"DRIVER={{{config.odbc_driver}}};"
+        f"DBQ={host_descriptor};"
+        f"UID={config.odbc_user};"
+        f"PWD={config.odbc_password}"
+    )
+
+
+def _build_oracle_dsn(config: AppConfig) -> str:
+    if config.oracle_dsn:
+        return config.oracle_dsn
+    return _build_host_descriptor(config)
+
+
+def _build_host_descriptor(config: AppConfig) -> str:
+    if not config.oracle_host:
+        return ""
+    port = config.oracle_port or "1521"
+    if config.oracle_service_name:
+        return f"{config.oracle_host}:{port}/{config.oracle_service_name}"
+    if config.oracle_sid:
+        return f"{config.oracle_host}:{port}:{config.oracle_sid}"
+    return ""
 
 
 def _to_json_text(value: object) -> str:

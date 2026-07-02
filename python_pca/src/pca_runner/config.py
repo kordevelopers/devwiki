@@ -21,7 +21,12 @@ class AppConfig:
     param_type: str
     target_draft_no: str
     sql: str
+    oracle_host: str
+    oracle_port: str
+    oracle_service_name: str
+    oracle_sid: str
     odbc_dsn: str
+    odbc_driver: str
     odbc_user: str
     odbc_password: str
     odbc_connection_string: str
@@ -39,11 +44,16 @@ def load_config(mode_override: str | None = None, target_override: str | None = 
         param_type=os.getenv("PCA_PARAM_TYP", "RESPONSE").strip().upper(),
         target_draft_no=target.strip(),
         sql=os.getenv("PCA_SQL", DEFAULT_SQL),
+        oracle_host=os.getenv("PCA_ORACLE_HOST", "").strip(),
+        oracle_port=os.getenv("PCA_ORACLE_PORT", "1521").strip(),
+        oracle_service_name=os.getenv("PCA_ORACLE_SERVICE_NAME", "").strip(),
+        oracle_sid=os.getenv("PCA_ORACLE_SID", "").strip(),
         odbc_dsn=os.getenv("PCA_ODBC_DSN", ""),
+        odbc_driver=os.getenv("PCA_ODBC_DRIVER", "Oracle in instantclient_23_8"),
         odbc_user=os.getenv("PCA_ODBC_USER", ""),
         odbc_password=os.getenv("PCA_ODBC_PASSWORD", ""),
         odbc_connection_string=os.getenv("PCA_ODBC_CONNECTION_STRING", ""),
         oracle_user=os.getenv("PCA_ORACLE_USER", ""),
         oracle_password=os.getenv("PCA_ORACLE_PASSWORD", ""),
-        oracle_dsn=os.getenv("PCA_ORACLE_DSN", ""),
+        oracle_dsn=os.getenv("PCA_ORACLE_DSN", "").strip(),
     )

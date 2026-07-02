@@ -21,6 +21,20 @@
       "type": "shell",
       "command": "powershell -ExecutionPolicy Bypass -File .\\scripts\\check_odbc_drivers.ps1",
       "problemMatcher": []
+    },
+    {
+      "label": "Test Oracle oracledb connection",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe .\\scripts\\test_oracle_connection.py --mode oracledb",
+      "dependsOn": "Setup Python and packages",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test Oracle ODBC connection",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe .\\scripts\\test_oracle_connection.py --mode odbc",
+      "dependsOn": "Setup Python and packages",
+      "problemMatcher": []
     }
   ]
 }
