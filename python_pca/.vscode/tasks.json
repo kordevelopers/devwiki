@@ -2,9 +2,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Create venv and install packages",
+      "label": "Setup Python and packages",
       "type": "shell",
-      "command": "py -3 -m venv .venv; .\\.venv\\Scripts\\python.exe -m pip install --upgrade pip; .\\.venv\\Scripts\\python.exe -m pip install -r requirements.txt; .\\.venv\\Scripts\\python.exe -m pip install -e .",
+      "command": "powershell -ExecutionPolicy Bypass -File .\\scripts\\setup_python.ps1",
       "group": "build",
       "problemMatcher": []
     },
@@ -13,6 +13,7 @@
       "type": "shell",
       "command": ".\\.venv\\Scripts\\python.exe -m pca_runner --mode sample",
       "group": "test",
+      "dependsOn": "Setup Python and packages",
       "problemMatcher": []
     },
     {

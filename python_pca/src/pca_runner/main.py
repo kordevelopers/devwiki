@@ -15,6 +15,11 @@ def main() -> int:
     parser.add_argument("--mode", choices=["sample", "odbc", "oracledb"], help="Override PCA_DB_MODE")
     parser.add_argument("--target", help="Target DRAFT_NO for KNN search")
     parser.add_argument("--output-dir", default="outputs", help="Directory for CSV and chart output")
+    parser.add_argument(
+        "--no-show-chart",
+        action="store_true",
+        help="Save the chart image without opening a matplotlib window.",
+    )
     args = parser.parse_args()
 
     config = load_config(args.mode, args.target)
@@ -36,7 +41,7 @@ def main() -> int:
         file.write("Rank,Similar_Draft,Distance\n")
         for row in neighbors:
             file.write(f"{row.rank},{row.similar_draft},{row.distance:.4f}\n")
-    save_scatter(result.points, chart_path, target)
+    save_scatter(result.points, chart_path, target, show_chart=not args.no_show_chart)
 
     print(f"Mode: {config.mode}")
     print(f"PARAM_TYP: {config.param_type}")
