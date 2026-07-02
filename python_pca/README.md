@@ -47,6 +47,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup_python.ps1
 - `PCA_DB_MODE=odbc`: Windows ODBC DSN 또는 전체 ODBC 연결 문자열 사용
 - `PCA_DB_MODE=oracledb`: `python-oracledb` thin 모드 사용, Oracle Client 설치 불필요
 
+`oracledb` 모드는 pandas가 직접 Oracle 연결 객체를 받지 않도록 SQLAlchemy 엔진을 사용합니다.
+`ODBC` 모드는 pandas에 pyodbc 연결 객체를 직접 넘기지 않고 cursor 결과를 DataFrame으로 변환합니다.
+
 IP/Port/계정정보가 있고 Service Name을 알고 있으면 `oracledb` 모드가 가장 단순합니다.
 
 ```env

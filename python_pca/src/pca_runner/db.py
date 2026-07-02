@@ -40,11 +40,15 @@ def _load_with_odbc(config: AppConfig) -> pd.DataFrame:
 
     connection_string = _build_odbc_connection_string(config)
     with pyodbc.connect(connection_string) as connection:
-        return pd.read_sql(config.sql, connection)
+        cursor = connection.cursor()
+        cursor.execute(config.sql)
+        columns = [description[0] for description in cursor.description]
+        return pd.DataFrame.from_records((tuple(row) for row in cursor.fetchall()), columns=columns)
 
 
 def _load_with_oracledb(config: AppConfig) -> pd.DataFrame:
-    import oracledb
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.pool import NullPool
 
     dsn = _build_oracle_dsn(config)
     if not (config.oracle_user and config.oracle_password and dsn):
@@ -52,12 +56,20 @@ def _load_with_oracledb(config: AppConfig) -> pd.DataFrame:
             "PCA_ORACLE_USER, PCA_ORACLE_PASSWORD, and Oracle DSN values are required. "
             "Set PCA_ORACLE_DSN or PCA_ORACLE_HOST/PCA_ORACLE_PORT/PCA_ORACLE_SERVICE_NAME."
         )
-    with oracledb.connect(
-        user=config.oracle_user,
-        password=config.oracle_password,
-        dsn=dsn,
-    ) as connection:
-        return pd.read_sql(config.sql, connection)
+    engine = create_engine(
+        "oracle+oracledb://",
+        connect_args={
+            "user": config.oracle_user,
+            "password": config.oracle_password,
+            "dsn": dsn,
+        },
+        poolclass=NullPool,
+    )
+    try:
+        with engine.connect() as connection:
+            return pd.read_sql_query(text(config.sql), connection)
+    finally:
+        engine.dispose()
 
 
 def _build_odbc_connection_string(config: AppConfig) -> str:
