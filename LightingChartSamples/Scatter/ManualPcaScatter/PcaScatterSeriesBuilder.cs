@@ -29,19 +29,25 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                     .ToList();
             }
 
+            Dictionary<string, List<ScatterSampleData>> allGroups = samples
+                .GroupBy(item => ResolveSeriesName(item, options), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
             Dictionary<string, List<ScatterSampleData>> groups = regularSamples
                 .GroupBy(item => ResolveSeriesName(item, options), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
-            List<string> orderedNames = ResolveSeriesOrder(groups.Keys, options);
+            List<string> orderedNames = ResolveSeriesOrder(allGroups.Keys, options);
+            Dictionary<string, Color> seriesColors = ResolveSeriesColors(orderedNames, options);
             var result = new List<LightningScatterSeries>();
-            int companyPaletteIndex = 0;
             for (int index = 0; index < orderedNames.Count; index++)
             {
                 string seriesName = orderedNames[index];
-                bool isNaSeries = IsNaSeriesName(seriesName, options);
-                int colorIndex = isNaSeries ? 0 : companyPaletteIndex++;
-                Color seriesColor = ResolveSeriesColor(seriesName, colorIndex, options);
+                if (!groups.ContainsKey(seriesName) || groups[seriesName].Count == 0)
+                {
+                    continue;
+                }
+
+                Color seriesColor = seriesColors[seriesName];
                 result.Add(new LightningScatterSeries
                 {
                     Name = seriesName,
@@ -60,18 +66,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
             if (highlightedSample != null)
             {
-                result.Add(CreateSinglePointSeries(
-                    highlightedSample, highlightedSample.DraftNo.Trim(), options.HighlightColor, options.HighlightColor,
-                    options.PointShape,
-                    Math.Max(1f, options.HighlightPointSize), 1.8f, true));
+                result.Add(CreateSinglePointSeries(highlightedSample, highlightedSample.DraftNo.Trim(), options.HighlightColor, options.HighlightColor, options.PointShape, Math.Max(1f, options.HighlightPointSize), 1.8f, true));
             }
 
             if (selectedSample != null && !object.ReferenceEquals(selectedSample, highlightedSample))
             {
-                result.Add(CreateSinglePointSeries(
-                    selectedSample, selectedSample.DraftNo.Trim(), options.SelectedPointColor, options.SelectedPointBorderColor,
-                    options.PointShape,
-                    Math.Max(1f, options.SelectedPointSize), Math.Max(0f, options.SelectedPointBorderWidth), false));
+                string selectedSeriesName = ResolveSeriesName(selectedSample, options);
+                Color selectedPointColor = ResolveSelectedPointColor(selectedSeriesName, seriesColors, options);
+                result.Add(CreateSinglePointSeries(selectedSample, selectedSample.DraftNo.Trim(), selectedPointColor, options.SelectedPointBorderColor, options.PointShape, ResolveSelectedPointSize(options), Math.Max(0f, options.SelectedPointBorderWidth), false));
             }
 
             return result;
@@ -183,6 +185,41 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             }
 
             return ApplyColorAlpha(options.DefaultColor, options);
+        }
+
+        private static Dictionary<string, Color> ResolveSeriesColors(IEnumerable<string> orderedNames, PcaScatterSeriesOptions options)
+        {
+            var colors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
+            int companyPaletteIndex = 0;
+            foreach (string seriesName in orderedNames ?? Enumerable.Empty<string>())
+            {
+                bool isNaSeries = IsNaSeriesName(seriesName, options);
+                int colorIndex = isNaSeries ? 0 : companyPaletteIndex++;
+                colors[seriesName] = ResolveSeriesColor(seriesName, colorIndex, options);
+            }
+
+            return colors;
+        }
+
+        private static Color ResolveSelectedPointColor(string selectedSeriesName, IDictionary<string, Color> seriesColors, PcaScatterSeriesOptions options)
+        {
+            if (options != null && !options.SelectedPointColor.IsEmpty)
+            {
+                return ApplyColorAlpha(options.SelectedPointColor, options);
+            }
+
+            Color seriesColor;
+            return seriesColors != null && seriesColors.TryGetValue(selectedSeriesName, out seriesColor)
+                ? seriesColor
+                : ResolveSeriesColor(selectedSeriesName, 0, options);
+        }
+
+        private static float ResolveSelectedPointSize(PcaScatterSeriesOptions options)
+        {
+            float basePointSize = options == null ? 7f : Math.Max(1f, options.PointSize);
+            return options != null && options.SelectedPointSize > 0f
+                ? Math.Max(1f, options.SelectedPointSize)
+                : Math.Max(1f, basePointSize * 1.1f);
         }
 
         private static Color ApplyColorAlpha(Color color, PcaScatterSeriesOptions options)

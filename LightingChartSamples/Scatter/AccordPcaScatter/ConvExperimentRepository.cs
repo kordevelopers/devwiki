@@ -84,8 +84,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
                     "CONV_EXPER_CTN DataTable is required. Load data through the company service and pass the DataTable.");
             }
 
-            ConvExperimentQueryOptions effectiveOptions =
-                options ?? ConvExperimentQueryOptions.FromConfiguration();
+            ConvExperimentQueryOptions effectiveOptions = options ?? ConvExperimentQueryOptions.FromConfiguration();
             DataColumn jsonColumn = FindColumn(table, effectiveOptions.JsonColumnName);
             DataColumn draftNoColumn = FindColumn(table, effectiveOptions.DraftNoColumnName);
             DataColumn parameterTypeColumn = FindColumn(table, effectiveOptions.ParameterTypeColumnName);

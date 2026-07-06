@@ -53,7 +53,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             MinimumNumericCoveragePercent = 90d;
             SeriesPointSize = 7f;
             HighlightPointSize = 19f;
-            SelectedPointSize = 24f;
+            SelectedPointSize = 0f;
             currentSamples = new List<ScatterSampleData>();
             currentRecords = new List<PcaExperimentRecord>();
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
@@ -100,7 +100,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         public float HighlightPointSize { get; set; }
 
         /// <summary>
-        /// 그리드에서 선택한 행의 포인트 크기다. 기본값은 24다.
+        /// 그리드에서 선택한 행의 포인트 크기다. 0 이하이면 일반 포인트보다 10% 크게 표시한다.
         /// </summary>
         public float SelectedPointSize { get; set; }
 
@@ -344,12 +344,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             string draftNo = (draftNoTextBox.Text ?? string.Empty).Trim();
             if (draftNo.Length == 0)
             {
-                MessageBox.Show(
-                    this,
-                    "조회할 DRAFT_NO를 입력하세요.",
-                    "DRAFT_NO 확인",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                MessageBox.Show(this, "조회할 DRAFT Number를 입력하세요.", "DRAFT Number 확인", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 draftNoTextBox.Focus();
                 return;
             }
@@ -1546,7 +1541,10 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Series.PastelPalette = PcaScatterSeriesOptions.CreateCompanySeriesPalette();
             options.Series.PointSize = NormalizePointSize(SeriesPointSize, 7f);
             options.Series.HighlightPointSize = NormalizePointSize(HighlightPointSize, 19f);
-            options.Series.SelectedPointSize = NormalizePointSize(SelectedPointSize, 24f);
+            options.Series.SelectedPointSize = ResolveSelectedPointSize(options.Series.PointSize, SelectedPointSize);
+            options.Series.SelectedPointColor = Color.Empty;
+            options.Series.SelectedPointBorderColor = Color.Lime;
+            options.Series.SelectedPointBorderWidth = 2.2f;
             options.Display.FontName = "맑은 고딕";
             options.Display.ShowTitle = true;
             options.Display.Title = "Distribution Chart";
@@ -1581,6 +1579,18 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             }
 
             return Math.Max(1f, value);
+        }
+
+        private static float ResolveSelectedPointSize(float pointSize, float selectedPointSize)
+        {
+            if (!float.IsNaN(selectedPointSize)
+                && !float.IsInfinity(selectedPointSize)
+                && selectedPointSize > 0f)
+            {
+                return Math.Max(1f, selectedPointSize);
+            }
+
+            return Math.Max(1f, pointSize * 1.1f);
         }
 
         private static double ConvertCoveragePercentToRatio(double value)

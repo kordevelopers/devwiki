@@ -57,10 +57,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             this.parent = parent;
             this.options = options == null ? PcaScatterOptions.CreateDefault() : options.Clone();
             seriesBuilder = new PcaScatterSeriesBuilder();
-            scatterChart = LightningScatter.Create(
-                parent,
-                Enumerable.Empty<LightningScatterSeries>(),
-                this.options.ToScatterOptions(null));
+            scatterChart = LightningScatter.Create(parent, Enumerable.Empty<LightningScatterSeries>(), this.options.ToScatterOptions(null));
             scatterChart.PointClicked += ScatterChart_PointClicked;
             scatterChart.Clear();
         }
@@ -177,8 +174,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
         public void BindFromDatabase(DataTable sourceTable, PcaScatterDatabaseOptions databaseOptions, PcaScatterOptions newOptions)
         {
-            PcaScatterDatabaseOptions effectiveDatabaseOptions =
-                databaseOptions ?? PcaScatterDatabaseOptions.CreateDefault();
+            PcaScatterDatabaseOptions effectiveDatabaseOptions = databaseOptions ?? PcaScatterDatabaseOptions.CreateDefault();
             effectiveDatabaseOptions.SourceTable = sourceTable;
             BindFromDatabase(effectiveDatabaseOptions, newOptions);
         }
@@ -227,18 +223,15 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
         public void BindFromExadata(DataTable sourceTable, PcaScatterExadataOptions exadataOptions, PcaScatterOptions newOptions)
         {
-            PcaScatterExadataOptions effectiveOptions =
-                exadataOptions ?? PcaScatterExadataOptions.CreateDefault();
+            PcaScatterExadataOptions effectiveOptions = exadataOptions ?? PcaScatterExadataOptions.CreateDefault();
             effectiveOptions.SourceTable = sourceTable;
             BindFromExadata(effectiveOptions, newOptions);
         }
 
         public void BindFromExadata(PcaScatterExadataOptions exadataOptions, PcaScatterOptions newOptions)
         {
-            PcaScatterExadataOptions effectiveOptions =
-                exadataOptions ?? PcaScatterExadataOptions.CreateDefault();
-            PcaScatterOptions nextOptions =
-                newOptions == null ? PcaScatterOptions.CreateDefault() : newOptions.Clone();
+            PcaScatterExadataOptions effectiveOptions = exadataOptions ?? PcaScatterExadataOptions.CreateDefault();
+            PcaScatterOptions nextOptions = newOptions == null ? PcaScatterOptions.CreateDefault() : newOptions.Clone();
 
             try
             {
@@ -284,17 +277,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 return;
             }
 
-            PcaScatterOptions nextOptions = options == null
-                ? PcaScatterOptions.CreateDefault()
-                : options.Clone();
+            PcaScatterOptions nextOptions = options == null ? PcaScatterOptions.CreateDefault() : options.Clone();
             if (nextOptions.Series == null)
             {
                 nextOptions.Series = new PcaScatterSeriesOptions();
             }
 
-            nextOptions.Series.SelectedDraftNo = string.IsNullOrWhiteSpace(draftNo)
-                ? string.Empty
-                : draftNo.Trim();
+            nextOptions.Series.SelectedDraftNo = string.IsNullOrWhiteSpace(draftNo) ? string.Empty : draftNo.Trim();
             RefreshSeries(nextOptions);
         }
 

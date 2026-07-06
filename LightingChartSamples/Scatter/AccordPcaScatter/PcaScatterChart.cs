@@ -56,10 +56,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
             this.parent = parent;
             this.options = options == null ? PcaScatterOptions.CreateDefault() : options.Clone();
             seriesBuilder = new PcaScatterSeriesBuilder();
-            scatterChart = LightningScatter.Create(
-                parent,
-                Enumerable.Empty<LightningScatterSeries>(),
-                this.options.ToScatterOptions(null));
+            scatterChart = LightningScatter.Create(parent, Enumerable.Empty<LightningScatterSeries>(), this.options.ToScatterOptions(null));
             scatterChart.PointClicked += ScatterChart_PointClicked;
             scatterChart.Clear();
         }

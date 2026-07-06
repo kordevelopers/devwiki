@@ -74,10 +74,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             HighlightColor = Color.Black;
             HighlightPointSize = 19f;
             SelectedDraftNo = string.Empty;
-            SelectedPointColor = Color.FromArgb(255, 242, 128);
-            SelectedPointBorderColor = Color.Red;
-            SelectedPointBorderWidth = 2.8f;
-            SelectedPointSize = 24f;
+            SelectedPointColor = Color.Empty;
+            SelectedPointBorderColor = Color.Lime;
+            SelectedPointBorderWidth = 2.2f;
+            SelectedPointSize = 0f;
             SeriesOrder = new[] { PassResultName, ReviewResultName };
             SeriesColors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
             PastelPalette = CreateCompanySeriesPalette();

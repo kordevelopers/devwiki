@@ -108,8 +108,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
                     "Accord PCA analysis requires at least 3 rows with experiment data.");
             }
 
-            PcaScatterAnalysisOptions effectiveOptions =
-                analysisOptions ?? new PcaScatterAnalysisOptions();
+            PcaScatterAnalysisOptions effectiveOptions = analysisOptions ?? new PcaScatterAnalysisOptions();
             PcaAnalysisOptions pipelineOptions = effectiveOptions.ToPipelineOptions();
 
             AccordFeatureMatrix featureMatrix = BuildFeatureMatrix(parsed, pipelineOptions);

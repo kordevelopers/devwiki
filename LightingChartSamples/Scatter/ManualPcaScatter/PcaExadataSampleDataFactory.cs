@@ -7,6 +7,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
     public sealed class PcaExadataSampleDataFactory
     {
+        private const int DefaultVisibleSampleCount = 300;
+        private const int DefaultHiddenSampleCount = 30;
+
         private readonly Random random;
 
         public PcaExadataSampleDataFactory(int seed)
@@ -20,13 +23,25 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return ToDataTable(snapshot);
         }
 
+        public DataTable CreateDefaultDataTable(int countPerVisibleParameterType)
+        {
+            PcaExadataSnapshot snapshot = CreateDefaultSnapshot(countPerVisibleParameterType);
+            return ToDataTable(snapshot);
+        }
+
         public PcaExadataSnapshot CreateDefaultSnapshot()
         {
+            return CreateDefaultSnapshot(DefaultVisibleSampleCount);
+        }
+
+        public PcaExadataSnapshot CreateDefaultSnapshot(int countPerVisibleParameterType)
+        {
             var rows = new List<PcaExadataSourceRow>();
-            AddRows(rows, PcaParameterType.Response, "SAMPLE-R", 30, -0.9d);
-            AddRows(rows, PcaParameterType.Defect, "SAMPLE-D", 30, 0.8d);
-            AddRows(rows, PcaParameterType.Epm, "SAMPLE-E", 6, -0.2d);
-            AddRows(rows, PcaParameterType.Probe, "SAMPLE-P", 6, 0.2d);
+            int visibleCount = Math.Max(0, countPerVisibleParameterType);
+            AddRows(rows, PcaParameterType.Response, "SAMPLE-R", visibleCount, -0.9d);
+            AddRows(rows, PcaParameterType.Defect, "SAMPLE-D", visibleCount, 0.8d);
+            AddRows(rows, PcaParameterType.Epm, "SAMPLE-E", DefaultHiddenSampleCount, -0.2d);
+            AddRows(rows, PcaParameterType.Probe, "SAMPLE-P", DefaultHiddenSampleCount, 0.2d);
             return new PcaExadataSnapshot(rows, DateTime.UtcNow);
         }
 
@@ -68,26 +83,19 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return table;
         }
 
-        private void AddRows(
-            IList<PcaExadataSourceRow> rows,
-            PcaParameterType parameterType,
-            string draftPrefix,
-            int count,
-            double typeOffset)
+        private void AddRows(IList<PcaExadataSourceRow> rows, PcaParameterType parameterType, string draftPrefix, int count, double typeOffset)
         {
             for (int rowIndex = 0; rowIndex < count; rowIndex++)
             {
-                string draftNo = string.Format(
-                    CultureInfo.InvariantCulture,
-                    "{0}-{1:000}",
-                    draftPrefix,
-                    rowIndex + 1);
                 bool isPass = rowIndex < (count * 2 / 3);
                 string labelY = isPass ? "PASS" : "FAIL";
-                double qualityFactor = typeOffset
-                    + (isPass ? -0.7d : 1.0d)
-                    + NextGaussian(0d, 0.35d);
-                double processFactor = NextGaussian(0d, 0.8d);
+                string draftNo = string.Format(CultureInfo.InvariantCulture, "{0}-{1:000}", draftPrefix, rowIndex + 1);
+                double clusterCenterX = isPass ? -2.4d : 2.7d;
+                double clusterCenterY = isPass ? 0.8d : -0.7d;
+                double subClusterOffset = ResolveSubClusterOffset(rowIndex, isPass);
+                double pcaFactorX = clusterCenterX + typeOffset + subClusterOffset + NextGaussian(0d, 0.42d);
+                double pcaFactorY = clusterCenterY - (subClusterOffset * 0.45d) + NextGaussian(0d, 0.38d);
+                double batchNoise = NextGaussian(0d, 0.18d);
 
                 var experiment = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -98,25 +106,27 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 for (int featureIndex = 0; featureIndex < 80; featureIndex++)
                 {
                     int featureNumber = featureIndex + 1;
-                    double value = 40d
-                        + (featureNumber * 0.4d)
-                        + (qualityFactor * (0.7d + Math.Sin(featureNumber * 0.19d)) * 4.5d)
-                        + (processFactor * Math.Cos(featureNumber * 0.13d) * 2.2d)
-                        + NextGaussian(0d, 0.45d);
-                    experiment[string.Format(
-                        CultureInfo.InvariantCulture,
-                        "FEATURE_{0:000}",
-                        featureNumber)] = Math.Round(value, 6);
+                    double angle = featureNumber * 0.17d;
+                    double loadingX = Math.Cos(angle) * 4.2d;
+                    double loadingY = Math.Sin(angle * 0.9d) * 3.4d;
+                    double value = 40d + (featureNumber * 0.35d) + (pcaFactorX * loadingX) + (pcaFactorY * loadingY) + batchNoise + NextGaussian(0d, 0.28d);
+                    experiment[string.Format(CultureInfo.InvariantCulture, "FEATURE_{0:000}", featureNumber)] = Math.Round(value, 6);
                 }
 
                 string json = PcaJsonUtility.SerializeObject(new[] { experiment });
-                rows.Add(new PcaExadataSourceRow(
-                    rows.Count,
-                    draftNo,
-                    parameterType,
-                    labelY,
-                    json));
+                rows.Add(new PcaExadataSourceRow(rows.Count, draftNo, parameterType, labelY, json));
             }
+        }
+
+        private static double ResolveSubClusterOffset(int rowIndex, bool isPass)
+        {
+            int clusterIndex = rowIndex % 3;
+            if (isPass)
+            {
+                return clusterIndex == 0 ? -0.45d : clusterIndex == 1 ? 0.05d : 0.48d;
+            }
+
+            return clusterIndex == 0 ? -0.35d : clusterIndex == 1 ? 0.25d : 0.62d;
         }
 
         private double NextGaussian(double mean, double standardDeviation)
