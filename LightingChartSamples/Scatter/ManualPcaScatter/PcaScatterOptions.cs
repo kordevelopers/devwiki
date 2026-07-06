@@ -56,6 +56,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public PcaScatterSeriesOptions()
         {
             PointSize = 15f;
+            PointShape = LightningScatterPointShape.RoundedRectangle;
             ShowLine = false;
             ShowPoints = true;
             PassResultName = "Pass";
@@ -76,6 +77,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         }
 
         public float PointSize { get; set; }
+        public LightningScatterPointShape PointShape { get; set; }
         public bool ShowLine { get; set; }
         public bool ShowPoints { get; set; }
         public string PassResultName { get; set; }
@@ -102,6 +104,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return new PcaScatterSeriesOptions
             {
                 PointSize = PointSize,
+                PointShape = PointShape,
                 ShowLine = ShowLine,
                 ShowPoints = ShowPoints,
                 PassResultName = PassResultName,
@@ -296,7 +299,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             scatterOptions.Interaction = snapshot.Interaction ?? new LightningScatterInteractionOptions();
             scatterOptions.Style.UsePastelPalette = false;
             scatterOptions.Style.ForceBubbleStyle = true;
-            scatterOptions.Style.BubbleSize = Math.Max(1f, (snapshot.Series ?? new PcaScatterSeriesOptions()).PointSize);
+            PcaScatterSeriesOptions series = snapshot.Series ?? new PcaScatterSeriesOptions();
+            scatterOptions.Style.BubbleSize = Math.Max(1f, series.PointSize);
+            scatterOptions.Style.PointShape = series.PointShape;
 
             ApplyAxisOptions(scatterOptions, analysisResult, display);
 

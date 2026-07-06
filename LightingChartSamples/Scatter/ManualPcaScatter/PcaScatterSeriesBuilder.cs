@@ -45,6 +45,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                     LineColor = ResolveSeriesColor(seriesName, index, options),
                     PointColor = ResolveSeriesColor(seriesName, index, options),
                     PointSize = Math.Max(1f, options.PointSize),
+                    PointShape = options.PointShape,
                     ShowLine = options.ShowLine,
                     ShowPoints = options.ShowPoints,
                     Points = groups[seriesName]
@@ -57,6 +58,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             {
                 result.Add(CreateSinglePointSeries(
                     highlightedSample, highlightedSample.DraftNo.Trim(), options.HighlightColor, options.HighlightColor,
+                    options.PointShape,
                     Math.Max(1f, options.HighlightPointSize), 1.8f, true));
             }
 
@@ -64,6 +66,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             {
                 result.Add(CreateSinglePointSeries(
                     selectedSample, selectedSample.DraftNo.Trim(), options.SelectedPointColor, options.SelectedPointBorderColor,
+                    options.PointShape,
                     Math.Max(1f, options.SelectedPointSize), Math.Max(0f, options.SelectedPointBorderWidth), false));
             }
 
@@ -98,7 +101,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
         private static LightningScatterSeries CreateSinglePointSeries(
             ScatterSampleData sample, string seriesName, Color fillColor, Color borderColor,
-            float pointSize, float borderWidth, bool showInLegend)
+            LightningScatterPointShape pointShape, float pointSize, float borderWidth, bool showInLegend)
         {
             return new LightningScatterSeries
             {
@@ -109,6 +112,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 PointBorderColor = borderColor,
                 PointBorderWidth = borderWidth,
                 PointSize = pointSize,
+                PointShape = pointShape,
                 ShowLine = false,
                 ShowPoints = true,
                 ShowInLegend = showInLegend,

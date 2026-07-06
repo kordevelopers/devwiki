@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -21,6 +22,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         BottomLeft,
         BottomCenter,
         BottomRight
+    }
+
+    public enum LightningScatterPointShape
+    {
+        Circle,
+        Rectangle,
+        RoundedRectangle
     }
 
     public enum LightningScatterImageFileFormat
@@ -85,6 +93,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             PointBorderWidth = -1f;
             LineColor = Color.FromArgb(129, 178, 231);
             PointSize = 14f;
+            PointShape = LightningScatterPointShape.Circle;
             LineWidth = 1.5f;
             ShowLine = false;
             ShowPoints = true;
@@ -99,6 +108,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         public float PointBorderWidth { get; set; }
         public Color LineColor { get; set; }
         public float PointSize { get; set; }
+        public LightningScatterPointShape PointShape { get; set; }
         public float LineWidth { get; set; }
         public bool ShowLine { get; set; }
         public bool ShowPoints { get; set; }
@@ -118,6 +128,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 PointBorderWidth = PointBorderWidth,
                 LineColor = LineColor,
                 PointSize = PointSize,
+                PointShape = PointShape,
                 LineWidth = LineWidth,
                 ShowLine = ShowLine,
                 ShowPoints = ShowPoints,
@@ -205,6 +216,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             ForceBubbleStyle = true;
             UsePastelPalette = true;
             BubbleSize = 14f;
+            PointShape = LightningScatterPointShape.Circle;
             BubbleBorderWidth = 1.2f;
             PastelPalette = LightningScatterOptions.CreateDefaultPastelPalette();
         }
@@ -212,6 +224,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         public bool ForceBubbleStyle { get; set; }
         public bool UsePastelPalette { get; set; }
         public float BubbleSize { get; set; }
+        public LightningScatterPointShape PointShape { get; set; }
         public float BubbleBorderWidth { get; set; }
         public Color[] PastelPalette { get; set; }
 
@@ -222,6 +235,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 ForceBubbleStyle = ForceBubbleStyle,
                 UsePastelPalette = UsePastelPalette,
                 BubbleSize = BubbleSize,
+                PointShape = PointShape,
                 BubbleBorderWidth = BubbleBorderWidth,
                 PastelPalette = PastelPalette == null ? LightningScatterOptions.CreateDefaultPastelPalette() : (Color[])PastelPalette.Clone()
             };
@@ -499,6 +513,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         private readonly ToolTip pointToolTip = new ToolTip();
         private readonly Dictionary<PointLineSeries, ScatterSeriesBinding> seriesBindings =
             new Dictionary<PointLineSeries, ScatterSeriesBinding>();
+        private readonly List<Image> generatedPointImages = new List<Image>();
         private readonly object syncRoot = new object();
         private LightningScatterOptions options = new LightningScatterOptions();
         private List<LightningScatterSeries> series = new List<LightningScatterSeries>();
@@ -757,6 +772,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             {
                 pointToolTip.Dispose();
                 ClearSavedImage();
+                ClearGeneratedPointImages();
                 chart.MouseMove -= Chart_MouseMove;
                 chart.Resize -= Chart_Resize;
                 pointToolTip.Popup -= PointToolTip_Popup;
@@ -825,9 +841,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             chart.ColorTheme = ColorTheme.LightGray;
             chart.Options.AllowInternalMouseCursorChange = GetInteractionOptions(currentOptions).AllowInternalMouseCursorChange;
             chart.Options.MouseInteraction = true;
-            chart.BackColor = currentOptions.BackgroundColor;
-            chart.Background.Color = currentOptions.BackgroundColor;
-            chart.Background.GradientColor = currentOptions.BackgroundColor;
+            chart.BackColor = Color.White;
+            chart.Background.Color = Color.White;
+            chart.Background.GradientColor = Color.White;
+            chart.Background.GradientFill = GradientFill.Solid;
             chart.Background.Style = RectFillStyle.ColorOnly;
             chart.Title.Text = currentOptions.Title ?? string.Empty;
             chart.Title.Visible = currentOptions.ShowTitle && !string.IsNullOrWhiteSpace(currentOptions.Title);
@@ -962,6 +979,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
 
             view.PointLineSeries.Clear();
             seriesBindings.Clear();
+            ClearGeneratedPointImages();
 
             AxisX xAxis = GetXAxis();
             AxisY yAxis = GetYAxis();
@@ -972,19 +990,22 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 LightningScatterStyleOptions styleOptions = GetStyleOptions(currentOptions);
                 Color seriesColor = ResolveSeriesColor(sourceSeries, i, styleOptions);
                 bool forceBubbleStyle = styleOptions.ForceBubbleStyle;
+                float pointSize = ResolveBubbleSize(sourceSeries, styleOptions);
+                Color pointBorderColor = ResolvePointBorderColor(sourceSeries, seriesColor);
+                float pointBorderWidth = ResolvePointBorderWidth(sourceSeries, styleOptions);
                 chartSeries.Title.Text = GetLegendLabel(sourceSeries, i);
                 chartSeries.ShowInLegendBox = sourceSeries.ShowInLegend;
                 chartSeries.PointsVisible = forceBubbleStyle || sourceSeries.ShowPoints;
                 chartSeries.LineVisible = !forceBubbleStyle && sourceSeries.ShowLine;
                 chartSeries.LineStyle.Color = seriesColor;
                 chartSeries.LineStyle.Width = Math.Max(0.5f, sourceSeries.LineWidth);
-                chartSeries.PointStyle.Shape = Shape.Circle;
-                chartSeries.PointStyle.Width = ResolveBubbleSize(sourceSeries, styleOptions);
-                chartSeries.PointStyle.Height = ResolveBubbleSize(sourceSeries, styleOptions);
-                chartSeries.PointStyle.Color1 = seriesColor;
-                chartSeries.PointStyle.Color2 = seriesColor;
-                chartSeries.PointStyle.BorderColor = ResolvePointBorderColor(sourceSeries, seriesColor);
-                chartSeries.PointStyle.BorderWidth = ResolvePointBorderWidth(sourceSeries, styleOptions);
+                ApplyPointStyle(
+                    chartSeries.PointStyle,
+                    ResolvePointShape(sourceSeries, styleOptions),
+                    pointSize,
+                    seriesColor,
+                    pointBorderColor,
+                    pointBorderWidth);
                 chartSeries.MouseInteraction = true;
                 chartSeries.CursorTrackEnabled = true;
                 chartSeries.MouseClick += PointSeries_MouseClick;
@@ -992,6 +1013,100 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 view.PointLineSeries.Add(chartSeries);
                 seriesBindings[chartSeries] = new ScatterSeriesBinding(chartSeries, sourceSeries.Clone(), i);
             }
+        }
+
+        private void ApplyPointStyle(
+            PointShapeStyle pointStyle,
+            LightningScatterPointShape pointShape,
+            float pointSize,
+            Color fillColor,
+            Color borderColor,
+            float borderWidth)
+        {
+            float safeSize = Math.Max(1f, pointSize);
+            pointStyle.Width = safeSize;
+            pointStyle.Height = safeSize;
+            pointStyle.Color1 = fillColor;
+            pointStyle.Color2 = fillColor;
+            pointStyle.BorderColor = borderColor;
+            pointStyle.BorderWidth = Math.Max(0f, borderWidth);
+            pointStyle.Antialiasing = true;
+
+            switch (pointShape)
+            {
+                case LightningScatterPointShape.Rectangle:
+                    pointStyle.Shape = Shape.Rectangle;
+                    pointStyle.BitmapImage = null;
+                    break;
+                case LightningScatterPointShape.RoundedRectangle:
+                    pointStyle.Shape = Shape.Bitmap;
+                    pointStyle.BitmapImage = CreateRoundedRectanglePointImage(safeSize, fillColor, borderColor, borderWidth);
+                    pointStyle.BitmapAlphaLevel = 255;
+                    pointStyle.UseImageSize = false;
+                    break;
+                case LightningScatterPointShape.Circle:
+                default:
+                    pointStyle.Shape = Shape.Circle;
+                    pointStyle.BitmapImage = null;
+                    break;
+            }
+        }
+
+        private Image CreateRoundedRectanglePointImage(float pointSize, Color fillColor, Color borderColor, float borderWidth)
+        {
+            int imageSize = Math.Max(4, (int)Math.Ceiling(pointSize) + 4);
+            var image = new Bitmap(imageSize, imageSize);
+            using (Graphics graphics = Graphics.FromImage(image))
+            {
+                graphics.Clear(Color.Transparent);
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+                float inset = Math.Max(1f, borderWidth) / 2f + 1f;
+                var rect = new RectangleF(
+                    inset,
+                    inset,
+                    imageSize - (inset * 2f),
+                    imageSize - (inset * 2f));
+                float radius = Math.Max(2f, rect.Height * 0.35f);
+
+                using (GraphicsPath path = CreateRoundedRectanglePath(rect, radius))
+                using (SolidBrush brush = new SolidBrush(fillColor))
+                {
+                    graphics.FillPath(brush, path);
+                    if (borderWidth > 0f)
+                    {
+                        using (Pen pen = new Pen(borderColor, Math.Max(1f, borderWidth)))
+                        {
+                            graphics.DrawPath(pen, path);
+                        }
+                    }
+                }
+            }
+
+            generatedPointImages.Add(image);
+            return image;
+        }
+
+        private static GraphicsPath CreateRoundedRectanglePath(RectangleF rectangle, float radius)
+        {
+            float diameter = Math.Max(1f, radius * 2f);
+            var path = new GraphicsPath();
+            path.AddArc(rectangle.Left, rectangle.Top, diameter, diameter, 180f, 90f);
+            path.AddArc(rectangle.Right - diameter, rectangle.Top, diameter, diameter, 270f, 90f);
+            path.AddArc(rectangle.Right - diameter, rectangle.Bottom - diameter, diameter, diameter, 0f, 90f);
+            path.AddArc(rectangle.Left, rectangle.Bottom - diameter, diameter, diameter, 90f, 90f);
+            path.CloseFigure();
+            return path;
+        }
+
+        private void ClearGeneratedPointImages()
+        {
+            foreach (Image image in generatedPointImages)
+            {
+                image.Dispose();
+            }
+
+            generatedPointImages.Clear();
         }
 
         private IEnumerable<SeriesPoint> ToSeriesPoints(LightningScatterSeries sourceSeries)
@@ -1065,7 +1180,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             if (chartCleared)
             {
                 noDataAnnotation.Visible = false;
-                UpdateLegendVisibilityForDataState(currentSeries, currentOptions, false);
                 return;
             }
 
@@ -1074,7 +1188,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             bool allValuesZero = hasRenderableData && AreAllValuesZero(currentSeries);
             bool showNoData = (!hasRenderableData && noDataOptions.ShowWhenDataMissing)
                 || (allValuesZero && noDataOptions.ShowWhenAllValuesZero);
-            UpdateLegendVisibilityForDataState(currentSeries, currentOptions, hasRenderableData);
 
             string displayText = GetNoDataDisplayText(noDataOptions.Text, noDataOptions);
             noDataAnnotation.Visible = showNoData && !string.IsNullOrWhiteSpace(displayText);
@@ -1090,20 +1203,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             noDataAnnotation.BorderVisible = true;
             noDataAnnotation.CornerRoundRadius = 8;
             UpdateNoDataAnnotationLayout(noDataOptions, displayText);
-        }
-
-        private void UpdateLegendVisibilityForDataState(IList<LightningScatterSeries> currentSeries, LightningScatterOptions currentOptions, bool hasRenderableData)
-        {
-            LegendBoxXY legendBox = GetLegendBox();
-            LightningScatterLegendOptions legendOptions = currentOptions == null || currentOptions.Legend == null
-                ? new LightningScatterLegendOptions()
-                : currentOptions.Legend;
-            bool hasLegendSeries = currentSeries != null
-                && currentSeries.Any(series => series != null
-                    && series.ShowInLegend
-                    && series.Points != null
-                    && series.Points.Count > 0);
-            legendBox.Visible = legendOptions.Visible && hasRenderableData && hasLegendSeries;
         }
 
         private void UpdateNoDataAnnotationLayout(LightningScatterNoDataOptions noDataOptions, string displayText)
@@ -1314,6 +1413,17 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             }
 
             return Math.Max(1f, effectiveOptions.BubbleSize);
+        }
+
+        private LightningScatterPointShape ResolvePointShape(LightningScatterSeries sourceSeries, LightningScatterStyleOptions styleOptions)
+        {
+            if (sourceSeries != null)
+            {
+                return sourceSeries.PointShape;
+            }
+
+            LightningScatterStyleOptions effectiveOptions = styleOptions ?? new LightningScatterStyleOptions();
+            return effectiveOptions.PointShape;
         }
 
         private Color ResolvePointBorderColor(LightningScatterSeries sourceSeries, Color fallbackColor)
