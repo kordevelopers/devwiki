@@ -293,6 +293,18 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             await RefreshAllAsync();
         }
 
+        private async void SampleDataButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                await LoadSampleDataAsync();
+            }
+            catch (Exception ex)
+            {
+                ShowOperationError(ex, "샘플 데이터 생성 실패");
+            }
+        }
+
         private void AnalysisLogButton_Click(object sender, EventArgs e)
         {
             OpenLatestAnalysisLog();
@@ -426,6 +438,30 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             }
 
             return await LoadPopupDatabaseSnapshotAsync();
+        }
+
+        private async Task LoadSampleDataAsync()
+        {
+            SetToolbarEnabled(false);
+            ShowBusyOverlay("샘플 DataTable 생성 중...");
+            try
+            {
+                await Task.Delay(50);
+                DataTable sampleTable = await Task.Run(delegate
+                {
+                    return new PcaExadataSampleDataFactory(20260629).CreateDefaultDataTable();
+                });
+
+                await LoadConvExperimentDataTableAsync(sampleTable);
+                responseRadioButton.Checked = true;
+                draftNoTextBox.Text = "SAMPLE-R-001";
+                preferMemoryCheckBox.Checked = true;
+                await DrawLoadedDataAsync();
+            }
+            finally
+            {
+                SetToolbarEnabled(true);
+            }
         }
 
         private async Task RefreshAllAsync()
@@ -1314,6 +1350,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             searchButton.Enabled = enabled;
             drawChartButton.Enabled = enabled && HasRenderableDataSource();
             refreshAllButton.Enabled = enabled && showRefreshAllButton;
+            sampleDataButton.Enabled = enabled;
             preferMemoryCheckBox.Enabled = enabled && showPreferMemoryOption;
             summaryLabel.Enabled = enabled && showAnalysisSummaryText;
             nearestNeighborGrid.Enabled = enabled;
@@ -1515,7 +1552,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Display.Title = "Distribution Chart";
             options.Display.TitleColor = Color.Black;
             options.Display.BackgroundColor = Color.White;
-            options.Display.GraphBackgroundColor = Color.FromArgb(245, 245, 245);
+            options.Display.GraphBackgroundColor = Color.FromArgb(230, 230, 230);
             options.Display.XAxisTitle = "X1";
             options.Display.YAxisTitle = "X2";
             options.Display.MajorDivCount = 8;

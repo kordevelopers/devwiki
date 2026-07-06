@@ -914,6 +914,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             chart.Title.Visible = currentOptions.ShowTitle && !string.IsNullOrWhiteSpace(currentOptions.Title);
             chart.Title.Font = CreateChartFont(12f, FontStyle.Bold);
             chart.Title.Color = currentOptions.TitleColor.IsEmpty ? Color.Black : currentOptions.TitleColor;
+            chart.Title.MouseInteraction = false;
+            chart.Title.MoveByMouse = false;
 
             ViewXY view = chart.ViewXY;
             view.GraphBackground.Color = currentOptions.GraphBackgroundColor;

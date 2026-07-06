@@ -1,0 +1,131 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Globalization;
+
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
+{
+    public sealed class PcaExadataSampleDataFactory
+    {
+        private readonly Random random;
+
+        public PcaExadataSampleDataFactory(int seed)
+        {
+            random = new Random(seed);
+        }
+
+        public DataTable CreateDefaultDataTable()
+        {
+            PcaExadataSnapshot snapshot = CreateDefaultSnapshot();
+            return ToDataTable(snapshot);
+        }
+
+        public PcaExadataSnapshot CreateDefaultSnapshot()
+        {
+            var rows = new List<PcaExadataSourceRow>();
+            AddRows(rows, PcaParameterType.Response, "SAMPLE-R", 30, -0.9d);
+            AddRows(rows, PcaParameterType.Defect, "SAMPLE-D", 30, 0.8d);
+            AddRows(rows, PcaParameterType.Epm, "SAMPLE-E", 6, -0.2d);
+            AddRows(rows, PcaParameterType.Probe, "SAMPLE-P", 6, 0.2d);
+            return new PcaExadataSnapshot(rows, DateTime.UtcNow);
+        }
+
+        public DataTable CreateDatabaseLikeDataTable(int responseCount, int defectCount, int epmCount, int probeCount)
+        {
+            var rows = new List<PcaExadataSourceRow>();
+            AddRows(rows, PcaParameterType.Response, "DRAFT-R", Math.Max(0, responseCount), -0.9d);
+            AddRows(rows, PcaParameterType.Defect, "DRAFT-D", Math.Max(0, defectCount), 0.8d);
+            AddRows(rows, PcaParameterType.Epm, "DRAFT-E", Math.Max(0, epmCount), -0.2d);
+            AddRows(rows, PcaParameterType.Probe, "DRAFT-P", Math.Max(0, probeCount), 0.2d);
+            return ToDataTable(new PcaExadataSnapshot(rows, DateTime.UtcNow));
+        }
+
+        public static DataTable ToDataTable(PcaExadataSnapshot snapshot)
+        {
+            DataTable table = new DataTable("PCCB_INFER_RSLT_INF");
+            table.Columns.Add("DRAFT_NO", typeof(string));
+            table.Columns.Add("PARAM_TYP", typeof(string));
+            table.Columns.Add("ENGR_RSLT_VAL", typeof(string));
+            table.Columns.Add("CONV_EXPER_CTN", typeof(string));
+            table.Columns.Add("CHG_TM", typeof(DateTime));
+
+            if (snapshot == null || snapshot.Rows == null)
+            {
+                return table;
+            }
+
+            foreach (PcaExadataSourceRow row in snapshot.Rows)
+            {
+                DataRow dataRow = table.NewRow();
+                dataRow["DRAFT_NO"] = row.DraftNo;
+                dataRow["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(row.ParameterType);
+                dataRow["ENGR_RSLT_VAL"] = row.LabelY;
+                dataRow["CONV_EXPER_CTN"] = row.RawConvExperimentJson;
+                dataRow["CHG_TM"] = DateTime.Now;
+                table.Rows.Add(dataRow);
+            }
+
+            return table;
+        }
+
+        private void AddRows(
+            IList<PcaExadataSourceRow> rows,
+            PcaParameterType parameterType,
+            string draftPrefix,
+            int count,
+            double typeOffset)
+        {
+            for (int rowIndex = 0; rowIndex < count; rowIndex++)
+            {
+                string draftNo = string.Format(
+                    CultureInfo.InvariantCulture,
+                    "{0}-{1:000}",
+                    draftPrefix,
+                    rowIndex + 1);
+                bool isPass = rowIndex < (count * 2 / 3);
+                string labelY = isPass ? "PASS" : "FAIL";
+                double qualityFactor = typeOffset
+                    + (isPass ? -0.7d : 1.0d)
+                    + NextGaussian(0d, 0.35d);
+                double processFactor = NextGaussian(0d, 0.8d);
+
+                var experiment = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "PUB_NO", draftNo },
+                    { "_VERSION_NM", "SAMPLE-V1" }
+                };
+
+                for (int featureIndex = 0; featureIndex < 80; featureIndex++)
+                {
+                    int featureNumber = featureIndex + 1;
+                    double value = 40d
+                        + (featureNumber * 0.4d)
+                        + (qualityFactor * (0.7d + Math.Sin(featureNumber * 0.19d)) * 4.5d)
+                        + (processFactor * Math.Cos(featureNumber * 0.13d) * 2.2d)
+                        + NextGaussian(0d, 0.45d);
+                    experiment[string.Format(
+                        CultureInfo.InvariantCulture,
+                        "FEATURE_{0:000}",
+                        featureNumber)] = Math.Round(value, 6);
+                }
+
+                string json = PcaJsonUtility.SerializeObject(new[] { experiment });
+                rows.Add(new PcaExadataSourceRow(
+                    rows.Count,
+                    draftNo,
+                    parameterType,
+                    labelY,
+                    json));
+            }
+        }
+
+        private double NextGaussian(double mean, double standardDeviation)
+        {
+            double u1 = 1d - random.NextDouble();
+            double u2 = 1d - random.NextDouble();
+            double normal = Math.Sqrt(-2d * Math.Log(u1))
+                * Math.Sin(2d * Math.PI * u2);
+            return mean + (standardDeviation * normal);
+        }
+    }
+}

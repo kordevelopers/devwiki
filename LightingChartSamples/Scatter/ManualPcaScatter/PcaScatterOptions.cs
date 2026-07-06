@@ -180,7 +180,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             Title = "Distribution Chart";
             TitleColor = Color.Black;
             BackgroundColor = Color.White;
-            GraphBackgroundColor = Color.FromArgb(245, 245, 245);
+            GraphBackgroundColor = Color.FromArgb(230, 230, 230);
             XAxisTitle = "X1";
             YAxisTitle = "X2";
             AutoCalculateAxisRange = true;
