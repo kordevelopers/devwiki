@@ -92,7 +92,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             PointBorderColor = Color.Empty;
             PointBorderWidth = -1f;
             LineColor = Color.FromArgb(129, 178, 231);
-            PointSize = 7.5f;
+            PointSize = 7f;
             PointShape = LightningScatterPointShape.Circle;
             LineWidth = 1.5f;
             ShowLine = false;
@@ -217,7 +217,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             UsePastelPalette = true;
             ApplyColorAlpha = true;
             ColorAlpha = 190;
-            BubbleSize = 7.5f;
+            ApplyBorderTransparency = true;
+            BorderTransparencyPercent = 20f;
+            BubbleSize = 7f;
             PointShape = LightningScatterPointShape.Circle;
             BubbleBorderWidth = 1f;
             PointBodyThickness = 1f;
@@ -228,6 +230,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         public bool UsePastelPalette { get; set; }
         public bool ApplyColorAlpha { get; set; }
         public int ColorAlpha { get; set; }
+        public bool ApplyBorderTransparency { get; set; }
+        public float BorderTransparencyPercent { get; set; }
         public float BubbleSize { get; set; }
         public LightningScatterPointShape PointShape { get; set; }
         public float BubbleBorderWidth { get; set; }
@@ -242,6 +246,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 UsePastelPalette = UsePastelPalette,
                 ApplyColorAlpha = ApplyColorAlpha,
                 ColorAlpha = ColorAlpha,
+                ApplyBorderTransparency = ApplyBorderTransparency,
+                BorderTransparencyPercent = BorderTransparencyPercent,
                 BubbleSize = BubbleSize,
                 PointShape = PointShape,
                 BubbleBorderWidth = BubbleBorderWidth,
@@ -1200,7 +1206,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 Color seriesColor = ResolveSeriesColor(sourceSeries, i, styleOptions);
                 bool forceBubbleStyle = styleOptions.ForceBubbleStyle;
                 float pointSize = ResolveBubbleSize(sourceSeries, styleOptions);
-                Color pointBorderColor = ResolvePointBorderColor(sourceSeries, seriesColor);
+                Color pointBorderColor = ResolvePointBorderColor(sourceSeries, seriesColor, styleOptions);
                 float pointBorderWidth = ResolvePointBorderWidth(sourceSeries, styleOptions);
                 chartSeries.Title.Text = GetLegendLabel(sourceSeries, i);
                 chartSeries.ShowInLegendBox = sourceSeries.ShowInLegend;
@@ -1643,14 +1649,19 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             return effectiveOptions.PointShape;
         }
 
-        private Color ResolvePointBorderColor(LightningScatterSeries sourceSeries, Color fallbackColor)
+        private Color ResolvePointBorderColor(LightningScatterSeries sourceSeries, Color fallbackColor, LightningScatterStyleOptions styleOptions)
         {
+            Color borderColor;
             if (sourceSeries == null || sourceSeries.PointBorderColor.IsEmpty)
             {
-                return fallbackColor;
+                borderColor = fallbackColor;
+            }
+            else
+            {
+                borderColor = sourceSeries.PointBorderColor;
             }
 
-            return sourceSeries.PointBorderColor;
+            return ApplyBorderTransparency(borderColor, styleOptions);
         }
 
         private float ResolvePointBorderWidth(LightningScatterSeries sourceSeries, LightningScatterStyleOptions styleOptions)
@@ -1679,6 +1690,20 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             }
 
             int alpha = Math.Max(0, Math.Min(255, effectiveOptions.ColorAlpha));
+            return Color.FromArgb(alpha, color.R, color.G, color.B);
+        }
+
+        private static Color ApplyBorderTransparency(Color color, LightningScatterStyleOptions styleOptions)
+        {
+            LightningScatterStyleOptions effectiveOptions = styleOptions ?? new LightningScatterStyleOptions();
+            if (!effectiveOptions.ApplyBorderTransparency || color.IsEmpty)
+            {
+                return color;
+            }
+
+            float transparency = Math.Max(0f, Math.Min(100f, effectiveOptions.BorderTransparencyPercent));
+            int alpha = (int)Math.Round(255f * ((100f - transparency) / 100f));
+            alpha = Math.Max(0, Math.Min(255, alpha));
             return Color.FromArgb(alpha, color.R, color.G, color.B);
         }
 

@@ -51,7 +51,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
 
             this.popupDataProvider = popupDataProvider;
             MinimumNumericCoveragePercent = 90d;
-            SeriesPointSize = 7.5f;
+            SeriesPointSize = 7f;
             HighlightPointSize = 19f;
             SelectedPointSize = 24f;
             currentSamples = new List<ScatterSampleData>();
@@ -90,7 +90,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         public double MinimumNumericCoveragePercent { get; set; }
 
         /// <summary>
-        /// 일반 시리즈 포인트 크기다. 기본값은 7.5다.
+        /// 일반 시리즈 포인트 크기다. 기본값은 7이다.
         /// </summary>
         public float SeriesPointSize { get; set; }
 
@@ -1501,9 +1501,13 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             PcaScatterOptions options = PcaScatterOptions.CreateDefault600x400();
             options.Analysis.MinimumNumericFeatureCoverageRatio =
                 ConvertCoveragePercentToRatio(MinimumNumericCoveragePercent);
-            options.Series.PassColor = Color.Blue;
-            options.Series.ReviewColor = Color.Red;
-            options.Series.PointSize = NormalizePointSize(SeriesPointSize, 7.5f);
+            options.Series.PassColor = Color.Red;
+            options.Series.ReviewColor = Color.Green;
+            options.Series.UsePaletteColors = true;
+            options.Series.NaSeriesName = "N/A";
+            options.Series.NaSeriesColor = Color.SkyBlue;
+            options.Series.PastelPalette = PcaScatterSeriesOptions.CreateCompanySeriesPalette();
+            options.Series.PointSize = NormalizePointSize(SeriesPointSize, 7f);
             options.Series.HighlightPointSize = NormalizePointSize(HighlightPointSize, 19f);
             options.Series.SelectedPointSize = NormalizePointSize(SelectedPointSize, 24f);
             options.Display.FontName = "맑은 고딕";

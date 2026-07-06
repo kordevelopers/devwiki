@@ -35,15 +35,19 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
             List<string> orderedNames = ResolveSeriesOrder(groups.Keys, options);
             var result = new List<LightningScatterSeries>();
+            int companyPaletteIndex = 0;
             for (int index = 0; index < orderedNames.Count; index++)
             {
                 string seriesName = orderedNames[index];
+                bool isNaSeries = IsNaSeriesName(seriesName, options);
+                int colorIndex = isNaSeries ? 0 : companyPaletteIndex++;
+                Color seriesColor = ResolveSeriesColor(seriesName, colorIndex, options);
                 result.Add(new LightningScatterSeries
                 {
                     Name = seriesName,
                     LegendLabel = ResolveLegendLabel(seriesName, options),
-                    LineColor = ResolveSeriesColor(seriesName, index, options),
-                    PointColor = ResolveSeriesColor(seriesName, index, options),
+                    LineColor = seriesColor,
+                    PointColor = seriesColor,
                     PointSize = Math.Max(1f, options.PointSize),
                     PointShape = options.PointShape,
                     ShowLine = options.ShowLine,
@@ -144,6 +148,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
         private static Color ResolveSeriesColor(string seriesName, int seriesIndex, PcaScatterSeriesOptions options)
         {
+            if (IsNaSeriesName(seriesName, options))
+            {
+                return ApplyColorAlpha(options.NaSeriesColor, options);
+            }
+
             Color configuredColor;
             if (options.SeriesColors != null && options.SeriesColors.TryGetValue(seriesName, out configuredColor))
             {
@@ -151,7 +160,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             }
 
             Color[] palette = options.PastelPalette == null || options.PastelPalette.Length == 0
-                ? LightningScatterOptions.CreateDefaultPastelPalette()
+                ? PcaScatterSeriesOptions.CreateCompanySeriesPalette()
                 : options.PastelPalette;
             if (options.UsePaletteColors && palette.Length > 0)
             {
@@ -185,6 +194,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
             int alpha = Math.Max(0, Math.Min(255, options.ColorAlpha));
             return Color.FromArgb(alpha, color.R, color.G, color.B);
+        }
+
+        private static bool IsNaSeriesName(string seriesName, PcaScatterSeriesOptions options)
+        {
+            string naSeriesName = options == null || string.IsNullOrWhiteSpace(options.NaSeriesName)
+                ? "N/A"
+                : options.NaSeriesName.Trim();
+            return string.Equals(seriesName, naSeriesName, StringComparison.OrdinalIgnoreCase);
         }
 
         private static List<string> ResolveSeriesOrder(IEnumerable<string> groupNames, PcaScatterSeriesOptions options)

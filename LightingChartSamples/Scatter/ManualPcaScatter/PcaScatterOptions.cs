@@ -55,18 +55,22 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
     {
         public PcaScatterSeriesOptions()
         {
-            PointSize = 7.5f;
+            PointSize = 7f;
             PointShape = LightningScatterPointShape.RoundedRectangle;
             ShowLine = false;
             ShowPoints = true;
-            UsePaletteColors = false;
+            UsePaletteColors = true;
             ApplyColorAlpha = true;
             ColorAlpha = 190;
+            ApplyBorderTransparency = true;
+            BorderTransparencyPercent = 20f;
+            NaSeriesName = "N/A";
+            NaSeriesColor = Color.SkyBlue;
             PassResultName = "Pass";
             ReviewResultName = "Review";
-            PassColor = Color.Blue;
-            ReviewColor = Color.Red;
-            DefaultColor = Color.FromArgb(129, 178, 231);
+            PassColor = Color.Red;
+            ReviewColor = Color.Green;
+            DefaultColor = Color.Red;
             HighlightColor = Color.Black;
             HighlightPointSize = 19f;
             SelectedDraftNo = string.Empty;
@@ -76,7 +80,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             SelectedPointSize = 24f;
             SeriesOrder = new[] { PassResultName, ReviewResultName };
             SeriesColors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
-            PastelPalette = LightningScatterOptions.CreateDefaultPastelPalette();
+            PastelPalette = CreateCompanySeriesPalette();
         }
 
         public float PointSize { get; set; }
@@ -86,6 +90,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public bool UsePaletteColors { get; set; }
         public bool ApplyColorAlpha { get; set; }
         public int ColorAlpha { get; set; }
+        public bool ApplyBorderTransparency { get; set; }
+        public float BorderTransparencyPercent { get; set; }
+        public string NaSeriesName { get; set; }
+        public Color NaSeriesColor { get; set; }
         public string PassResultName { get; set; }
         public string ReviewResultName { get; set; }
         public Color PassColor { get; set; }
@@ -116,6 +124,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 UsePaletteColors = UsePaletteColors,
                 ApplyColorAlpha = ApplyColorAlpha,
                 ColorAlpha = ColorAlpha,
+                ApplyBorderTransparency = ApplyBorderTransparency,
+                BorderTransparencyPercent = BorderTransparencyPercent,
+                NaSeriesName = NaSeriesName,
+                NaSeriesColor = NaSeriesColor,
                 PassResultName = PassResultName,
                 ReviewResultName = ReviewResultName,
                 PassColor = PassColor,
@@ -133,9 +145,28 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 SeriesColors = SeriesColors == null
                     ? new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)
                     : new Dictionary<string, Color>(SeriesColors, StringComparer.OrdinalIgnoreCase),
-                PastelPalette = PastelPalette == null ? LightningScatterOptions.CreateDefaultPastelPalette() : (Color[])PastelPalette.Clone(),
+                PastelPalette = PastelPalette == null ? CreateCompanySeriesPalette() : (Color[])PastelPalette.Clone(),
                 SeriesNameSelector = SeriesNameSelector,
                 LegendLabelFormatter = LegendLabelFormatter
+            };
+        }
+
+        public static Color[] CreateCompanySeriesPalette()
+        {
+            return new[]
+            {
+                Color.Red,
+                Color.Green,
+                Color.Black,
+                Color.Yellow,
+                Color.Navy,
+                Color.Orange,
+                Color.OliveDrab,
+                Color.Purple,
+                Color.Lime,
+                Color.Pink,
+                Color.MistyRose,
+                Color.LightCyan
             };
         }
     }
@@ -316,6 +347,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             scatterOptions.Style.PointShape = series.PointShape;
             scatterOptions.Style.ApplyColorAlpha = series.ApplyColorAlpha;
             scatterOptions.Style.ColorAlpha = series.ColorAlpha;
+            scatterOptions.Style.ApplyBorderTransparency = series.ApplyBorderTransparency;
+            scatterOptions.Style.BorderTransparencyPercent = series.BorderTransparencyPercent;
             scatterOptions.Style.BubbleBorderWidth = 1f;
             scatterOptions.Style.PointBodyThickness = 1f;
 
