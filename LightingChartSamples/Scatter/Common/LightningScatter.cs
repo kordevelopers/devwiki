@@ -92,7 +92,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             PointBorderColor = Color.Empty;
             PointBorderWidth = -1f;
             LineColor = Color.FromArgb(129, 178, 231);
-            PointSize = 14f;
+            PointSize = 7.5f;
             PointShape = LightningScatterPointShape.Circle;
             LineWidth = 1.5f;
             ShowLine = false;
@@ -215,17 +215,23 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         {
             ForceBubbleStyle = true;
             UsePastelPalette = true;
-            BubbleSize = 14f;
+            ApplyColorAlpha = true;
+            ColorAlpha = 190;
+            BubbleSize = 7.5f;
             PointShape = LightningScatterPointShape.Circle;
-            BubbleBorderWidth = 1.2f;
+            BubbleBorderWidth = 1f;
+            PointBodyThickness = 1f;
             PastelPalette = LightningScatterOptions.CreateDefaultPastelPalette();
         }
 
         public bool ForceBubbleStyle { get; set; }
         public bool UsePastelPalette { get; set; }
+        public bool ApplyColorAlpha { get; set; }
+        public int ColorAlpha { get; set; }
         public float BubbleSize { get; set; }
         public LightningScatterPointShape PointShape { get; set; }
         public float BubbleBorderWidth { get; set; }
+        public float PointBodyThickness { get; set; }
         public Color[] PastelPalette { get; set; }
 
         public LightningScatterStyleOptions Clone()
@@ -234,9 +240,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             {
                 ForceBubbleStyle = ForceBubbleStyle,
                 UsePastelPalette = UsePastelPalette,
+                ApplyColorAlpha = ApplyColorAlpha,
+                ColorAlpha = ColorAlpha,
                 BubbleSize = BubbleSize,
                 PointShape = PointShape,
                 BubbleBorderWidth = BubbleBorderWidth,
+                PointBodyThickness = PointBodyThickness,
                 PastelPalette = PastelPalette == null ? LightningScatterOptions.CreateDefaultPastelPalette() : (Color[])PastelPalette.Clone()
             };
         }
@@ -361,10 +370,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         public LightningScatterOptions()
         {
             FontName = LightningScatter.DefaultChartFontName;
-            Title = string.Empty;
-            ShowTitle = false;
+            Title = "Distribution Chart";
+            ShowTitle = true;
+            TitleColor = Color.Black;
             BackgroundColor = Color.White;
-            GraphBackgroundColor = Color.White;
+            GraphBackgroundColor = Color.FromArgb(245, 245, 245);
             XAxis = new LightningScatterAxisOptions { Title = "X" };
             YAxis = new LightningScatterAxisOptions { Title = "Y" };
             Legend = new LightningScatterLegendOptions();
@@ -378,6 +388,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         public string FontName { get; set; }
         public string Title { get; set; }
         public bool ShowTitle { get; set; }
+        public Color TitleColor { get; set; }
         public Color BackgroundColor { get; set; }
         public Color GraphBackgroundColor { get; set; }
         public LightningScatterAxisOptions XAxis { get; set; }
@@ -421,6 +432,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 FontName = FontName,
                 Title = Title,
                 ShowTitle = ShowTitle,
+                TitleColor = TitleColor,
                 BackgroundColor = BackgroundColor,
                 GraphBackgroundColor = GraphBackgroundColor,
                 XAxis = XAxis == null ? new LightningScatterAxisOptions() : XAxis.Clone(),
@@ -870,7 +882,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 ApplyAxesRange(snapshotSeries, snapshotOptions);
                 ApplyLegendOptions(GetLegendBox(), snapshotOptions.Legend);
                 ApplyNoDataState(snapshotSeries, snapshotOptions, snapshotIsCleared);
-                UpdateLegendStrip(snapshotSeries, snapshotOptions.Legend);
+                UpdateLegendStrip(snapshotSeries, snapshotOptions);
             }
             finally
             {
@@ -895,11 +907,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             chart.Title.Text = currentOptions.Title ?? string.Empty;
             chart.Title.Visible = currentOptions.ShowTitle && !string.IsNullOrWhiteSpace(currentOptions.Title);
             chart.Title.Font = CreateChartFont(12f, FontStyle.Bold);
-            chart.Title.Color = Color.FromArgb(90, 90, 90);
+            chart.Title.Color = currentOptions.TitleColor.IsEmpty ? Color.Black : currentOptions.TitleColor;
 
             ViewXY view = chart.ViewXY;
             view.GraphBackground.Color = currentOptions.GraphBackgroundColor;
             view.GraphBackground.GradientColor = currentOptions.GraphBackgroundColor;
+            view.GraphBackground.GradientFill = GradientFill.Solid;
             view.GraphBackground.Style = RectFillStyle.ColorOnly;
             view.Border.Color = currentOptions.BackgroundColor;
             view.Margins = ResolveViewMargins(currentOptions.Legend);
@@ -1016,8 +1029,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             }
         }
 
-        private void UpdateLegendStrip(IList<LightningScatterSeries> currentSeries, LightningScatterLegendOptions legendOptions)
+        private void UpdateLegendStrip(IList<LightningScatterSeries> currentSeries, LightningScatterOptions currentOptions)
         {
+            LightningScatterOptions effectiveChartOptions = currentOptions ?? new LightningScatterOptions();
+            LightningScatterLegendOptions legendOptions = effectiveChartOptions.Legend;
+            LightningScatterStyleOptions styleOptions = effectiveChartOptions.Style;
             LightningScatterLegendOptions effectiveOptions = legendOptions ?? new LightningScatterLegendOptions();
             ClearLegendStrip();
 
@@ -1044,7 +1060,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             {
                 LightningScatterSeries sourceSeries = legendSeries[index];
                 string legendLabel = GetLegendLabel(sourceSeries, index);
-                legendItemsPanel.Controls.Add(CreateLegendItem(sourceSeries, index, legendLabel, effectiveOptions));
+                Color markerColor = ResolveSeriesColor(sourceSeries, index, styleOptions);
+                legendItemsPanel.Controls.Add(CreateLegendItem(sourceSeries, index, legendLabel, markerColor, effectiveOptions));
             }
 
             CenterLegendItems();
@@ -1054,6 +1071,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             LightningScatterSeries sourceSeries,
             int seriesIndex,
             string legendLabel,
+            Color markerColor,
             LightningScatterLegendOptions legendOptions)
         {
             Font labelFont = CreateChartFont(legendOptions.FontSize, FontStyle.Regular);
@@ -1075,7 +1093,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 Location = new Point(0, 4),
                 Size = new Size(12, 12)
             };
-            Color markerColor = ResolveLegendMarkerColor(sourceSeries);
             markerPanel.Paint += delegate(object sender, PaintEventArgs e)
             {
                 using (GraphicsPath path = CreateRoundedRectanglePath(new RectangleF(0, 0, 11, 11), 4f))
@@ -1112,21 +1129,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             {
                 OnLegendClicked(new LightningScatterLegendClickEventArgs(sourceSeries.Clone(), seriesIndex, legendLabel));
             };
-        }
-
-        private static Color ResolveLegendMarkerColor(LightningScatterSeries sourceSeries)
-        {
-            if (sourceSeries.PointColor != Color.Empty)
-            {
-                return sourceSeries.PointColor;
-            }
-
-            if (sourceSeries.LineColor != Color.Empty)
-            {
-                return sourceSeries.LineColor;
-            }
-
-            return Color.FromArgb(129, 178, 231);
         }
 
         private void ClearLegendStrip()
@@ -1212,7 +1214,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                     pointSize,
                     seriesColor,
                     pointBorderColor,
-                    pointBorderWidth);
+                    pointBorderWidth,
+                    ResolvePointBodyThickness(styleOptions));
                 chartSeries.MouseInteraction = true;
                 chartSeries.CursorTrackEnabled = true;
                 chartSeries.MouseClick += PointSeries_MouseClick;
@@ -1228,7 +1231,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             float pointSize,
             Color fillColor,
             Color borderColor,
-            float borderWidth)
+            float borderWidth,
+            float bodyThickness)
         {
             float safeSize = Math.Max(1f, pointSize);
             pointStyle.Width = safeSize;
@@ -1237,6 +1241,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             pointStyle.Color2 = fillColor;
             pointStyle.BorderColor = borderColor;
             pointStyle.BorderWidth = Math.Max(0f, borderWidth);
+            pointStyle.BodyThickness = Math.Max(0f, bodyThickness);
             pointStyle.Antialiasing = true;
 
             switch (pointShape)
@@ -1596,14 +1601,19 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         private Color ResolveSeriesColor(LightningScatterSeries sourceSeries, int seriesIndex, LightningScatterStyleOptions styleOptions)
         {
             LightningScatterStyleOptions effectiveOptions = styleOptions ?? new LightningScatterStyleOptions();
+            Color resolvedColor;
             if (effectiveOptions.UsePastelPalette
                 && effectiveOptions.PastelPalette != null
                 && effectiveOptions.PastelPalette.Length > 0)
             {
-                return effectiveOptions.PastelPalette[Math.Abs(seriesIndex) % effectiveOptions.PastelPalette.Length];
+                resolvedColor = effectiveOptions.PastelPalette[Math.Abs(seriesIndex) % effectiveOptions.PastelPalette.Length];
+                return ApplyColorAlpha(resolvedColor, effectiveOptions);
             }
 
-            return sourceSeries == null ? Color.FromArgb(129, 178, 231) : sourceSeries.PointColor;
+            resolvedColor = sourceSeries == null || sourceSeries.PointColor.IsEmpty
+                ? Color.FromArgb(129, 178, 231)
+                : sourceSeries.PointColor;
+            return ApplyColorAlpha(resolvedColor, effectiveOptions);
         }
 
         private float ResolveBubbleSize(LightningScatterSeries sourceSeries, LightningScatterStyleOptions styleOptions)
@@ -1652,6 +1662,24 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
 
             LightningScatterStyleOptions effectiveOptions = styleOptions ?? new LightningScatterStyleOptions();
             return Math.Max(0f, effectiveOptions.BubbleBorderWidth);
+        }
+
+        private float ResolvePointBodyThickness(LightningScatterStyleOptions styleOptions)
+        {
+            LightningScatterStyleOptions effectiveOptions = styleOptions ?? new LightningScatterStyleOptions();
+            return Math.Max(0f, effectiveOptions.PointBodyThickness);
+        }
+
+        private static Color ApplyColorAlpha(Color color, LightningScatterStyleOptions styleOptions)
+        {
+            LightningScatterStyleOptions effectiveOptions = styleOptions ?? new LightningScatterStyleOptions();
+            if (!effectiveOptions.ApplyColorAlpha || color.IsEmpty)
+            {
+                return color;
+            }
+
+            int alpha = Math.Max(0, Math.Min(255, effectiveOptions.ColorAlpha));
+            return Color.FromArgb(alpha, color.R, color.G, color.B);
         }
 
         private LegendBoxPositionXY ConvertLegendPosition(LightningScatterLegendPosition position)

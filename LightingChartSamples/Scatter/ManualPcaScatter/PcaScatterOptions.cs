@@ -55,10 +55,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
     {
         public PcaScatterSeriesOptions()
         {
-            PointSize = 15f;
+            PointSize = 7.5f;
             PointShape = LightningScatterPointShape.RoundedRectangle;
             ShowLine = false;
             ShowPoints = true;
+            UsePaletteColors = false;
+            ApplyColorAlpha = true;
+            ColorAlpha = 190;
             PassResultName = "Pass";
             ReviewResultName = "Review";
             PassColor = Color.Blue;
@@ -80,6 +83,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public LightningScatterPointShape PointShape { get; set; }
         public bool ShowLine { get; set; }
         public bool ShowPoints { get; set; }
+        public bool UsePaletteColors { get; set; }
+        public bool ApplyColorAlpha { get; set; }
+        public int ColorAlpha { get; set; }
         public string PassResultName { get; set; }
         public string ReviewResultName { get; set; }
         public Color PassColor { get; set; }
@@ -107,6 +113,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 PointShape = PointShape,
                 ShowLine = ShowLine,
                 ShowPoints = ShowPoints,
+                UsePaletteColors = UsePaletteColors,
+                ApplyColorAlpha = ApplyColorAlpha,
+                ColorAlpha = ColorAlpha,
                 PassResultName = PassResultName,
                 ReviewResultName = ReviewResultName,
                 PassColor = PassColor,
@@ -136,10 +145,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public PcaScatterDisplayOptions()
         {
             FontName = "맑은 고딕";
-            ShowTitle = false;
-            Title = string.Empty;
+            ShowTitle = true;
+            Title = "Distribution Chart";
+            TitleColor = Color.Black;
             BackgroundColor = Color.White;
-            GraphBackgroundColor = Color.White;
+            GraphBackgroundColor = Color.FromArgb(245, 245, 245);
             XAxisTitle = "X1";
             YAxisTitle = "X2";
             AutoCalculateAxisRange = true;
@@ -156,6 +166,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public string FontName { get; set; }
         public bool ShowTitle { get; set; }
         public string Title { get; set; }
+        public Color TitleColor { get; set; }
         public Color BackgroundColor { get; set; }
         public Color GraphBackgroundColor { get; set; }
         public string XAxisTitle { get; set; }
@@ -290,6 +301,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             scatterOptions.FontName = string.IsNullOrWhiteSpace(display.FontName) ? "맑은 고딕" : display.FontName.Trim();
             scatterOptions.ShowTitle = display.ShowTitle;
             scatterOptions.Title = display.Title ?? string.Empty;
+            scatterOptions.TitleColor = display.TitleColor.IsEmpty ? Color.Black : display.TitleColor;
             scatterOptions.BackgroundColor = display.BackgroundColor;
             scatterOptions.GraphBackgroundColor = display.GraphBackgroundColor;
             scatterOptions.Legend = snapshot.Legend ?? new LightningScatterLegendOptions();
@@ -302,6 +314,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             PcaScatterSeriesOptions series = snapshot.Series ?? new PcaScatterSeriesOptions();
             scatterOptions.Style.BubbleSize = Math.Max(1f, series.PointSize);
             scatterOptions.Style.PointShape = series.PointShape;
+            scatterOptions.Style.ApplyColorAlpha = series.ApplyColorAlpha;
+            scatterOptions.Style.ColorAlpha = series.ColorAlpha;
+            scatterOptions.Style.BubbleBorderWidth = 1f;
+            scatterOptions.Style.PointBodyThickness = 1f;
 
             ApplyAxisOptions(scatterOptions, analysisResult, display);
 

@@ -147,28 +147,44 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             Color configuredColor;
             if (options.SeriesColors != null && options.SeriesColors.TryGetValue(seriesName, out configuredColor))
             {
-                return configuredColor;
-            }
-
-            if (string.Equals(seriesName, options.PassResultName, StringComparison.OrdinalIgnoreCase))
-            {
-                return options.PassColor;
-            }
-
-            if (string.Equals(seriesName, options.ReviewResultName, StringComparison.OrdinalIgnoreCase))
-            {
-                return options.ReviewColor;
+                return ApplyColorAlpha(configuredColor, options);
             }
 
             Color[] palette = options.PastelPalette == null || options.PastelPalette.Length == 0
                 ? LightningScatterOptions.CreateDefaultPastelPalette()
                 : options.PastelPalette;
-            if (seriesIndex >= 0 && seriesIndex < palette.Length)
+            if (options.UsePaletteColors && palette.Length > 0)
             {
-                return palette[seriesIndex];
+                return ApplyColorAlpha(palette[Math.Abs(seriesIndex) % palette.Length], options);
             }
 
-            return options.DefaultColor;
+            if (string.Equals(seriesName, options.PassResultName, StringComparison.OrdinalIgnoreCase))
+            {
+                return ApplyColorAlpha(options.PassColor, options);
+            }
+
+            if (string.Equals(seriesName, options.ReviewResultName, StringComparison.OrdinalIgnoreCase))
+            {
+                return ApplyColorAlpha(options.ReviewColor, options);
+            }
+
+            if (seriesIndex >= 0 && seriesIndex < palette.Length)
+            {
+                return ApplyColorAlpha(palette[seriesIndex], options);
+            }
+
+            return ApplyColorAlpha(options.DefaultColor, options);
+        }
+
+        private static Color ApplyColorAlpha(Color color, PcaScatterSeriesOptions options)
+        {
+            if (options == null || !options.ApplyColorAlpha || color.IsEmpty)
+            {
+                return color;
+            }
+
+            int alpha = Math.Max(0, Math.Min(255, options.ColorAlpha));
+            return Color.FromArgb(alpha, color.R, color.G, color.B);
         }
 
         private static List<string> ResolveSeriesOrder(IEnumerable<string> groupNames, PcaScatterSeriesOptions options)

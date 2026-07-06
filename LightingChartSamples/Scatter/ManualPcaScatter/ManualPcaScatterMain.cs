@@ -51,7 +51,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
 
             this.popupDataProvider = popupDataProvider;
             MinimumNumericCoveragePercent = 90d;
-            SeriesPointSize = 15f;
+            SeriesPointSize = 7.5f;
             HighlightPointSize = 19f;
             SelectedPointSize = 24f;
             currentSamples = new List<ScatterSampleData>();
@@ -90,7 +90,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         public double MinimumNumericCoveragePercent { get; set; }
 
         /// <summary>
-        /// 일반 시리즈 포인트 크기다. 기본값은 15다.
+        /// 일반 시리즈 포인트 크기다. 기본값은 7.5다.
         /// </summary>
         public float SeriesPointSize { get; set; }
 
@@ -1503,11 +1503,15 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 ConvertCoveragePercentToRatio(MinimumNumericCoveragePercent);
             options.Series.PassColor = Color.Blue;
             options.Series.ReviewColor = Color.Red;
-            options.Series.PointSize = NormalizePointSize(SeriesPointSize, 15f);
+            options.Series.PointSize = NormalizePointSize(SeriesPointSize, 7.5f);
             options.Series.HighlightPointSize = NormalizePointSize(HighlightPointSize, 19f);
             options.Series.SelectedPointSize = NormalizePointSize(SelectedPointSize, 24f);
             options.Display.FontName = "맑은 고딕";
-            options.Display.ShowTitle = false;
+            options.Display.ShowTitle = true;
+            options.Display.Title = "Distribution Chart";
+            options.Display.TitleColor = Color.Black;
+            options.Display.BackgroundColor = Color.White;
+            options.Display.GraphBackgroundColor = Color.FromArgb(245, 245, 245);
             options.Display.XAxisTitle = "X1";
             options.Display.YAxisTitle = "X2";
             options.Display.MajorDivCount = 8;
