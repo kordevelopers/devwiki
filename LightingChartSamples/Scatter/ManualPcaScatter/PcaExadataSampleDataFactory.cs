@@ -87,12 +87,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         {
             for (int rowIndex = 0; rowIndex < count; rowIndex++)
             {
-                bool isPass = rowIndex < (count * 2 / 3);
-                string labelY = isPass ? "PASS" : "FAIL";
+                SampleSeriesProfile profile = ResolveSampleSeriesProfile(rowIndex);
                 string draftNo = string.Format(CultureInfo.InvariantCulture, "{0}-{1:000}", draftPrefix, rowIndex + 1);
-                double clusterCenterX = isPass ? -2.4d : 2.7d;
-                double clusterCenterY = isPass ? 0.8d : -0.7d;
-                double subClusterOffset = ResolveSubClusterOffset(rowIndex, isPass);
+                double subClusterOffset = ResolveSubClusterOffset(rowIndex, profile);
+                double clusterCenterX = profile.CenterX;
+                double clusterCenterY = profile.CenterY;
                 double pcaFactorX = clusterCenterX + typeOffset + subClusterOffset + NextGaussian(0d, 0.42d);
                 double pcaFactorY = clusterCenterY - (subClusterOffset * 0.45d) + NextGaussian(0d, 0.38d);
                 double batchNoise = NextGaussian(0d, 0.18d);
@@ -114,16 +113,41 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 }
 
                 string json = PcaJsonUtility.SerializeObject(new[] { experiment });
-                rows.Add(new PcaExadataSourceRow(rows.Count, draftNo, parameterType, labelY, json));
+                rows.Add(new PcaExadataSourceRow(rows.Count, draftNo, parameterType, profile.Label, json));
             }
         }
 
-        private static double ResolveSubClusterOffset(int rowIndex, bool isPass)
+        private static SampleSeriesProfile ResolveSampleSeriesProfile(int rowIndex)
+        {
+            switch (Math.Abs(rowIndex) % 4)
+            {
+                case 0:
+                    return new SampleSeriesProfile("N/A", -3.2d, 2.1d);
+                case 1:
+                    return new SampleSeriesProfile("Pass", -1.0d, -1.4d);
+                case 2:
+                    return new SampleSeriesProfile("Review", 1.2d, 1.1d);
+                default:
+                    return new SampleSeriesProfile("FAIL", 3.1d, -1.8d);
+            }
+        }
+
+        private static double ResolveSubClusterOffset(int rowIndex, SampleSeriesProfile profile)
         {
             int clusterIndex = rowIndex % 3;
-            if (isPass)
+            if (string.Equals(profile.Label, "N/A", StringComparison.OrdinalIgnoreCase))
+            {
+                return clusterIndex == 0 ? -0.30d : clusterIndex == 1 ? 0.08d : 0.36d;
+            }
+
+            if (string.Equals(profile.Label, "Pass", StringComparison.OrdinalIgnoreCase))
             {
                 return clusterIndex == 0 ? -0.45d : clusterIndex == 1 ? 0.05d : 0.48d;
+            }
+
+            if (string.Equals(profile.Label, "Review", StringComparison.OrdinalIgnoreCase))
+            {
+                return clusterIndex == 0 ? -0.40d : clusterIndex == 1 ? 0.15d : 0.54d;
             }
 
             return clusterIndex == 0 ? -0.35d : clusterIndex == 1 ? 0.25d : 0.62d;
@@ -136,6 +160,20 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             double normal = Math.Sqrt(-2d * Math.Log(u1))
                 * Math.Sin(2d * Math.PI * u2);
             return mean + (standardDeviation * normal);
+        }
+
+        private sealed class SampleSeriesProfile
+        {
+            public SampleSeriesProfile(string label, double centerX, double centerY)
+            {
+                Label = label;
+                CenterX = centerX;
+                CenterY = centerY;
+            }
+
+            public string Label { get; private set; }
+            public double CenterX { get; private set; }
+            public double CenterY { get; private set; }
         }
     }
 }

@@ -52,7 +52,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             this.popupDataProvider = popupDataProvider;
             MinimumNumericCoveragePercent = 90d;
             SeriesPointSize = 7f;
-            HighlightPointSize = 19f;
+            HighlightPointSize = 0f;
             SelectedPointSize = 0f;
             currentSamples = new List<ScatterSampleData>();
             currentRecords = new List<PcaExperimentRecord>();
@@ -95,7 +95,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         public float SeriesPointSize { get; set; }
 
         /// <summary>
-        /// 조회한 DRAFT_NO 강조 포인트 크기다. 기본값은 19다.
+        /// 조회한 DRAFT_NO 강조 포인트 크기다. 0 이하이면 일반 포인트보다 10% 크게 표시한다.
         /// </summary>
         public float HighlightPointSize { get; set; }
 
@@ -1536,11 +1536,17 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Series.PassColor = Color.Red;
             options.Series.ReviewColor = Color.Green;
             options.Series.UsePaletteColors = true;
+            options.Series.ColorTransparencyPercent = 20f;
+            options.Series.ColorAlpha = PcaScatterSeriesOptions.ResolveAlphaFromTransparencyPercent(options.Series.ColorTransparencyPercent, options.Series.ColorAlpha);
             options.Series.NaSeriesName = "N/A";
             options.Series.NaSeriesColor = Color.SkyBlue;
+            options.Series.SeriesOrder = new[] { "N/A", "Pass", "Review", "FAIL" };
             options.Series.PastelPalette = PcaScatterSeriesOptions.CreateCompanySeriesPalette();
             options.Series.PointSize = NormalizePointSize(SeriesPointSize, 7f);
-            options.Series.HighlightPointSize = NormalizePointSize(HighlightPointSize, 19f);
+            options.Series.HighlightColor = Color.Black;
+            options.Series.HighlightPointBorderColor = Color.Black;
+            options.Series.HighlightPointBorderWidth = 1f;
+            options.Series.HighlightPointSize = ResolveHighlightedPointSize(options.Series.PointSize, HighlightPointSize);
             options.Series.SelectedPointSize = ResolveSelectedPointSize(options.Series.PointSize, SelectedPointSize);
             options.Series.SelectedPointColor = Color.Empty;
             options.Series.SelectedPointBorderColor = Color.Lime;
@@ -1588,6 +1594,18 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 && selectedPointSize > 0f)
             {
                 return Math.Max(1f, selectedPointSize);
+            }
+
+            return Math.Max(1f, pointSize * 1.1f);
+        }
+
+        private static float ResolveHighlightedPointSize(float pointSize, float highlightedPointSize)
+        {
+            if (!float.IsNaN(highlightedPointSize)
+                && !float.IsInfinity(highlightedPointSize)
+                && highlightedPointSize > 0f)
+            {
+                return Math.Max(1f, highlightedPointSize);
             }
 
             return Math.Max(1f, pointSize * 1.1f);

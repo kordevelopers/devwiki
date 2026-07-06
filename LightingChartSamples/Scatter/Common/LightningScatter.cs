@@ -216,7 +216,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             ForceBubbleStyle = true;
             UsePastelPalette = true;
             ApplyColorAlpha = true;
-            ColorAlpha = 190;
+            ColorTransparencyPercent = 20f;
+            ColorAlpha = ResolveAlphaFromTransparencyPercent(ColorTransparencyPercent, 190);
+            ApplyColorTransparencyBlend = true;
+            ColorBlendBackground = Color.White;
             ApplyBorderTransparency = true;
             BorderTransparencyPercent = 20f;
             BubbleSize = 7f;
@@ -230,6 +233,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         public bool UsePastelPalette { get; set; }
         public bool ApplyColorAlpha { get; set; }
         public int ColorAlpha { get; set; }
+        public float ColorTransparencyPercent { get; set; }
+        public bool ApplyColorTransparencyBlend { get; set; }
+        public Color ColorBlendBackground { get; set; }
         public bool ApplyBorderTransparency { get; set; }
         public float BorderTransparencyPercent { get; set; }
         public float BubbleSize { get; set; }
@@ -246,6 +252,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 UsePastelPalette = UsePastelPalette,
                 ApplyColorAlpha = ApplyColorAlpha,
                 ColorAlpha = ColorAlpha,
+                ColorTransparencyPercent = ColorTransparencyPercent,
+                ApplyColorTransparencyBlend = ApplyColorTransparencyBlend,
+                ColorBlendBackground = ColorBlendBackground,
                 ApplyBorderTransparency = ApplyBorderTransparency,
                 BorderTransparencyPercent = BorderTransparencyPercent,
                 BubbleSize = BubbleSize,
@@ -254,6 +263,18 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 PointBodyThickness = PointBodyThickness,
                 PastelPalette = PastelPalette == null ? LightningScatterOptions.CreateDefaultPastelPalette() : (Color[])PastelPalette.Clone()
             };
+        }
+
+        private static int ResolveAlphaFromTransparencyPercent(float transparencyPercent, int fallbackAlpha)
+        {
+            if (float.IsNaN(transparencyPercent) || float.IsInfinity(transparencyPercent))
+            {
+                return Math.Max(0, Math.Min(255, fallbackAlpha));
+            }
+
+            float transparency = Math.Max(0f, Math.Min(100f, transparencyPercent));
+            int alpha = (int)Math.Round(255f * ((100f - transparency) / 100f));
+            return Math.Max(0, Math.Min(255, alpha));
         }
     }
 
@@ -1691,7 +1712,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 return color;
             }
 
-            int alpha = Math.Max(0, Math.Min(255, effectiveOptions.ColorAlpha));
+            int alpha = ResolveAlphaFromTransparencyPercent(effectiveOptions.ColorTransparencyPercent, effectiveOptions.ColorAlpha);
+            if (effectiveOptions.ApplyColorTransparencyBlend)
+            {
+                return BlendWithBackground(color, effectiveOptions.ColorBlendBackground, alpha);
+            }
+
             return Color.FromArgb(alpha, color.R, color.G, color.B);
         }
 
@@ -1707,6 +1733,34 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             int alpha = (int)Math.Round(255f * ((100f - transparency) / 100f));
             alpha = Math.Max(0, Math.Min(255, alpha));
             return Color.FromArgb(alpha, color.R, color.G, color.B);
+        }
+
+        private static int ResolveAlphaFromTransparencyPercent(float transparencyPercent, int fallbackAlpha)
+        {
+            if (float.IsNaN(transparencyPercent) || float.IsInfinity(transparencyPercent))
+            {
+                return Math.Max(0, Math.Min(255, fallbackAlpha));
+            }
+
+            float transparency = Math.Max(0f, Math.Min(100f, transparencyPercent));
+            int alpha = (int)Math.Round(255f * ((100f - transparency) / 100f));
+            return Math.Max(0, Math.Min(255, alpha));
+        }
+
+        private static Color BlendWithBackground(Color color, Color backgroundColor, int alpha)
+        {
+            Color background = backgroundColor.IsEmpty ? Color.White : backgroundColor;
+            float ratio = Math.Max(0f, Math.Min(255f, alpha)) / 255f;
+            int red = BlendChannel(color.R, background.R, ratio);
+            int green = BlendChannel(color.G, background.G, ratio);
+            int blue = BlendChannel(color.B, background.B, ratio);
+            return Color.FromArgb(255, red, green, blue);
+        }
+
+        private static int BlendChannel(int foreground, int background, float foregroundRatio)
+        {
+            int value = (int)Math.Round((foreground * foregroundRatio) + (background * (1f - foregroundRatio)));
+            return Math.Max(0, Math.Min(255, value));
         }
 
         private LegendBoxPositionXY ConvertLegendPosition(LightningScatterLegendPosition position)

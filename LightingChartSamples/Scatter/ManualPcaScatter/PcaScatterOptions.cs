@@ -61,7 +61,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             ShowPoints = true;
             UsePaletteColors = true;
             ApplyColorAlpha = true;
-            ColorAlpha = 190;
+            ColorTransparencyPercent = 20f;
+            ColorAlpha = ResolveAlphaFromTransparencyPercent(ColorTransparencyPercent, 190);
             ApplyBorderTransparency = true;
             BorderTransparencyPercent = 20f;
             NaSeriesName = "N/A";
@@ -72,7 +73,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             ReviewColor = Color.Green;
             DefaultColor = Color.Red;
             HighlightColor = Color.Black;
-            HighlightPointSize = 19f;
+            HighlightPointBorderColor = Color.Black;
+            HighlightPointBorderWidth = 1f;
+            HighlightPointSize = 0f;
             SelectedDraftNo = string.Empty;
             SelectedPointColor = Color.Empty;
             SelectedPointBorderColor = Color.Lime;
@@ -90,6 +93,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public bool UsePaletteColors { get; set; }
         public bool ApplyColorAlpha { get; set; }
         public int ColorAlpha { get; set; }
+        public float ColorTransparencyPercent { get; set; }
         public bool ApplyBorderTransparency { get; set; }
         public float BorderTransparencyPercent { get; set; }
         public string NaSeriesName { get; set; }
@@ -101,6 +105,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public Color DefaultColor { get; set; }
         public string HighlightDraftNo { get; set; }
         public Color HighlightColor { get; set; }
+        public Color HighlightPointBorderColor { get; set; }
+        public float HighlightPointBorderWidth { get; set; }
         public float HighlightPointSize { get; set; }
         public string SelectedDraftNo { get; set; }
         public Color SelectedPointColor { get; set; }
@@ -124,6 +130,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 UsePaletteColors = UsePaletteColors,
                 ApplyColorAlpha = ApplyColorAlpha,
                 ColorAlpha = ColorAlpha,
+                ColorTransparencyPercent = ColorTransparencyPercent,
                 ApplyBorderTransparency = ApplyBorderTransparency,
                 BorderTransparencyPercent = BorderTransparencyPercent,
                 NaSeriesName = NaSeriesName,
@@ -135,6 +142,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 DefaultColor = DefaultColor,
                 HighlightDraftNo = HighlightDraftNo,
                 HighlightColor = HighlightColor,
+                HighlightPointBorderColor = HighlightPointBorderColor,
+                HighlightPointBorderWidth = HighlightPointBorderWidth,
                 HighlightPointSize = HighlightPointSize,
                 SelectedDraftNo = SelectedDraftNo,
                 SelectedPointColor = SelectedPointColor,
@@ -168,6 +177,18 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 Color.MistyRose,
                 Color.LightCyan
             };
+        }
+
+        internal static int ResolveAlphaFromTransparencyPercent(float transparencyPercent, int fallbackAlpha)
+        {
+            if (float.IsNaN(transparencyPercent) || float.IsInfinity(transparencyPercent))
+            {
+                return Math.Max(0, Math.Min(255, fallbackAlpha));
+            }
+
+            float transparency = Math.Max(0f, Math.Min(100f, transparencyPercent));
+            int alpha = (int)Math.Round(255f * ((100f - transparency) / 100f));
+            return Math.Max(0, Math.Min(255, alpha));
         }
     }
 
@@ -346,7 +367,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             scatterOptions.Style.BubbleSize = Math.Max(1f, series.PointSize);
             scatterOptions.Style.PointShape = series.PointShape;
             scatterOptions.Style.ApplyColorAlpha = series.ApplyColorAlpha;
-            scatterOptions.Style.ColorAlpha = series.ColorAlpha;
+            scatterOptions.Style.ColorTransparencyPercent = series.ColorTransparencyPercent;
+            scatterOptions.Style.ColorAlpha = PcaScatterSeriesOptions.ResolveAlphaFromTransparencyPercent(series.ColorTransparencyPercent, series.ColorAlpha);
+            scatterOptions.Style.ApplyColorTransparencyBlend = true;
+            scatterOptions.Style.ColorBlendBackground = display.GraphBackgroundColor.IsEmpty ? display.BackgroundColor : display.GraphBackgroundColor;
             scatterOptions.Style.ApplyBorderTransparency = series.ApplyBorderTransparency;
             scatterOptions.Style.BorderTransparencyPercent = series.BorderTransparencyPercent;
             scatterOptions.Style.BubbleBorderWidth = 1f;

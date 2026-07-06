@@ -66,7 +66,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
             if (highlightedSample != null)
             {
-                result.Add(CreateSinglePointSeries(highlightedSample, highlightedSample.DraftNo.Trim(), options.HighlightColor, options.HighlightColor, options.PointShape, Math.Max(1f, options.HighlightPointSize), 1.8f, true));
+                result.Add(CreateSinglePointSeries(highlightedSample, highlightedSample.DraftNo.Trim(), options.HighlightColor, options.HighlightPointBorderColor, options.PointShape, ResolveHighlightedPointSize(options), Math.Max(0f, options.HighlightPointBorderWidth), true));
             }
 
             if (selectedSample != null && !object.ReferenceEquals(selectedSample, highlightedSample))
@@ -222,15 +222,17 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 : Math.Max(1f, basePointSize * 1.1f);
         }
 
+        private static float ResolveHighlightedPointSize(PcaScatterSeriesOptions options)
+        {
+            float basePointSize = options == null ? 7f : Math.Max(1f, options.PointSize);
+            return options != null && options.HighlightPointSize > 0f
+                ? Math.Max(1f, options.HighlightPointSize)
+                : Math.Max(1f, basePointSize * 1.1f);
+        }
+
         private static Color ApplyColorAlpha(Color color, PcaScatterSeriesOptions options)
         {
-            if (options == null || !options.ApplyColorAlpha || color.IsEmpty)
-            {
-                return color;
-            }
-
-            int alpha = Math.Max(0, Math.Min(255, options.ColorAlpha));
-            return Color.FromArgb(alpha, color.R, color.G, color.B);
+            return color;
         }
 
         private static bool IsNaSeriesName(string seriesName, PcaScatterSeriesOptions options)
