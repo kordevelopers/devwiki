@@ -883,7 +883,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 && (effectiveOptions.Position == LightningScatterLegendPosition.BottomLeft
                     || effectiveOptions.Position == LightningScatterLegendPosition.BottomCenter
                     || effectiveOptions.Position == LightningScatterLegendPosition.BottomRight);
-            return new Padding(70, 68, 24, legendAtBottom ? 94 : 48);
+            return new Padding(70, 68, 24, legendAtBottom ? 114 : 48);
         }
 
         private void ApplyAxisOptions(AxisBase axis, LightningScatterAxisOptions axisOptions)

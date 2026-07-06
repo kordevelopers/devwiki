@@ -51,6 +51,9 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
 
             this.popupDataProvider = popupDataProvider;
             MinimumNumericCoveragePercent = 90d;
+            SeriesPointSize = 15f;
+            HighlightPointSize = 19f;
+            SelectedPointSize = 24f;
             currentSamples = new List<ScatterSampleData>();
             currentRecords = new List<PcaExperimentRecord>();
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
@@ -85,6 +88,21 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         /// 90을 넣으면 90%, 0.9를 넣으면 90%로 처리한다.
         /// </summary>
         public double MinimumNumericCoveragePercent { get; set; }
+
+        /// <summary>
+        /// 일반 시리즈 포인트 크기다. 기본값은 15다.
+        /// </summary>
+        public float SeriesPointSize { get; set; }
+
+        /// <summary>
+        /// 조회한 DRAFT_NO 강조 포인트 크기다. 기본값은 19다.
+        /// </summary>
+        public float HighlightPointSize { get; set; }
+
+        /// <summary>
+        /// 그리드에서 선택한 행의 포인트 크기다. 기본값은 24다.
+        /// </summary>
+        public float SelectedPointSize { get; set; }
 
         /// <summary>
         /// 상단 분석 상태 텍스트 표시 여부다. 기본값은 숨김이다.
@@ -1485,6 +1503,9 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 ConvertCoveragePercentToRatio(MinimumNumericCoveragePercent);
             options.Series.PassColor = Color.Blue;
             options.Series.ReviewColor = Color.Red;
+            options.Series.PointSize = NormalizePointSize(SeriesPointSize, 15f);
+            options.Series.HighlightPointSize = NormalizePointSize(HighlightPointSize, 19f);
+            options.Series.SelectedPointSize = NormalizePointSize(SelectedPointSize, 24f);
             options.Display.FontName = "맑은 고딕";
             options.Display.ShowTitle = false;
             options.Display.XAxisTitle = "X1";
@@ -1505,6 +1526,16 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.NoData.Text = "PCA Scatter 데이터가 없습니다.";
             options.NoData.ShowWhenAllValuesZero = false;
             return options;
+        }
+
+        private static float NormalizePointSize(float value, float defaultValue)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value) || value <= 0f)
+            {
+                return defaultValue;
+            }
+
+            return Math.Max(1f, value);
         }
 
         private static double ConvertCoveragePercentToRatio(double value)
