@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
-using SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common;
+using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common;
 
 namespace LightingChartSamples.Scatter
 {

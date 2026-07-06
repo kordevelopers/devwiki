@@ -4,7 +4,6 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using LightingChartSamples.Scatter;
-using LightingChartSamples.Scatter.AccordPcaScatter;
 using LightingChartSamples.Scatter.ManualPcaScatter;
 
 namespace LightingChartSamples
@@ -21,7 +20,6 @@ namespace LightingChartSamples
             AddLightningScatterSampleButton();
             AddPcaScatterSampleButton();
             AddScatterMainButton();
-            AddAccordScatterMainButton();
         }
 
         private void btnTextDocument_Click(object sender, EventArgs e)
@@ -112,14 +110,6 @@ namespace LightingChartSamples
         private void btnScatterMain_Click(object sender, EventArgs e)
         {
             using (var form = new ManualPcaScatterMain())
-            {
-                form.ShowDialog(this);
-            }
-        }
-
-        private void btnAccordScatterMain_Click(object sender, EventArgs e)
-        {
-            using (var form = new AccordScatterMain())
             {
                 form.ShowDialog(this);
             }
@@ -293,29 +283,6 @@ namespace LightingChartSamples
             ClientSize = new Size(520, 762);
         }
 
-        private void AddAccordScatterMainButton()
-        {
-            var button = new Button
-            {
-                BackColor = Color.FromArgb(86, 119, 168),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Malgun Gothic", 10F, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = new Point(32, 712),
-                Name = "btnAccordScatterMain",
-                Size = new Size(456, 46),
-                TabIndex = 12,
-                Text = "Accord PCA Scatter Open",
-                UseVisualStyleBackColor = false
-            };
-
-            button.Click += btnAccordScatterMain_Click;
-            pnlContainer.Controls.Add(button);
-
-            btnClose.Location = new Point(392, 771);
-            btnClose.TabIndex = 13;
-            ClientSize = new Size(520, 820);
-        }
     }
 
     public class NewBarChartGuideForm : Form

@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter;
-using SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common;
+using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common;
 
 namespace LightingChartSamples.Scatter.ManualPcaScatter
 {
@@ -1494,7 +1494,8 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Display.GridLinesVisible = true;
             options.Display.GridColor = Color.FromArgb(232, 234, 238);
             options.Legend.Position = LightningScatterLegendPosition.BottomCenter;
-            options.Legend.ShowCheckboxes = true;
+            options.Legend.OffsetY = 20;
+            options.Legend.ShowCheckboxes = false;
             options.Legend.BackgroundColor = Color.Transparent;
             options.Legend.BorderColor = Color.Transparent;
             options.Legend.TransparentBackground = true;

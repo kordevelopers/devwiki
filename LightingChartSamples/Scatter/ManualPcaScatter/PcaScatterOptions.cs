@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using LightingChartSamples.Scatter;
-using SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common;
+using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
@@ -183,7 +183,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             Legend = new LightningScatterLegendOptions
             {
                 Position = LightningScatterLegendPosition.BottomCenter,
-                ShowCheckboxes = true,
+                OffsetY = 20,
+                ShowCheckboxes = false,
                 BackgroundColor = Color.Transparent,
                 BorderColor = Color.Transparent,
                 TransparentBackground = true

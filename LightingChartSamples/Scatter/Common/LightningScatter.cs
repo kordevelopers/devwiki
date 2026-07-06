@@ -11,7 +11,7 @@ using Arction.WinForms.Charting.Axes;
 using Arction.WinForms.Charting.SeriesXY;
 using Arction.WinForms.Charting.Views.ViewXY;
 
-namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
+namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
 {
     public enum LightningScatterLegendPosition
     {
@@ -174,6 +174,8 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             BackgroundColor = Color.White;
             BorderColor = Color.White;
             TransparentBackground = false;
+            OffsetX = 0;
+            OffsetY = 0;
             ShowCheckboxes = false;
             ShowIcons = true;
         }
@@ -185,6 +187,8 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         public Color BackgroundColor { get; set; }
         public Color BorderColor { get; set; }
         public bool TransparentBackground { get; set; }
+        public int OffsetX { get; set; }
+        public int OffsetY { get; set; }
         public bool ShowCheckboxes { get; set; }
         public bool ShowIcons { get; set; }
 
@@ -879,7 +883,7 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 && (effectiveOptions.Position == LightningScatterLegendPosition.BottomLeft
                     || effectiveOptions.Position == LightningScatterLegendPosition.BottomCenter
                     || effectiveOptions.Position == LightningScatterLegendPosition.BottomRight);
-            return new Padding(70, 68, 24, legendAtBottom ? 74 : 48);
+            return new Padding(70, 68, 24, legendAtBottom ? 94 : 48);
         }
 
         private void ApplyAxisOptions(AxisBase axis, LightningScatterAxisOptions axisOptions)
@@ -919,6 +923,7 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             LightningScatterLegendOptions effectiveOptions = legendOptions ?? new LightningScatterLegendOptions();
             legendBox.Visible = effectiveOptions.Visible;
             legendBox.Position = ConvertLegendPosition(effectiveOptions.Position);
+            legendBox.Offset = new PointIntXY(effectiveOptions.OffsetX, effectiveOptions.OffsetY);
             legendBox.Layout = LegendBoxLayout.Horizontal;
             legendBox.AutoSize = true;
             legendBox.SeriesTitleFont = CreateChartFont(effectiveOptions.FontSize, FontStyle.Regular);
@@ -931,14 +936,19 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             legendBox.AllowMouseResize = false;
             if (effectiveOptions.TransparentBackground)
             {
+                legendBox.Fill.Color = Color.Transparent;
                 legendBox.Fill.Style = RectFillStyle.None;
+                legendBox.BorderWidth = 0;
                 legendBox.BorderColor = Color.Transparent;
+                legendBox.Shadow.Visible = false;
             }
             else
             {
                 legendBox.Fill.Color = effectiveOptions.BackgroundColor;
                 legendBox.Fill.Style = RectFillStyle.ColorOnly;
+                legendBox.BorderWidth = 1;
                 legendBox.BorderColor = effectiveOptions.BorderColor;
+                legendBox.Shadow.Visible = false;
             }
         }
 

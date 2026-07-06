@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using LightingChartSamples.Scatter;
-using SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common;
+using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.AccordPcaScatter
 {

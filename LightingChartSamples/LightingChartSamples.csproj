@@ -33,22 +33,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Accord, Version=3.8.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
-      <HintPath>dlls\Accord.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Accord.Math, Version=3.8.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
-      <HintPath>dlls\Accord.Math.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Accord.Math.Core, Version=3.8.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
-      <HintPath>dlls\Accord.Math.Core.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Accord.Statistics, Version=3.8.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
-      <HintPath>dlls\Accord.Statistics.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="Arction.DirectX, Version=8.5.1.4001, Culture=neutral, PublicKeyToken=6484d7bb14b95dd3, processorArchitecture=MSIL">
       <HintPath>..\packages\LightningChart.8.5.1.1\lib\net40-client\Arction.DirectX.dll</HintPath>
     </Reference>
@@ -135,23 +119,6 @@
     <Compile Include="Scatter\Samples\PcaScatterSampleForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Scatter\AccordPcaScatter\AccordScatterMain.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Scatter\AccordPcaScatter\AccordScatterMain.Designer.cs">
-      <DependentUpon>AccordScatterMain.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Scatter\AccordPcaScatter\AccordPcaCoreModels.cs" />
-    <Compile Include="Scatter\AccordPcaScatter\AccordPcaExperimentModels.cs" />
-    <Compile Include="Scatter\AccordPcaScatter\AccordPcaScatterAnalyzer.cs" />
-    <Compile Include="Scatter\AccordPcaScatter\ConvExperimentRepository.cs" />
-    <Compile Include="Scatter\AccordPcaScatter\PcaExadataSampleDataFactory.cs" />
-    <Compile Include="Scatter\AccordPcaScatter\PcaJsonUtility.cs" />
-    <Compile Include="Scatter\AccordPcaScatter\PcaScatterChart.cs" />
-    <Compile Include="Scatter\AccordPcaScatter\PcaScatterOptions.cs" />
-    <Compile Include="Scatter\AccordPcaScatter\PcaScatterPopupDataProvider.cs" />
-    <Compile Include="Scatter\AccordPcaScatter\PcaScatterSeriesBuilder.cs" />
-    <Compile Include="Scatter\AccordPcaScatter\ScatterSampleData.cs" />
     <Compile Include="Scatter\ManualPcaScatter\ActDataJsonParser.cs" />
     <Compile Include="Scatter\ManualPcaScatter\ActDataRepository.cs" />
     <Compile Include="Scatter\ManualPcaScatter\ConvExperimentRepository.cs" />
