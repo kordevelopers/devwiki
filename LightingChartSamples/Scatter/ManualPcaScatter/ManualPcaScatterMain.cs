@@ -1515,7 +1515,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Display.GridLinesVisible = true;
             options.Display.GridColor = Color.FromArgb(232, 234, 238);
             options.Legend.Position = LightningScatterLegendPosition.BottomCenter;
-            options.Legend.OffsetY = 20;
+            options.Legend.OffsetY = 0;
             options.Legend.ShowCheckboxes = false;
             options.Legend.BackgroundColor = Color.Transparent;
             options.Legend.BorderColor = Color.Transparent;

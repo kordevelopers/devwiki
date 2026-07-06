@@ -186,7 +186,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             Legend = new LightningScatterLegendOptions
             {
                 Position = LightningScatterLegendPosition.BottomCenter,
-                OffsetY = 20,
+                OffsetY = 0,
                 ShowCheckboxes = false,
                 BackgroundColor = Color.Transparent,
                 BorderColor = Color.Transparent,

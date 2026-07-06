@@ -510,6 +510,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         public const string DefaultChartFontName = "맑은 고딕";
 
         private readonly LightningChartUltimate chart;
+        private readonly Panel legendStripPanel;
+        private readonly FlowLayoutPanel legendItemsPanel;
         private readonly ToolTip pointToolTip = new ToolTip();
         private readonly Dictionary<PointLineSeries, ScatterSeriesBinding> seriesBindings =
             new Dictionary<PointLineSeries, ScatterSeriesBinding>();
@@ -546,6 +548,30 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             chart.MouseLeave += delegate { HidePointToolTip(); };
             chart.Resize += Chart_Resize;
 
+            legendStripPanel = new Panel
+            {
+                BackColor = Color.White,
+                Dock = DockStyle.Bottom,
+                Height = 0,
+                Padding = new Padding(0, 12, 0, 4),
+                Visible = false
+            };
+            legendStripPanel.Resize += delegate { CenterLegendItems(); };
+
+            legendItemsPanel = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = Color.Transparent,
+                FlowDirection = FlowDirection.LeftToRight,
+                Location = new Point(0, 0),
+                Margin = new Padding(0),
+                Padding = new Padding(0),
+                WrapContents = false
+            };
+            legendItemsPanel.SizeChanged += delegate { CenterLegendItems(); };
+            legendStripPanel.Controls.Add(legendItemsPanel);
+
             pointToolTip.InitialDelay = 150;
             pointToolTip.ReshowDelay = 100;
             pointToolTip.AutoPopDelay = 5000;
@@ -554,6 +580,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             pointToolTip.Draw += PointToolTip_Draw;
 
             Controls.Add(chart);
+            Controls.Add(legendStripPanel);
+            legendStripPanel.BringToFront();
             InitializeChart();
         }
 
@@ -824,7 +852,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 ApplyChartOptions(snapshotOptions);
                 ApplySeries(snapshotSeries, snapshotOptions);
                 ApplyAxesRange(snapshotSeries, snapshotOptions);
+                ApplyLegendOptions(GetLegendBox(), snapshotOptions.Legend);
                 ApplyNoDataState(snapshotSeries, snapshotOptions, snapshotIsCleared);
+                UpdateLegendStrip(snapshotSeries, snapshotOptions.Legend);
             }
             finally
             {
@@ -900,7 +930,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 && (effectiveOptions.Position == LightningScatterLegendPosition.BottomLeft
                     || effectiveOptions.Position == LightningScatterLegendPosition.BottomCenter
                     || effectiveOptions.Position == LightningScatterLegendPosition.BottomRight);
-            return new Padding(70, 68, 24, legendAtBottom ? 114 : 48);
+            return new Padding(70, 68, 24, legendAtBottom ? 64 : 48);
         }
 
         private void ApplyAxisOptions(AxisBase axis, LightningScatterAxisOptions axisOptions)
@@ -938,9 +968,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         private void ApplyLegendOptions(LegendBoxXY legendBox, LightningScatterLegendOptions legendOptions)
         {
             LightningScatterLegendOptions effectiveOptions = legendOptions ?? new LightningScatterLegendOptions();
-            legendBox.Visible = effectiveOptions.Visible;
+            legendBox.Visible = effectiveOptions.Visible && !ShouldUseLegendStrip(effectiveOptions);
             legendBox.Position = ConvertLegendPosition(effectiveOptions.Position);
             legendBox.Offset = new PointIntXY(effectiveOptions.OffsetX, effectiveOptions.OffsetY);
+            legendBox.AlignmentInVerticalMargin = AlignmentInVerticalMargin.Center;
             legendBox.Layout = LegendBoxLayout.Horizontal;
             legendBox.AutoSize = true;
             legendBox.SeriesTitleFont = CreateChartFont(effectiveOptions.FontSize, FontStyle.Regular);
@@ -967,6 +998,156 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 legendBox.BorderColor = effectiveOptions.BorderColor;
                 legendBox.Shadow.Visible = false;
             }
+        }
+
+        private void UpdateLegendStrip(IList<LightningScatterSeries> currentSeries, LightningScatterLegendOptions legendOptions)
+        {
+            LightningScatterLegendOptions effectiveOptions = legendOptions ?? new LightningScatterLegendOptions();
+            ClearLegendStrip();
+
+            if (!effectiveOptions.Visible || !ShouldUseLegendStrip(effectiveOptions))
+            {
+                HideLegendStrip();
+                return;
+            }
+
+            IList<LightningScatterSeries> legendSeries = (currentSeries ?? new List<LightningScatterSeries>())
+                .Where(item => item != null
+                    && item.ShowInLegend
+                    && item.Points != null
+                    && item.Points.Count > 0)
+                .ToList();
+            if (legendSeries.Count == 0)
+            {
+                HideLegendStrip();
+                return;
+            }
+
+            legendStripPanel.Height = 44;
+            legendStripPanel.Visible = true;
+            for (int index = 0; index < legendSeries.Count; index++)
+            {
+                LightningScatterSeries sourceSeries = legendSeries[index];
+                string legendLabel = GetLegendLabel(sourceSeries, index);
+                legendItemsPanel.Controls.Add(CreateLegendItem(sourceSeries, index, legendLabel, effectiveOptions));
+            }
+
+            CenterLegendItems();
+        }
+
+        private Control CreateLegendItem(
+            LightningScatterSeries sourceSeries,
+            int seriesIndex,
+            string legendLabel,
+            LightningScatterLegendOptions legendOptions)
+        {
+            Font labelFont = CreateChartFont(legendOptions.FontSize, FontStyle.Regular);
+            Size labelSize = TextRenderer.MeasureText(legendLabel, labelFont);
+            int itemWidth = Math.Max(36, 18 + 6 + labelSize.Width);
+            var itemPanel = new Panel
+            {
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+                Height = 20,
+                Margin = new Padding(10, 0, 10, 0),
+                Width = itemWidth
+            };
+
+            var markerPanel = new Panel
+            {
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+                Location = new Point(0, 4),
+                Size = new Size(12, 12)
+            };
+            Color markerColor = ResolveLegendMarkerColor(sourceSeries);
+            markerPanel.Paint += delegate(object sender, PaintEventArgs e)
+            {
+                using (GraphicsPath path = CreateRoundedRectanglePath(new RectangleF(0, 0, 11, 11), 4f))
+                using (SolidBrush brush = new SolidBrush(markerColor))
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    e.Graphics.FillPath(brush, path);
+                }
+            };
+
+            var label = new Label
+            {
+                AutoSize = true,
+                BackColor = Color.Transparent,
+                Cursor = Cursors.Hand,
+                Font = labelFont,
+                ForeColor = legendOptions.TextColor,
+                Location = new Point(18, 2),
+                Text = legendLabel
+            };
+
+            AttachLegendItemClick(itemPanel, sourceSeries, seriesIndex, legendLabel);
+            AttachLegendItemClick(markerPanel, sourceSeries, seriesIndex, legendLabel);
+            AttachLegendItemClick(label, sourceSeries, seriesIndex, legendLabel);
+
+            itemPanel.Controls.Add(markerPanel);
+            itemPanel.Controls.Add(label);
+            return itemPanel;
+        }
+
+        private void AttachLegendItemClick(Control control, LightningScatterSeries sourceSeries, int seriesIndex, string legendLabel)
+        {
+            control.Click += delegate
+            {
+                OnLegendClicked(new LightningScatterLegendClickEventArgs(sourceSeries.Clone(), seriesIndex, legendLabel));
+            };
+        }
+
+        private static Color ResolveLegendMarkerColor(LightningScatterSeries sourceSeries)
+        {
+            if (sourceSeries.PointColor != Color.Empty)
+            {
+                return sourceSeries.PointColor;
+            }
+
+            if (sourceSeries.LineColor != Color.Empty)
+            {
+                return sourceSeries.LineColor;
+            }
+
+            return Color.FromArgb(129, 178, 231);
+        }
+
+        private void ClearLegendStrip()
+        {
+            while (legendItemsPanel.Controls.Count > 0)
+            {
+                Control control = legendItemsPanel.Controls[0];
+                legendItemsPanel.Controls.RemoveAt(0);
+                control.Dispose();
+            }
+        }
+
+        private void HideLegendStrip()
+        {
+            legendStripPanel.Visible = false;
+            legendStripPanel.Height = 0;
+        }
+
+        private void CenterLegendItems()
+        {
+            if (legendItemsPanel == null || legendStripPanel == null)
+            {
+                return;
+            }
+
+            int x = Math.Max(0, (legendStripPanel.ClientSize.Width - legendItemsPanel.Width) / 2);
+            int y = Math.Max(0, (legendStripPanel.ClientSize.Height - legendItemsPanel.Height) / 2);
+            legendItemsPanel.Location = new Point(x, y);
+        }
+
+        private static bool ShouldUseLegendStrip(LightningScatterLegendOptions legendOptions)
+        {
+            LightningScatterLegendOptions effectiveOptions = legendOptions ?? new LightningScatterLegendOptions();
+            return effectiveOptions.Position == LightningScatterLegendPosition.BottomLeft
+                || effectiveOptions.Position == LightningScatterLegendPosition.BottomCenter
+                || effectiveOptions.Position == LightningScatterLegendPosition.BottomRight;
         }
 
         private void ApplySeries(IList<LightningScatterSeries> currentSeries, LightningScatterOptions currentOptions)
