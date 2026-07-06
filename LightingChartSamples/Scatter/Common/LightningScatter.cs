@@ -509,6 +509,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
     {
         public const string DefaultChartFontName = "맑은 고딕";
 
+        private readonly TableLayoutPanel chartLayoutPanel;
         private readonly LightningChartUltimate chart;
         private readonly Panel legendStripPanel;
         private readonly FlowLayoutPanel legendItemsPanel;
@@ -539,10 +540,24 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             BackColor = Color.White;
             Size = new Size(600, 400);
 
+            chartLayoutPanel = new TableLayoutPanel
+            {
+                BackColor = Color.White,
+                ColumnCount = 1,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0),
+                Padding = new Padding(0),
+                RowCount = 2
+            };
+            chartLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            chartLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            chartLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 0F));
+
             chart = new LightningChartUltimate
             {
                 Dock = DockStyle.Fill,
-                Font = new Font(DefaultChartFontName, 9F, FontStyle.Regular)
+                Font = new Font(DefaultChartFontName, 9F, FontStyle.Regular),
+                Margin = new Padding(0)
             };
             chart.MouseMove += Chart_MouseMove;
             chart.MouseLeave += delegate { HidePointToolTip(); };
@@ -551,8 +566,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             legendStripPanel = new Panel
             {
                 BackColor = Color.White,
-                Dock = DockStyle.Bottom,
+                Dock = DockStyle.Fill,
                 Height = 0,
+                Margin = new Padding(0),
                 Padding = new Padding(0, 12, 0, 4),
                 Visible = false
             };
@@ -579,9 +595,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             pointToolTip.Popup += PointToolTip_Popup;
             pointToolTip.Draw += PointToolTip_Draw;
 
-            Controls.Add(chart);
-            Controls.Add(legendStripPanel);
-            legendStripPanel.BringToFront();
+            chartLayoutPanel.Controls.Add(chart, 0, 0);
+            chartLayoutPanel.Controls.Add(legendStripPanel, 0, 1);
+            Controls.Add(chartLayoutPanel);
             InitializeChart();
         }
 
@@ -930,7 +946,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 && (effectiveOptions.Position == LightningScatterLegendPosition.BottomLeft
                     || effectiveOptions.Position == LightningScatterLegendPosition.BottomCenter
                     || effectiveOptions.Position == LightningScatterLegendPosition.BottomRight);
-            return new Padding(70, 68, 24, legendAtBottom ? 64 : 48);
+            return new Padding(70, 68, 24, legendAtBottom ? 78 : 48);
         }
 
         private void ApplyAxisOptions(AxisBase axis, LightningScatterAxisOptions axisOptions)
@@ -1023,8 +1039,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 return;
             }
 
-            legendStripPanel.Height = 44;
-            legendStripPanel.Visible = true;
+            SetLegendStripVisible(true, 44);
             for (int index = 0; index < legendSeries.Count; index++)
             {
                 LightningScatterSeries sourceSeries = legendSeries[index];
@@ -1126,8 +1141,19 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
 
         private void HideLegendStrip()
         {
-            legendStripPanel.Visible = false;
-            legendStripPanel.Height = 0;
+            SetLegendStripVisible(false, 0);
+        }
+
+        private void SetLegendStripVisible(bool visible, int height)
+        {
+            legendStripPanel.Visible = visible;
+            legendStripPanel.Height = visible ? height : 0;
+            if (chartLayoutPanel.RowStyles.Count > 1)
+            {
+                chartLayoutPanel.RowStyles[1].Height = visible ? height : 0;
+            }
+
+            chartLayoutPanel.PerformLayout();
         }
 
         private void CenterLegendItems()
