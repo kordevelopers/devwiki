@@ -34,6 +34,11 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         private Label busyOverlayLabel;
         private ProgressBar busyOverlayProgressBar;
         private Font nearestNeighborGridFont;
+        private bool showAnalysisSummaryText;
+        private bool showRefreshAllButton;
+        private bool showAnalysisLogButton;
+        private bool showPreferMemoryOption;
+        private bool showFeatureAuditMessageBox;
 
         public ManualPcaScatterMain()
             : this(null)
@@ -70,6 +75,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             InitializeBusyOverlay();
             lastFeatureAuditLogPath = GetFeatureSelectionAuditLogPath();
             summaryLabel.Text = "서비스 DataTable을 전달한 뒤 PARAM_TYP과 DRAFT_NO를 선택해 분석하세요.";
+            ApplyOptionalUiVisibility();
             parameterChangeEnabled = true;
             SetToolbarEnabled(true);
         }
@@ -79,6 +85,67 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         /// 90을 넣으면 90%, 0.9를 넣으면 90%로 처리한다.
         /// </summary>
         public double MinimumNumericCoveragePercent { get; set; }
+
+        /// <summary>
+        /// 상단 분석 상태 텍스트 표시 여부다. 기본값은 숨김이다.
+        /// </summary>
+        public bool ShowAnalysisSummaryText
+        {
+            get { return showAnalysisSummaryText; }
+            set
+            {
+                showAnalysisSummaryText = value;
+                ApplyOptionalUiVisibility();
+            }
+        }
+
+        /// <summary>
+        /// 전체 새로고침 버튼 표시 여부다. 기본값은 숨김이다.
+        /// </summary>
+        public bool ShowRefreshAllButton
+        {
+            get { return showRefreshAllButton; }
+            set
+            {
+                showRefreshAllButton = value;
+                ApplyOptionalUiVisibility();
+            }
+        }
+
+        /// <summary>
+        /// PCA 분석 로그 열기 버튼 표시 여부다. 기본값은 숨김이다.
+        /// </summary>
+        public bool ShowAnalysisLogButton
+        {
+            get { return showAnalysisLogButton; }
+            set
+            {
+                showAnalysisLogButton = value;
+                ApplyOptionalUiVisibility();
+            }
+        }
+
+        /// <summary>
+        /// 메모리 데이터 우선 체크박스 표시 여부다. 기본값은 숨김이다.
+        /// </summary>
+        public bool ShowPreferMemoryOption
+        {
+            get { return showPreferMemoryOption; }
+            set
+            {
+                showPreferMemoryOption = value;
+                ApplyOptionalUiVisibility();
+            }
+        }
+
+        /// <summary>
+        /// 차트 렌더링 후 개발자용 PCA 로그 메시지박스를 표시할지 결정한다. 기본값은 비활성이다.
+        /// </summary>
+        public bool ShowFeatureAuditMessageBox
+        {
+            get { return showFeatureAuditMessageBox; }
+            set { showFeatureAuditMessageBox = value; }
+        }
 
         private void ConfigureNearestNeighborGrid()
         {
@@ -106,6 +173,36 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             nearestNeighborGrid.AlternatingRowsDefaultCellStyle.Alignment =
                 DataGridViewContentAlignment.MiddleLeft;
             nearestNeighborGrid.AlternatingRowsDefaultCellStyle.Font = nearestNeighborGridFont;
+        }
+
+        private void ApplyOptionalUiVisibility()
+        {
+            ApplyOptionalControlState(summaryLabel, showAnalysisSummaryText);
+            ApplyOptionalControlState(refreshAllButton, showRefreshAllButton);
+            ApplyOptionalControlState(preferMemoryCheckBox, showPreferMemoryOption);
+            if (analysisLogButton != null)
+            {
+                analysisLogButton.Visible = showAnalysisLogButton;
+                if (!showAnalysisLogButton)
+                {
+                    analysisLogButton.Enabled = false;
+                }
+                else
+                {
+                    UpdateAnalysisLogButtonState();
+                }
+            }
+        }
+
+        private static void ApplyOptionalControlState(Control control, bool visible)
+        {
+            if (control == null)
+            {
+                return;
+            }
+
+            control.Visible = visible;
+            control.Enabled = visible;
         }
 
         public Task LoadConvExperimentDataTableAsync(DataTable sourceTable)
@@ -412,21 +509,24 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             Debug.WriteLine("PCA Feature Audit Log: " + lastFeatureAuditLogPath);
 
 #if DEBUG
-            string popupLog = BuildFeatureSelectionAuditText(result, chartOptions, false);
-            if (!string.IsNullOrWhiteSpace(lastFeatureAuditLogPath))
+            if (ShowFeatureAuditMessageBox)
             {
-                popupLog += Environment.NewLine
-                    + "Developer log file:"
-                    + Environment.NewLine
-                    + lastFeatureAuditLogPath;
-            }
+                string popupLog = BuildFeatureSelectionAuditText(result, chartOptions, false);
+                if (!string.IsNullOrWhiteSpace(lastFeatureAuditLogPath))
+                {
+                    popupLog += Environment.NewLine
+                        + "Developer log file:"
+                        + Environment.NewLine
+                        + lastFeatureAuditLogPath;
+                }
 
-            MessageBox.Show(
-                this,
-                popupLog,
-                "PCA Feature Audit (Developer)",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+                MessageBox.Show(
+                    this,
+                    popupLog,
+                    "PCA Feature Audit (Developer)",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
 #endif
         }
 
@@ -1195,8 +1295,9 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             draftNoTextBox.Enabled = enabled;
             searchButton.Enabled = enabled;
             drawChartButton.Enabled = enabled && HasRenderableDataSource();
-            refreshAllButton.Enabled = enabled;
-            preferMemoryCheckBox.Enabled = enabled;
+            refreshAllButton.Enabled = enabled && showRefreshAllButton;
+            preferMemoryCheckBox.Enabled = enabled && showPreferMemoryOption;
+            summaryLabel.Enabled = enabled && showAnalysisSummaryText;
             nearestNeighborGrid.Enabled = enabled;
             UpdateAnalysisLogButtonState(enabled);
             UseWaitCursor = !enabled;
@@ -1228,6 +1329,12 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         {
             if (analysisLogButton == null)
             {
+                return;
+            }
+
+            if (!showAnalysisLogButton)
+            {
+                analysisLogButton.Enabled = false;
                 return;
             }
 
@@ -1376,6 +1483,9 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             PcaScatterOptions options = PcaScatterOptions.CreateDefault600x400();
             options.Analysis.MinimumNumericFeatureCoverageRatio =
                 ConvertCoveragePercentToRatio(MinimumNumericCoveragePercent);
+            options.Series.PassColor = Color.Blue;
+            options.Series.ReviewColor = Color.Red;
+            options.Display.FontName = "맑은 고딕";
             options.Display.ShowTitle = false;
             options.Display.XAxisTitle = "X1";
             options.Display.YAxisTitle = "X2";
@@ -1383,10 +1493,11 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Display.AxisLabelFormat = "0.##";
             options.Display.GridLinesVisible = true;
             options.Display.GridColor = Color.FromArgb(232, 234, 238);
-            options.Legend.Position = LightningScatterLegendPosition.TopCenter;
+            options.Legend.Position = LightningScatterLegendPosition.BottomCenter;
             options.Legend.ShowCheckboxes = true;
-            options.Legend.BackgroundColor = Color.White;
-            options.Legend.BorderColor = Color.FromArgb(220, 220, 220);
+            options.Legend.BackgroundColor = Color.Transparent;
+            options.Legend.BorderColor = Color.Transparent;
+            options.Legend.TransparentBackground = true;
             options.Tooltip.Enabled = true;
             options.Tooltip.HitPixelTolerance = 14;
             options.Tooltip.Format = "{5}\r\nX1:{1:0.###}, X2:{2:0.###}";

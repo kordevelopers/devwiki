@@ -173,6 +173,7 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             TextColor = Color.FromArgb(90, 90, 90);
             BackgroundColor = Color.White;
             BorderColor = Color.White;
+            TransparentBackground = false;
             ShowCheckboxes = false;
             ShowIcons = true;
         }
@@ -183,6 +184,7 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         public Color TextColor { get; set; }
         public Color BackgroundColor { get; set; }
         public Color BorderColor { get; set; }
+        public bool TransparentBackground { get; set; }
         public bool ShowCheckboxes { get; set; }
         public bool ShowIcons { get; set; }
 
@@ -833,7 +835,7 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             view.GraphBackground.GradientColor = currentOptions.GraphBackgroundColor;
             view.GraphBackground.Style = RectFillStyle.ColorOnly;
             view.Border.Color = currentOptions.BackgroundColor;
-            view.Margins = new Padding(70, 68, 24, 48);
+            view.Margins = ResolveViewMargins(currentOptions.Legend);
 
             ApplyInteractionOptions(view, currentOptions.Interaction);
             ApplyAxisOptions(GetXAxis(), currentOptions.XAxis);
@@ -868,6 +870,16 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             LightningScatterInteractionOptions effectiveOptions = interactionOptions ?? new LightningScatterInteractionOptions();
             axis.ZoomingEnabled = effectiveOptions.ZoomEnabled;
             axis.PanningEnabled = effectiveOptions.PanEnabled;
+        }
+
+        private static Padding ResolveViewMargins(LightningScatterLegendOptions legendOptions)
+        {
+            LightningScatterLegendOptions effectiveOptions = legendOptions ?? new LightningScatterLegendOptions();
+            bool legendAtBottom = effectiveOptions.Visible
+                && (effectiveOptions.Position == LightningScatterLegendPosition.BottomLeft
+                    || effectiveOptions.Position == LightningScatterLegendPosition.BottomCenter
+                    || effectiveOptions.Position == LightningScatterLegendPosition.BottomRight);
+            return new Padding(70, 68, 24, legendAtBottom ? 74 : 48);
         }
 
         private void ApplyAxisOptions(AxisBase axis, LightningScatterAxisOptions axisOptions)
@@ -917,9 +929,17 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             legendBox.MoveByMouse = false;
             legendBox.MoveFromSeriesTitle = false;
             legendBox.AllowMouseResize = false;
-            legendBox.Fill.Color = effectiveOptions.BackgroundColor;
-            legendBox.Fill.Style = RectFillStyle.ColorOnly;
-            legendBox.BorderColor = effectiveOptions.BorderColor;
+            if (effectiveOptions.TransparentBackground)
+            {
+                legendBox.Fill.Style = RectFillStyle.None;
+                legendBox.BorderColor = Color.Transparent;
+            }
+            else
+            {
+                legendBox.Fill.Color = effectiveOptions.BackgroundColor;
+                legendBox.Fill.Style = RectFillStyle.ColorOnly;
+                legendBox.BorderColor = effectiveOptions.BorderColor;
+            }
         }
 
         private void ApplySeries(IList<LightningScatterSeries> currentSeries, LightningScatterOptions currentOptions)
@@ -1035,6 +1055,7 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             if (chartCleared)
             {
                 noDataAnnotation.Visible = false;
+                UpdateLegendVisibilityForDataState(currentSeries, currentOptions, false);
                 return;
             }
 
@@ -1043,6 +1064,7 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             bool allValuesZero = hasRenderableData && AreAllValuesZero(currentSeries);
             bool showNoData = (!hasRenderableData && noDataOptions.ShowWhenDataMissing)
                 || (allValuesZero && noDataOptions.ShowWhenAllValuesZero);
+            UpdateLegendVisibilityForDataState(currentSeries, currentOptions, hasRenderableData);
 
             string displayText = GetNoDataDisplayText(noDataOptions.Text, noDataOptions);
             noDataAnnotation.Visible = showNoData && !string.IsNullOrWhiteSpace(displayText);
@@ -1058,6 +1080,20 @@ namespace SKhunix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             noDataAnnotation.BorderVisible = true;
             noDataAnnotation.CornerRoundRadius = 8;
             UpdateNoDataAnnotationLayout(noDataOptions, displayText);
+        }
+
+        private void UpdateLegendVisibilityForDataState(IList<LightningScatterSeries> currentSeries, LightningScatterOptions currentOptions, bool hasRenderableData)
+        {
+            LegendBoxXY legendBox = GetLegendBox();
+            LightningScatterLegendOptions legendOptions = currentOptions == null || currentOptions.Legend == null
+                ? new LightningScatterLegendOptions()
+                : currentOptions.Legend;
+            bool hasLegendSeries = currentSeries != null
+                && currentSeries.Any(series => series != null
+                    && series.ShowInLegend
+                    && series.Points != null
+                    && series.Points.Count > 0);
+            legendBox.Visible = legendOptions.Visible && hasRenderableData && hasLegendSeries;
         }
 
         private void UpdateNoDataAnnotationLayout(LightningScatterNoDataOptions noDataOptions, string displayText)

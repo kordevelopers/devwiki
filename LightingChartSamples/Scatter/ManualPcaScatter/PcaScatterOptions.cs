@@ -60,8 +60,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             ShowPoints = true;
             PassResultName = "Pass";
             ReviewResultName = "Review";
-            PassColor = Color.FromArgb(151, 211, 169);
-            ReviewColor = Color.FromArgb(238, 171, 210);
+            PassColor = Color.Blue;
+            ReviewColor = Color.Red;
             DefaultColor = Color.FromArgb(129, 178, 231);
             HighlightColor = Color.Black;
             HighlightPointSize = 19f;
@@ -182,10 +182,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             Display = new PcaScatterDisplayOptions();
             Legend = new LightningScatterLegendOptions
             {
-                Position = LightningScatterLegendPosition.TopCenter,
+                Position = LightningScatterLegendPosition.BottomCenter,
                 ShowCheckboxes = true,
-                BackgroundColor = Color.White,
-                BorderColor = Color.FromArgb(220, 220, 220)
+                BackgroundColor = Color.Transparent,
+                BorderColor = Color.Transparent,
+                TransparentBackground = true
             };
             Tooltip = new LightningScatterTooltipOptions
             {

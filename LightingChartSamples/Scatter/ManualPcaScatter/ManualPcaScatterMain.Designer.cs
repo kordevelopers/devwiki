@@ -252,10 +252,10 @@
             //
             this.chartHost.BackColor = System.Drawing.Color.White;
             this.chartHost.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.chartHost.Location = new System.Drawing.Point(0, 88);
-            this.chartHost.Margin = new System.Windows.Forms.Padding(0);
+            this.chartHost.Location = new System.Drawing.Point(12, 88);
+            this.chartHost.Margin = new System.Windows.Forms.Padding(12, 0, 12, 4);
             this.chartHost.Name = "chartHost";
-            this.chartHost.Size = new System.Drawing.Size(1180, 560);
+            this.chartHost.Size = new System.Drawing.Size(1156, 556);
             this.chartHost.TabIndex = 1;
             //
             // nearestNeighborGrid
@@ -268,8 +268,8 @@
             this.nearestNeighborGrid.ColumnHeadersHeight = 30;
             this.nearestNeighborGrid.Dock = System.Windows.Forms.DockStyle.Fill;
             this.nearestNeighborGrid.EnableHeadersVisualStyles = false;
-            this.nearestNeighborGrid.Location = new System.Drawing.Point(12, 656);
-            this.nearestNeighborGrid.Margin = new System.Windows.Forms.Padding(12, 8, 12, 12);
+            this.nearestNeighborGrid.Location = new System.Drawing.Point(12, 652);
+            this.nearestNeighborGrid.Margin = new System.Windows.Forms.Padding(12, 4, 12, 12);
             this.nearestNeighborGrid.MultiSelect = false;
             this.nearestNeighborGrid.Name = "nearestNeighborGrid";
             this.nearestNeighborGrid.ReadOnly = true;
