@@ -1,4 +1,4 @@
-﻿namespace LightingChartSamples.Scatter.ManualPcaScatter
+namespace LightingChartSamples.Scatter.ManualPcaScatter
 {
     partial class ManualPcaScatterMain
     {
@@ -16,6 +16,14 @@
                 if (components != null)
                 {
                     components.Dispose();
+                }
+
+                if (nearestNeighborGrid != null)
+                {
+                    nearestNeighborGrid.SelChange -= new AxFPUSpreadADO._DSpreadEvents_SelChangeEventHandler(this.NearestNeighborGrid_SelChange);
+                    nearestNeighborGrid.ClickEvent -= new AxFPUSpreadADO._DSpreadEvents_ClickEventHandler(this.NearestNeighborGrid_ClickEvent);
+                    nearestNeighborGrid.Dispose();
+                    nearestNeighborGrid = null;
                 }
 
                 if (nearestNeighborGridFont != null)
@@ -49,11 +57,10 @@
             this.analysisLogButton = new System.Windows.Forms.Button();
             this.preferMemoryCheckBox = new System.Windows.Forms.CheckBox();
             this.chartHost = new System.Windows.Forms.Panel();
-            this.nearestNeighborGrid = new System.Windows.Forms.DataGridView();
+            this.nearestNeighborGridHost = new System.Windows.Forms.Panel();
             this.rootLayout.SuspendLayout();
             this.toolbarLayout.SuspendLayout();
             this.commandPanel.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.nearestNeighborGrid)).BeginInit();
             this.SuspendLayout();
             // 
             // rootLayout
@@ -62,7 +69,7 @@
             this.rootLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.rootLayout.Controls.Add(this.toolbarLayout, 0, 0);
             this.rootLayout.Controls.Add(this.chartHost, 0, 1);
-            this.rootLayout.Controls.Add(this.nearestNeighborGrid, 0, 2);
+            this.rootLayout.Controls.Add(this.nearestNeighborGridHost, 0, 2);
             this.rootLayout.Dock = System.Windows.Forms.DockStyle.Fill;
             this.rootLayout.Location = new System.Drawing.Point(0, 0);
             this.rootLayout.Name = "rootLayout";
@@ -70,7 +77,7 @@
             this.rootLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 88F));
             this.rootLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.rootLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 172F));
-            this.rootLayout.Size = new System.Drawing.Size(1180, 820);
+            this.rootLayout.Size = new System.Drawing.Size(920, 611);
             this.rootLayout.TabIndex = 0;
             // 
             // toolbarLayout
@@ -90,7 +97,7 @@
             this.toolbarLayout.RowCount = 2;
             this.toolbarLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
             this.toolbarLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 34F));
-            this.toolbarLayout.Size = new System.Drawing.Size(1180, 88);
+            this.toolbarLayout.Size = new System.Drawing.Size(920, 88);
             this.toolbarLayout.TabIndex = 0;
             // 
             // titleLabel
@@ -114,7 +121,7 @@
             this.summaryLabel.Margin = new System.Windows.Forms.Padding(0);
             this.summaryLabel.Name = "summaryLabel";
             this.summaryLabel.Padding = new System.Windows.Forms.Padding(8, 0, 8, 0);
-            this.summaryLabel.Size = new System.Drawing.Size(1036, 30);
+            this.summaryLabel.Size = new System.Drawing.Size(776, 30);
             this.summaryLabel.TabIndex = 1;
             this.summaryLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
@@ -136,7 +143,7 @@
             this.commandPanel.Location = new System.Drawing.Point(12, 38);
             this.commandPanel.Margin = new System.Windows.Forms.Padding(0);
             this.commandPanel.Name = "commandPanel";
-            this.commandPanel.Size = new System.Drawing.Size(1156, 42);
+            this.commandPanel.Size = new System.Drawing.Size(896, 42);
             this.commandPanel.TabIndex = 2;
             this.commandPanel.WrapContents = false;
             // 
@@ -269,35 +276,26 @@
             this.chartHost.Location = new System.Drawing.Point(12, 88);
             this.chartHost.Margin = new System.Windows.Forms.Padding(12, 0, 12, 16);
             this.chartHost.Name = "chartHost";
-            this.chartHost.Size = new System.Drawing.Size(1156, 544);
+            this.chartHost.Size = new System.Drawing.Size(896, 335);
             this.chartHost.TabIndex = 1;
             // 
-            // nearestNeighborGrid
+            // nearestNeighborGridHost
             // 
-            this.nearestNeighborGrid.AllowUserToAddRows = false;
-            this.nearestNeighborGrid.AllowUserToDeleteRows = false;
-            this.nearestNeighborGrid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
-            this.nearestNeighborGrid.BackgroundColor = System.Drawing.Color.White;
-            this.nearestNeighborGrid.ColumnHeadersHeight = 30;
-            this.nearestNeighborGrid.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.nearestNeighborGrid.EnableHeadersVisualStyles = false;
-            this.nearestNeighborGrid.Location = new System.Drawing.Point(12, 660);
-            this.nearestNeighborGrid.Margin = new System.Windows.Forms.Padding(12);
-            this.nearestNeighborGrid.MultiSelect = false;
-            this.nearestNeighborGrid.Name = "nearestNeighborGrid";
-            this.nearestNeighborGrid.ReadOnly = true;
-            this.nearestNeighborGrid.RowHeadersVisible = false;
-            this.nearestNeighborGrid.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.nearestNeighborGrid.Size = new System.Drawing.Size(1156, 148);
-            this.nearestNeighborGrid.TabIndex = 2;
-            this.nearestNeighborGrid.SelectionChanged += new System.EventHandler(this.NearestNeighborGrid_SelectionChanged);
+            this.nearestNeighborGridHost.BackColor = System.Drawing.Color.White;
+            this.nearestNeighborGridHost.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.nearestNeighborGridHost.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.nearestNeighborGridHost.Location = new System.Drawing.Point(12, 451);
+            this.nearestNeighborGridHost.Margin = new System.Windows.Forms.Padding(12);
+            this.nearestNeighborGridHost.Name = "nearestNeighborGridHost";
+            this.nearestNeighborGridHost.Size = new System.Drawing.Size(896, 148);
+            this.nearestNeighborGridHost.TabIndex = 2;
             // 
             // ManualPcaScatterMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(1180, 820);
+            this.ClientSize = new System.Drawing.Size(920, 611);
             this.Controls.Add(this.rootLayout);
             this.Font = new System.Drawing.Font("맑은 고딕", 9F);
             this.MinimumSize = new System.Drawing.Size(900, 650);
@@ -308,7 +306,6 @@
             this.toolbarLayout.ResumeLayout(false);
             this.commandPanel.ResumeLayout(false);
             this.commandPanel.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.nearestNeighborGrid)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -332,6 +329,6 @@
         private System.Windows.Forms.Button analysisLogButton;
         private System.Windows.Forms.CheckBox preferMemoryCheckBox;
         private System.Windows.Forms.Panel chartHost;
-        private System.Windows.Forms.DataGridView nearestNeighborGrid;
+        private System.Windows.Forms.Panel nearestNeighborGridHost;
     }
 }

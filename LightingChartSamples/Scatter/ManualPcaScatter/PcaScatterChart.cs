@@ -287,6 +287,29 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             RefreshSeries(nextOptions);
         }
 
+        public void HighlightDraft(string draftNo)
+        {
+            if (analysisResult == null)
+            {
+                return;
+            }
+
+            PcaScatterOptions nextOptions = options == null ? PcaScatterOptions.CreateDefault() : options.Clone();
+            if (nextOptions.Series == null)
+            {
+                nextOptions.Series = new PcaScatterSeriesOptions();
+            }
+
+            nextOptions.Series.HighlightDraftNo = string.IsNullOrWhiteSpace(draftNo) ? string.Empty : draftNo.Trim();
+            nextOptions.Series.SelectedDraftNo = string.Empty;
+            RefreshSeries(nextOptions);
+        }
+
+        public void ClearDraftHighlight()
+        {
+            HighlightDraft(string.Empty);
+        }
+
         public void ClearSelectedDraftHighlight()
         {
             HighlightSelectedDraft(string.Empty);

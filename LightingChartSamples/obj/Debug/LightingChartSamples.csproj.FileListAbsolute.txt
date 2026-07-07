@@ -50,3 +50,14 @@ C:\Users\android\AppData\Local\Temp\LightingChartSamples_ImageFeatureVerify\Ligh
 C:\Users\android\AppData\Local\Temp\LightingChartSamples_ExcelImageVerify\LightingChartSamples.exe.config
 C:\Users\android\AppData\Local\Temp\LightingChartSamples_ExcelImageVerify\LightingChartSamples.exe
 C:\Users\android\AppData\Local\Temp\LightingChartSamples_ExcelImageVerify\LightingChartSamples.pdb
+F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\bin\Debug\Newtonsoft.Json.dll
+F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\bin\Debug\Newtonsoft.Json.xml
+F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\bin\Debug\Interop.FPUSpreadADO.dll
+F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\bin\Debug\AxInterop.FPUSpreadADO.dll
+F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\obj\Debug\Interop.FPUSpreadADO.dll
+F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\obj\Debug\AxInterop.FPUSpreadADO.dll
+F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\obj\Debug\LightingChartSamples.csproj.ResolveComReference.cache
+F:\DevSources\03_Git_Public_Sources\Hynix_TAS\hynixTas\LightingChartSamples\obj\Debug\LightingChartSamples.Scatter.ManualPcaScatter.ManualPcaScatterMain.resources
+C:\Users\android\AppData\Local\Temp\LightingChartSamples_verify\LightingChartSamples.exe.config
+C:\Users\android\AppData\Local\Temp\LightingChartSamples_verify\LightingChartSamples.exe
+C:\Users\android\AppData\Local\Temp\LightingChartSamples_verify\LightingChartSamples.pdb

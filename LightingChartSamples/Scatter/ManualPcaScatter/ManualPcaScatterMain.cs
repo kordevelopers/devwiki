@@ -34,6 +34,9 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         private Label busyOverlayLabel;
         private ProgressBar busyOverlayProgressBar;
         private Font nearestNeighborGridFont;
+        private AxFPUSpreadADO.AxfpSpread nearestNeighborGrid;
+        private readonly Dictionary<int, string> nearestNeighborDraftNoByGridRow = new Dictionary<int, string>();
+        private int selectedNearestNeighborGridRow;
         private bool showAnalysisSummaryText;
         private bool showRefreshAllButton;
         private bool showAnalysisLogButton;
@@ -68,6 +71,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 PcaScatterExadataOptions.CreateDefault().ToQueryOptions());
             exadataService = new PcaExadataService(exadataRepository);
 
+            InitializeNearestNeighborGridControl();
             ConfigureNearestNeighborGrid();
             BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
             pcaChart = PcaScatterChart.Create(chartHost, CreateChartOptions());
@@ -165,32 +169,148 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             set { showFeatureAuditMessageBox = value; }
         }
 
+        private void InitializeNearestNeighborGridControl()
+        {
+            if (nearestNeighborGrid != null)
+            {
+                return;
+            }
+
+            nearestNeighborGrid = new AxFPUSpreadADO.AxfpSpread();
+            ((ISupportInitialize)nearestNeighborGrid).BeginInit();
+            nearestNeighborGrid.Dock = DockStyle.Fill;
+            nearestNeighborGrid.Name = "nearestNeighborGrid";
+            nearestNeighborGrid.TabIndex = 0;
+            nearestNeighborGrid.SelChange += new AxFPUSpreadADO._DSpreadEvents_SelChangeEventHandler(this.NearestNeighborGrid_SelChange);
+            nearestNeighborGrid.ClickEvent += new AxFPUSpreadADO._DSpreadEvents_ClickEventHandler(this.NearestNeighborGrid_ClickEvent);
+            nearestNeighborGridHost.Controls.Add(nearestNeighborGrid);
+            ((ISupportInitialize)nearestNeighborGrid).EndInit();
+        }
+
         private void ConfigureNearestNeighborGrid()
         {
+            if (nearestNeighborGrid == null)
+            {
+                return;
+            }
+
             if (nearestNeighborGridFont == null)
             {
                 nearestNeighborGridFont = new Font("맑은 고딕", 10f, FontStyle.Regular);
             }
 
-            nearestNeighborGrid.AllowUserToResizeRows = false;
-            nearestNeighborGrid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
-            nearestNeighborGrid.RowTemplate.Height = 28;
-            nearestNeighborGrid.RowTemplate.Resizable = DataGridViewTriState.False;
-            nearestNeighborGrid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            nearestNeighborGrid.BackColor = Color.White;
+            nearestNeighborGrid.BorderStyle = FPUSpreadADO.BorderStyleConstants.BorderStyleFixedSingle;
+            nearestNeighborGrid.Font = nearestNeighborGridFont;
+            nearestNeighborGrid.FontName = "맑은 고딕";
+            nearestNeighborGrid.FontSize = 10f;
+            nearestNeighborGrid.ScrollBars = FPUSpreadADO.ScrollBarsConstants.ScrollBarsBoth;
+            nearestNeighborGrid.OperationMode = FPUSpreadADO.OperationModeConstants.OperationModeRow;
+            nearestNeighborGrid.SelectBlockOptions = FPUSpreadADO.SelectBlockOptionsConstants.SelectBlockOptionsRows;
+            nearestNeighborGrid.AllowMultiBlocks = false;
+            nearestNeighborGrid.RetainSelBlock = true;
+            nearestNeighborGrid.Protect = true;
+            nearestNeighborGrid.DisplayColHeaders = true;
+            nearestNeighborGrid.DisplayRowHeaders = false;
+            nearestNeighborGrid.ColHeadersShow = true;
+            nearestNeighborGrid.RowHeadersShow = false;
+            nearestNeighborGrid.ColHeaderRows = 1;
+            nearestNeighborGrid.RowHeaderCols = 0;
+            nearestNeighborGrid.GridColor = Color.FromArgb(225, 225, 225);
+            nearestNeighborGrid.SelBackColor = Color.FromArgb(255, 242, 128);
+            nearestNeighborGrid.SelForeColor = Color.Black;
+            nearestNeighborGrid.UserResizeRow = FPUSpreadADO.UserResizeConstants2.UserResizeOff;
+            nearestNeighborGrid.UserResizeCol = FPUSpreadADO.UserResizeConstants2.UserResizeOn;
+        }
 
-            nearestNeighborGrid.ColumnHeadersDefaultCellStyle.Alignment =
-                DataGridViewContentAlignment.MiddleCenter;
-            nearestNeighborGrid.ColumnHeadersDefaultCellStyle.Font = nearestNeighborGridFont;
+        private void ApplyNearestNeighborSpreadColumnLayout(DataTable table)
+        {
+            if (table == null || table.Columns.Count == 0)
+            {
+                return;
+            }
 
-            nearestNeighborGrid.DefaultCellStyle.Alignment =
-                DataGridViewContentAlignment.MiddleLeft;
-            nearestNeighborGrid.DefaultCellStyle.Font = nearestNeighborGridFont;
-            nearestNeighborGrid.RowsDefaultCellStyle.Alignment =
-                DataGridViewContentAlignment.MiddleLeft;
-            nearestNeighborGrid.RowsDefaultCellStyle.Font = nearestNeighborGridFont;
-            nearestNeighborGrid.AlternatingRowsDefaultCellStyle.Alignment =
-                DataGridViewContentAlignment.MiddleLeft;
-            nearestNeighborGrid.AlternatingRowsDefaultCellStyle.Font = nearestNeighborGridFont;
+            for (int columnIndex = 0; columnIndex < table.Columns.Count; columnIndex++)
+            {
+                int spreadColumn = columnIndex + 1;
+                string columnName = table.Columns[columnIndex].ColumnName;
+                nearestNeighborGrid.SetText(spreadColumn, 0, columnName);
+                nearestNeighborGrid.set_ColWidth(spreadColumn, ResolveNearestNeighborColumnWidth(columnName));
+            }
+
+            nearestNeighborGrid.set_RowHeight(0, 22d);
+            for (int rowIndex = 1; rowIndex <= nearestNeighborGrid.MaxRows; rowIndex++)
+            {
+                nearestNeighborGrid.set_RowHeight(rowIndex, 20d);
+            }
+
+            ApplyNearestNeighborSpreadStyle(
+                1,
+                0,
+                table.Columns.Count,
+                0,
+                FPUSpreadADO.TypeHAlignConstants.TypeHAlignCenter,
+                true,
+                Color.FromArgb(245, 245, 245));
+
+            if (nearestNeighborGrid.MaxRows > 0)
+            {
+                ApplyNearestNeighborSpreadStyle(
+                    1,
+                    1,
+                    table.Columns.Count,
+                    nearestNeighborGrid.MaxRows,
+                    FPUSpreadADO.TypeHAlignConstants.TypeHAlignLeft,
+                    false,
+                    Color.White);
+            }
+        }
+
+        private void ApplyNearestNeighborSpreadStyle(
+            int col,
+            int row,
+            int col2,
+            int row2,
+            FPUSpreadADO.TypeHAlignConstants horizontalAlignment,
+            bool header,
+            Color backColor)
+        {
+            nearestNeighborGrid.BlockMode = true;
+            nearestNeighborGrid.Col = col;
+            nearestNeighborGrid.Row = row;
+            nearestNeighborGrid.Col2 = col2;
+            nearestNeighborGrid.Row2 = row2;
+            nearestNeighborGrid.CellType = FPUSpreadADO.CellTypeConstants.CellTypeStaticText;
+            nearestNeighborGrid.TypeHAlign = horizontalAlignment;
+            nearestNeighborGrid.TypeVAlign = FPUSpreadADO.TypeVAlignConstants.TypeVAlignCenter;
+            nearestNeighborGrid.FontName = "맑은 고딕";
+            nearestNeighborGrid.FontSize = 10f;
+            nearestNeighborGrid.FontBold = header;
+            nearestNeighborGrid.BackColor = backColor;
+            nearestNeighborGrid.ForeColor = Color.Black;
+            nearestNeighborGrid.Lock = true;
+            nearestNeighborGrid.BlockMode = false;
+        }
+
+        private static double ResolveNearestNeighborColumnWidth(string columnName)
+        {
+            switch ((columnName ?? string.Empty).Trim().ToUpperInvariant())
+            {
+                case "DRAFT_NO":
+                case "TARGET_DRAFT":
+                    return 18d;
+                case "PARAM_TYP":
+                case "LABEL(Y)":
+                    return 13d;
+                case "X1":
+                case "X2":
+                case "DISTANCE":
+                    return 12d;
+                case "RANK":
+                    return 8d;
+                default:
+                    return 14d;
+            }
         }
 
         private void ApplyOptionalUiVisibility()
@@ -1243,6 +1363,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             }
 
             draftNoTextBox.Text = target.DraftNo;
+            pcaChart.HighlightDraft(target.DraftNo);
             BindNearestNeighborTable(CreateNearestNeighborTable(target, e.Neighbors));
         }
 
@@ -1261,19 +1382,34 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 : "분석 실패: " + e.Exception.Message;
         }
 
-        private void NearestNeighborGrid_SelectionChanged(object sender, EventArgs e)
+        private void NearestNeighborGrid_SelChange(object sender, AxFPUSpreadADO._DSpreadEvents_SelChangeEvent e)
         {
             if (nearestNeighborGridBinding)
             {
                 return;
             }
 
+            selectedNearestNeighborGridRow = ResolveNearestNeighborGridRow(e.curRow, e.blockRow);
+            UpdateSelectedNeighborHighlight();
+        }
+
+        private void NearestNeighborGrid_ClickEvent(object sender, AxFPUSpreadADO._DSpreadEvents_ClickEvent e)
+        {
+            if (nearestNeighborGridBinding)
+            {
+                return;
+            }
+
+            selectedNearestNeighborGridRow = ResolveNearestNeighborGridRow(e.row, 0);
             UpdateSelectedNeighborHighlight();
         }
 
         private void UpdateSelectedNeighborHighlight()
         {
-            if (pcaChart == null || nearestNeighborGrid.SelectedRows.Count == 0)
+            int rowIndex = ResolveSelectedNearestNeighborGridRow();
+            if (pcaChart == null
+                || nearestNeighborGrid == null
+                || rowIndex <= 0)
             {
                 if (pcaChart != null)
                 {
@@ -1295,25 +1431,91 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
 
         private string ResolveSelectedNeighborDraftNo()
         {
-            DataGridViewRow row = nearestNeighborGrid.SelectedRows
-                .Cast<DataGridViewRow>()
-                .FirstOrDefault(item => item != null && !item.IsNewRow);
-            if (row == null)
+            int rowIndex = ResolveSelectedNearestNeighborGridRow();
+            if (nearestNeighborGrid == null || rowIndex <= 0)
             {
                 return string.Empty;
             }
 
-            object value = null;
-            if (nearestNeighborGrid.Columns.Contains("DRAFT_NO"))
+            string mappedDraftNo;
+            if (nearestNeighborDraftNoByGridRow.TryGetValue(rowIndex, out mappedDraftNo)
+                && !string.IsNullOrWhiteSpace(mappedDraftNo))
             {
-                value = row.Cells["DRAFT_NO"].Value;
+                return mappedDraftNo;
             }
-            else if (nearestNeighborGrid.Columns.Contains("Similar_Draft"))
+
+            int columnIndex = FindNearestNeighborColumnIndex("DRAFT_NO");
+            if (columnIndex < 0)
             {
-                value = row.Cells["Similar_Draft"].Value;
+                columnIndex = FindNearestNeighborColumnIndex("Similar_Draft");
+            }
+
+            object value = null;
+            if (columnIndex > 0)
+            {
+                nearestNeighborGrid.GetText(columnIndex, rowIndex, ref value);
             }
 
             return value == null ? string.Empty : Convert.ToString(value, CultureInfo.InvariantCulture);
+        }
+
+        private int ResolveSelectedNearestNeighborGridRow()
+        {
+            if (nearestNeighborGrid == null || nearestNeighborGrid.MaxRows <= 0)
+            {
+                return 0;
+            }
+
+            int rowIndex = ResolveNearestNeighborGridRow(selectedNearestNeighborGridRow, nearestNeighborGrid.ActiveRow);
+            if (rowIndex > 0)
+            {
+                return rowIndex;
+            }
+
+            return ResolveNearestNeighborGridRow(nearestNeighborGrid.SelBlockRow, nearestNeighborGrid.Row);
+        }
+
+        private int ResolveNearestNeighborGridRow(int preferredRow, int fallbackRow)
+        {
+            if (IsValidNearestNeighborGridRow(preferredRow))
+            {
+                return preferredRow;
+            }
+
+            return IsValidNearestNeighborGridRow(fallbackRow) ? fallbackRow : 0;
+        }
+
+        private bool IsValidNearestNeighborGridRow(int rowIndex)
+        {
+            return nearestNeighborGrid != null
+                && rowIndex > 0
+                && rowIndex <= nearestNeighborGrid.MaxRows;
+        }
+
+        private static int FindNearestNeighborColumnIndex(string columnName)
+        {
+            switch ((columnName ?? string.Empty).Trim().ToUpperInvariant())
+            {
+                case "DRAFT_NO":
+                    return 1;
+                case "PARAM_TYP":
+                    return 2;
+                case "LABEL(Y)":
+                    return 3;
+                case "X1":
+                    return 4;
+                case "X2":
+                    return 5;
+                case "RANK":
+                    return 6;
+                case "TARGET_DRAFT":
+                case "SIMILAR_DRAFT":
+                    return 7;
+                case "DISTANCE":
+                    return 8;
+                default:
+                    return -1;
+            }
         }
 
         private void ShowOperationError(Exception exception, string title)
@@ -1543,14 +1745,14 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Series.SeriesOrder = new[] { "Pass", "Review", "FAIL" };
             options.Series.PastelPalette = PcaScatterSeriesOptions.CreateCompanySeriesPalette();
             options.Series.PointSize = NormalizePointSize(SeriesPointSize, 7f);
-            options.Series.HighlightColor = Color.Black;
-            options.Series.HighlightPointBorderColor = Color.Black;
+            options.Series.HighlightColor = Color.Yellow;
+            options.Series.HighlightPointBorderColor = Color.Yellow;
             options.Series.HighlightPointBorderWidth = 1f;
             options.Series.HighlightPointSize = ResolveHighlightedPointSize(options.Series.PointSize, HighlightPointSize);
             options.Series.SelectedPointSize = ResolveSelectedPointSize(options.Series.PointSize, SelectedPointSize);
-            options.Series.SelectedPointColor = Color.Empty;
-            options.Series.SelectedPointBorderColor = Color.Lime;
-            options.Series.SelectedPointBorderWidth = 2.2f;
+            options.Series.SelectedPointColor = Color.Yellow;
+            options.Series.SelectedPointBorderColor = Color.Red;
+            options.Series.SelectedPointBorderWidth = 2.8f;
             options.Display.FontName = "맑은 고딕";
             options.Display.ShowTitle = true;
             options.Display.Title = "Distribution Chart";
@@ -1650,14 +1852,43 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
 
         private void BindNearestNeighborTable(DataTable table)
         {
+            DataTable source = table ?? CreateNearestNeighborTable(null, null);
             nearestNeighborGridBinding = true;
+            selectedNearestNeighborGridRow = 0;
+            nearestNeighborDraftNoByGridRow.Clear();
             try
             {
-                nearestNeighborGrid.DataSource = table;
-                nearestNeighborGrid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(255, 242, 128);
-                nearestNeighborGrid.DefaultCellStyle.SelectionForeColor = Color.Black;
                 ConfigureNearestNeighborGrid();
+                nearestNeighborGrid.Protect = false;
+                nearestNeighborGrid.MaxCols = source.Columns.Count;
+                nearestNeighborGrid.MaxRows = source.Rows.Count;
                 nearestNeighborGrid.ClearSelection();
+                ApplyNearestNeighborSpreadColumnLayout(source);
+
+                for (int rowIndex = 0; rowIndex < source.Rows.Count; rowIndex++)
+                {
+                    if (source.Columns.Contains("DRAFT_NO"))
+                    {
+                        object draftNo = source.Rows[rowIndex]["DRAFT_NO"];
+                        nearestNeighborDraftNoByGridRow[rowIndex + 1] = draftNo == null || draftNo == DBNull.Value
+                            ? string.Empty
+                            : Convert.ToString(draftNo, CultureInfo.InvariantCulture);
+                    }
+
+                    for (int columnIndex = 0; columnIndex < source.Columns.Count; columnIndex++)
+                    {
+                        object value = source.Rows[rowIndex][columnIndex];
+                        nearestNeighborGrid.SetText(
+                            columnIndex + 1,
+                            rowIndex + 1,
+                            value == null || value == DBNull.Value
+                                ? string.Empty
+                                : Convert.ToString(value, CultureInfo.InvariantCulture));
+                    }
+                }
+
+                nearestNeighborGrid.Protect = true;
+                nearestNeighborGrid.Refresh();
             }
             finally
             {

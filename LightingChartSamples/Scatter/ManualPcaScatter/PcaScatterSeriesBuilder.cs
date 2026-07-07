@@ -29,13 +29,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                     .ToList();
             }
 
-            if (selectedSample != null)
-            {
-                regularSamples = regularSamples
-                    .Where(item => !object.ReferenceEquals(item, selectedSample))
-                    .ToList();
-            }
-
             Dictionary<string, List<ScatterSampleData>> allGroups = regularSamples
                 .GroupBy(item => ResolveSeriesName(item, options), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
@@ -76,7 +69,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 result.Add(CreateSinglePointSeries(highlightedSample, highlightedSample.DraftNo.Trim(), options.HighlightColor, options.HighlightPointBorderColor, options.PointShape, ResolveHighlightedPointSize(options), Math.Max(0f, options.HighlightPointBorderWidth), true));
             }
 
-            if (selectedSample != null && !object.ReferenceEquals(selectedSample, highlightedSample))
+            if (selectedSample != null)
             {
                 string selectedSeriesName = ResolveSeriesName(selectedSample, options);
                 Color selectedPointColor = ResolveSelectedPointColor(selectedSeriesName, seriesColors, options);
