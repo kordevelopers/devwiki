@@ -94,7 +94,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 table,
                 effectiveOptions.LabelColumnName,
                 "ENGR_RSLT_VAL",
-                "LABEL_Y");
+                "LABEL_Y",
+                "AI_RSLT_VAL",
+                "AI_RSLT_Val");
 
             var rows = new List<PcaExadataSourceRow>();
             for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
@@ -108,10 +110,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                     dataRow,
                     parameterTypeColumn,
                     rowIndex);
-                string labelY = ReadRequiredText(
+                string labelY = ReadOptionalText(
                     dataRow,
-                    labelColumn,
-                    rowIndex);
+                    labelColumn);
 
                 PcaParameterType parameterType;
                 if (!PcaParameterTypeParser.TryParse(parameterTypeText, out parameterType))
@@ -209,6 +210,18 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             }
 
             return text.Trim();
+        }
+
+        private static string ReadOptionalText(DataRow row, DataColumn column)
+        {
+            object value = row[column];
+            if (value == null || value == DBNull.Value)
+            {
+                return string.Empty;
+            }
+
+            string text = Convert.ToString(value, CultureInfo.InvariantCulture);
+            return string.IsNullOrWhiteSpace(text) ? string.Empty : text.Trim();
         }
 
         private static string ReadJsonText(DataRow row, DataColumn column)

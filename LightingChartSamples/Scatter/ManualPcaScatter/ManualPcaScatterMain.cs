@@ -683,7 +683,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         {
             builder.AppendLine("PCA processing overview:");
             builder.AppendLine("- 이 로그 파일은 수동 PCA Scatter가 차트를 그릴 때마다 같은 경로에 덮어쓰는 최신 분석 로그입니다.");
-            builder.AppendLine("- 입력 데이터는 DataTable의 DRAFT_NO, PARAM_TYP, ENGR_RSLT_VAL, CONV_EXPER_CTN 컬럼입니다.");
+            builder.AppendLine("- 입력 데이터는 DataTable의 DRAFT_NO, PARAM_TYP, CONV_EXPER_CTN, AI_RSLT_VAL, ENGR_RSLT_VAL 컬럼입니다.");
             builder.AppendLine("- CONV_EXPER_CTN JSON 배열에서 실험 객체를 꺼내고, Dict/List 구조를 펼쳐 feature 후보를 만듭니다.");
             builder.AppendLine("- PUB_NO, _VERSION_NM, Draft_NO, AI_RSLT_Val 같은 식별/라벨 값은 PCA 수치 feature에서 제외합니다.");
             builder.AppendLine("- 남은 값 중 숫자로 안전하게 변환되는 값만 후보가 되고, 누락/문자열/상수 feature는 규칙에 따라 제외됩니다.");

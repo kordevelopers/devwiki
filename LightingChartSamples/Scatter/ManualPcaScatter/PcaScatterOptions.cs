@@ -60,6 +60,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             ShowLine = false;
             ShowPoints = true;
             UsePaletteColors = true;
+            RequireSeriesLabel = true;
             ApplyColorAlpha = true;
             ColorTransparencyPercent = 20f;
             ColorAlpha = ResolveAlphaFromTransparencyPercent(ColorTransparencyPercent, 190);
@@ -91,6 +92,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public bool ShowLine { get; set; }
         public bool ShowPoints { get; set; }
         public bool UsePaletteColors { get; set; }
+        public bool RequireSeriesLabel { get; set; }
         public bool ApplyColorAlpha { get; set; }
         public int ColorAlpha { get; set; }
         public float ColorTransparencyPercent { get; set; }
@@ -128,6 +130,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 ShowLine = ShowLine,
                 ShowPoints = ShowPoints,
                 UsePaletteColors = UsePaletteColors,
+                RequireSeriesLabel = RequireSeriesLabel,
                 ApplyColorAlpha = ApplyColorAlpha,
                 ColorAlpha = ColorAlpha,
                 ColorTransparencyPercent = ColorTransparencyPercent,
@@ -380,7 +383,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             scatterOptions.Style.BubbleBorderWidth = 1f;
             scatterOptions.Style.PointBodyThickness = 1f;
 
-            ApplyAxisOptions(scatterOptions, analysisResult, display);
+            ApplyAxisOptions(scatterOptions, analysisResult, display, series);
 
             if (snapshot.CustomizeScatterOptions != null)
             {
@@ -390,13 +393,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return scatterOptions;
         }
 
-        private static void ApplyAxisOptions(LightningScatterOptions scatterOptions, PcaAnalysisResult analysisResult, PcaScatterDisplayOptions display)
+        private static void ApplyAxisOptions(LightningScatterOptions scatterOptions, PcaAnalysisResult analysisResult, PcaScatterDisplayOptions display, PcaScatterSeriesOptions series)
         {
+            IList<ScatterSampleData> axisSamples = ResolveAxisSamples(analysisResult, series);
             AxisRange xRange = CalculateRange(
-                analysisResult == null ? null : analysisResult.ScatterData.Select(item => item.X1),
+                axisSamples.Select(item => item.X1),
                 display);
             AxisRange yRange = CalculateRange(
-                analysisResult == null ? null : analysisResult.ScatterData.Select(item => item.X2),
+                axisSamples.Select(item => item.X2),
                 display);
 
             scatterOptions.XAxis.Title = display.XAxisTitle ?? string.Empty;
@@ -418,6 +422,45 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             scatterOptions.YAxis.GridLinesVisible = display.GridLinesVisible;
             scatterOptions.YAxis.MinorGridLinesVisible = display.MinorGridLinesVisible;
             scatterOptions.YAxis.GridColor = display.GridColor;
+        }
+
+        private static IList<ScatterSampleData> ResolveAxisSamples(PcaAnalysisResult analysisResult, PcaScatterSeriesOptions series)
+        {
+            IList<ScatterSampleData> samples = analysisResult == null || analysisResult.ScatterData == null
+                ? new List<ScatterSampleData>()
+                : analysisResult.ScatterData.Where(item => item != null).ToList();
+            if (series == null || !series.RequireSeriesLabel)
+            {
+                return samples;
+            }
+
+            string highlightedDraftNo = (series.HighlightDraftNo ?? string.Empty).Trim();
+            string selectedDraftNo = (series.SelectedDraftNo ?? string.Empty).Trim();
+            return samples.Where(sample =>
+                HasSeriesLabel(sample, series)
+                || IsSameDraftNo(sample.DraftNo, highlightedDraftNo)
+                || IsSameDraftNo(sample.DraftNo, selectedDraftNo))
+                .ToList();
+        }
+
+        private static bool HasSeriesLabel(ScatterSampleData sample, PcaScatterSeriesOptions series)
+        {
+            if (sample == null)
+            {
+                return false;
+            }
+
+            string label = series != null && series.SeriesNameSelector != null
+                ? series.SeriesNameSelector(sample)
+                : sample.AiResultValue;
+            return !string.IsNullOrWhiteSpace(label);
+        }
+
+        private static bool IsSameDraftNo(string left, string right)
+        {
+            return !string.IsNullOrWhiteSpace(left)
+                && !string.IsNullOrWhiteSpace(right)
+                && string.Equals(left.Trim(), right.Trim(), StringComparison.OrdinalIgnoreCase);
         }
 
         private static AxisRange CalculateRange(IEnumerable<double> values, PcaScatterDisplayOptions display)

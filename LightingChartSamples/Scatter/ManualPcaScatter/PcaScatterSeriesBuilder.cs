@@ -19,9 +19,16 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 : analysisResult.ScatterData.Where(item => item != null).ToList();
             ScatterSampleData highlightedSample = ResolveHighlightedSample(samples, options);
             ScatterSampleData selectedSample = ResolveSelectedSample(samples, options);
-            IList<ScatterSampleData> regularSamples = highlightedSample == null
-                ? samples
-                : samples.Where(item => !object.ReferenceEquals(item, highlightedSample)).ToList();
+            IList<ScatterSampleData> regularSamples = samples
+                .Where(item => ShouldIncludeInRegularSeries(item, options))
+                .ToList();
+            if (highlightedSample != null)
+            {
+                regularSamples = regularSamples
+                    .Where(item => !object.ReferenceEquals(item, highlightedSample))
+                    .ToList();
+            }
+
             if (selectedSample != null)
             {
                 regularSamples = regularSamples
@@ -29,7 +36,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                     .ToList();
             }
 
-            Dictionary<string, List<ScatterSampleData>> allGroups = samples
+            Dictionary<string, List<ScatterSampleData>> allGroups = regularSamples
                 .GroupBy(item => ResolveSeriesName(item, options), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
             Dictionary<string, List<ScatterSampleData>> groups = regularSamples
@@ -131,10 +138,35 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
         private static string ResolveSeriesName(ScatterSampleData sample, PcaScatterSeriesOptions options)
         {
-            string seriesName = options.SeriesNameSelector == null
-                ? sample.AiResultValue
-                : options.SeriesNameSelector(sample);
+            string seriesName = ResolveRawSeriesName(sample, options);
             return string.IsNullOrWhiteSpace(seriesName) ? "Unknown" : seriesName.Trim();
+        }
+
+        private static string ResolveRawSeriesName(ScatterSampleData sample, PcaScatterSeriesOptions options)
+        {
+            if (sample == null)
+            {
+                return string.Empty;
+            }
+
+            return options != null && options.SeriesNameSelector != null
+                ? options.SeriesNameSelector(sample)
+                : sample.AiResultValue;
+        }
+
+        private static bool ShouldIncludeInRegularSeries(ScatterSampleData sample, PcaScatterSeriesOptions options)
+        {
+            if (sample == null)
+            {
+                return false;
+            }
+
+            if (options == null || !options.RequireSeriesLabel)
+            {
+                return true;
+            }
+
+            return !string.IsNullOrWhiteSpace(ResolveRawSeriesName(sample, options));
         }
 
         private static string ResolveLegendLabel(string seriesName, PcaScatterSeriesOptions options)

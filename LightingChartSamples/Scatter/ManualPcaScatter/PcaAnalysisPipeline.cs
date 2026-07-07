@@ -247,6 +247,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             "draft_No",
             "AI_RSLT_Val",
             "AI_RSLT_VAL",
+            "ENGR_RSLT_VAL",
             "AiResultValue",
             "PUB_NO",
             "_VERSION_NM"
@@ -626,7 +627,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
     public sealed class PcaAnalysisPipeline
     {
         private static readonly string[] DraftNoAliases = { "Draft_NO", "Draft_No", "draft_No" };
-        private static readonly string[] AiResultAliases = { "AI_RSLT_Val", "AI_RSLT_VAL", "AiResultValue" };
+        private static readonly string[] AiResultAliases = { "AI_RSLT_Val", "AI_RSLT_VAL", "ENGR_RSLT_VAL", "AiResultValue" };
         private static readonly HashSet<string> MetadataNames = new HashSet<string>(
             DraftNoAliases.Concat(AiResultAliases),
             StringComparer.OrdinalIgnoreCase);
@@ -759,7 +760,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 }
 
                 string draftNo = GetRequiredText(dictionary, DraftNoAliases, "Draft_NO", index);
-                string aiResult = GetRequiredText(dictionary, AiResultAliases, "AI_RSLT_Val", index);
+                string aiResult = GetOptionalText(dictionary, AiResultAliases);
                 if (!draftNos.Add(draftNo))
                 {
                     throw new InvalidOperationException("Duplicate Draft_NO: " + draftNo);
@@ -812,6 +813,25 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             }
 
             throw new FormatException(string.Format("JSON row {0} does not contain {1}.", rowIndex, displayName));
+        }
+
+        private static string GetOptionalText(IDictionary<string, object> dictionary, IEnumerable<string> aliases)
+        {
+            foreach (string alias in aliases)
+            {
+                KeyValuePair<string, object> match = dictionary.FirstOrDefault(pair =>
+                    string.Equals(pair.Key, alias, StringComparison.OrdinalIgnoreCase));
+                if (!string.IsNullOrEmpty(match.Key) && match.Value != null)
+                {
+                    string text = Convert.ToString(match.Value, CultureInfo.InvariantCulture);
+                    if (!string.IsNullOrWhiteSpace(text))
+                    {
+                        return text.Trim();
+                    }
+                }
+            }
+
+            return string.Empty;
         }
 
         private static bool TryConvertFiniteDouble(object value, out double numericValue)

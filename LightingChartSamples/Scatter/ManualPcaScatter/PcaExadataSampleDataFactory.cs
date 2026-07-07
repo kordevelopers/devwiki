@@ -60,6 +60,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             DataTable table = new DataTable("PCCB_INFER_RSLT_INF");
             table.Columns.Add("DRAFT_NO", typeof(string));
             table.Columns.Add("PARAM_TYP", typeof(string));
+            table.Columns.Add("AI_RSLT_VAL", typeof(string));
             table.Columns.Add("ENGR_RSLT_VAL", typeof(string));
             table.Columns.Add("CONV_EXPER_CTN", typeof(string));
             table.Columns.Add("CHG_TM", typeof(DateTime));
@@ -74,6 +75,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 DataRow dataRow = table.NewRow();
                 dataRow["DRAFT_NO"] = row.DraftNo;
                 dataRow["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(row.ParameterType);
+                dataRow["AI_RSLT_VAL"] = row.LabelY;
                 dataRow["ENGR_RSLT_VAL"] = row.LabelY;
                 dataRow["CONV_EXPER_CTN"] = row.RawConvExperimentJson;
                 dataRow["CHG_TM"] = DateTime.Now;
