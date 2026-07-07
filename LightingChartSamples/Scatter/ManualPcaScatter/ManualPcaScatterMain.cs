@@ -1654,21 +1654,6 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             try
             {
                 nearestNeighborGrid.DataSource = table;
-                if (nearestNeighborGrid.Columns.Contains("X1"))
-                {
-                    nearestNeighborGrid.Columns["X1"].DefaultCellStyle.Format = "0.####";
-                }
-
-                if (nearestNeighborGrid.Columns.Contains("X2"))
-                {
-                    nearestNeighborGrid.Columns["X2"].DefaultCellStyle.Format = "0.####";
-                }
-
-                if (nearestNeighborGrid.Columns.Contains("Distance"))
-                {
-                    nearestNeighborGrid.Columns["Distance"].DefaultCellStyle.Format = "0.0000";
-                }
-
                 nearestNeighborGrid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(255, 242, 128);
                 nearestNeighborGrid.DefaultCellStyle.SelectionForeColor = Color.Black;
                 ConfigureNearestNeighborGrid();
@@ -1688,11 +1673,11 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             table.Columns.Add("DRAFT_NO", typeof(string));
             table.Columns.Add("PARAM_TYP", typeof(string));
             table.Columns.Add("LABEL(Y)", typeof(string));
-            table.Columns.Add("X1", typeof(double));
-            table.Columns.Add("X2", typeof(double));
-            table.Columns.Add("Rank", typeof(int));
+            table.Columns.Add("X1", typeof(string));
+            table.Columns.Add("X2", typeof(string));
+            table.Columns.Add("Rank", typeof(string));
             table.Columns.Add("Target_Draft", typeof(string));
-            table.Columns.Add("Distance", typeof(double));
+            table.Columns.Add("Distance", typeof(string));
 
             if (target == null || neighbors == null)
             {
@@ -1720,12 +1705,17 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             row["DRAFT_NO"] = record.DraftNo;
             row["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(record.ParameterType);
             row["LABEL(Y)"] = record.LabelY;
-            row["X1"] = record.X1;
-            row["X2"] = record.X2;
-            row["Rank"] = rank;
+            row["X1"] = FormatGridNumber(record.X1);
+            row["X2"] = FormatGridNumber(record.X2);
+            row["Rank"] = rank <= 0 ? "-" : rank.ToString(CultureInfo.InvariantCulture);
             row["Target_Draft"] = targetDraftNo;
-            row["Distance"] = distance;
+            row["Distance"] = FormatGridNumber(distance);
             table.Rows.Add(row);
+        }
+
+        private static string FormatGridNumber(double value)
+        {
+            return value.ToString("0.0000", CultureInfo.InvariantCulture);
         }
     }
 }
