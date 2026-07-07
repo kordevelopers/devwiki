@@ -31,6 +31,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         RoundedRectangle
     }
 
+    public enum LightningScatterThemeMode
+    {
+        LightGray,
+        DarkGray,
+        Custom
+    }
+
     public enum LightningScatterImageFileFormat
     {
         Png,
@@ -402,6 +409,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             TitleColor = Color.Black;
             BackgroundColor = Color.White;
             GraphBackgroundColor = Color.FromArgb(245, 245, 245);
+            ThemeMode = LightningScatterThemeMode.LightGray;
             XAxis = new LightningScatterAxisOptions { Title = "X" };
             YAxis = new LightningScatterAxisOptions { Title = "Y" };
             Legend = new LightningScatterLegendOptions();
@@ -418,6 +426,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         public Color TitleColor { get; set; }
         public Color BackgroundColor { get; set; }
         public Color GraphBackgroundColor { get; set; }
+        public LightningScatterThemeMode ThemeMode { get; set; }
         public LightningScatterAxisOptions XAxis { get; set; }
         public LightningScatterAxisOptions YAxis { get; set; }
         public LightningScatterLegendOptions Legend { get; set; }
@@ -462,6 +471,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 TitleColor = TitleColor,
                 BackgroundColor = BackgroundColor,
                 GraphBackgroundColor = GraphBackgroundColor,
+                ThemeMode = ThemeMode,
                 XAxis = XAxis == null ? new LightningScatterAxisOptions() : XAxis.Clone(),
                 YAxis = YAxis == null ? new LightningScatterAxisOptions() : YAxis.Clone(),
                 Legend = Legend == null ? new LightningScatterLegendOptions() : Legend.Clone(),
@@ -922,13 +932,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             currentFontName = string.IsNullOrWhiteSpace(currentOptions.FontName)
                 ? DefaultChartFontName
                 : currentOptions.FontName.Trim();
+            LightningScatterThemeColors themeColors = ResolveThemeColors(currentOptions);
             chart.Font = CreateChartFont(9f, FontStyle.Regular);
-            chart.ColorTheme = ColorTheme.LightGray;
+            chart.ColorTheme = themeColors.ColorTheme;
             chart.Options.AllowInternalMouseCursorChange = GetInteractionOptions(currentOptions).AllowInternalMouseCursorChange;
             chart.Options.MouseInteraction = true;
-            chart.BackColor = Color.White;
-            chart.Background.Color = Color.White;
-            chart.Background.GradientColor = Color.White;
+            chart.BackColor = themeColors.BackgroundColor;
+            chart.Background.Color = themeColors.BackgroundColor;
+            chart.Background.GradientColor = themeColors.BackgroundColor;
             chart.Background.GradientFill = GradientFill.Solid;
             chart.Background.Style = RectFillStyle.ColorOnly;
             chart.Title.Text = currentOptions.Title ?? string.Empty;
@@ -939,12 +950,16 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             chart.Title.MoveByMouse = false;
 
             ViewXY view = chart.ViewXY;
-            view.GraphBackground.Color = currentOptions.GraphBackgroundColor;
-            view.GraphBackground.GradientColor = currentOptions.GraphBackgroundColor;
+            view.GraphBackground.Color = themeColors.GraphBackgroundColor;
+            view.GraphBackground.GradientColor = themeColors.GraphBackgroundColor;
             view.GraphBackground.GradientFill = GradientFill.Solid;
             view.GraphBackground.Style = RectFillStyle.ColorOnly;
-            view.Border.Color = currentOptions.BackgroundColor;
+            view.Border.Color = themeColors.BackgroundColor;
             view.Margins = ResolveViewMargins(currentOptions.Legend);
+            if (currentOptions.Style != null)
+            {
+                currentOptions.Style.ColorBlendBackground = themeColors.GraphBackgroundColor;
+            }
 
             ApplyInteractionOptions(view, currentOptions.Interaction);
             ApplyAxisOptions(GetXAxis(), currentOptions.XAxis);
@@ -952,6 +967,35 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             ApplyAxisInteraction(GetXAxis(), currentOptions.Interaction);
             ApplyAxisInteraction(GetYAxis(), currentOptions.Interaction);
             ApplyLegendOptions(GetLegendBox(), currentOptions.Legend);
+        }
+
+        private static LightningScatterThemeColors ResolveThemeColors(LightningScatterOptions options)
+        {
+            LightningScatterOptions effectiveOptions = options ?? new LightningScatterOptions();
+            if (effectiveOptions.ThemeMode == LightningScatterThemeMode.DarkGray)
+            {
+                return new LightningScatterThemeColors(ColorTheme.LightGray, Color.White, Color.FromArgb(218, 218, 218));
+            }
+
+            Color backgroundColor = effectiveOptions.BackgroundColor.IsEmpty ? Color.White : effectiveOptions.BackgroundColor;
+            Color graphBackgroundColor = effectiveOptions.GraphBackgroundColor.IsEmpty
+                ? Color.FromArgb(245, 245, 245)
+                : effectiveOptions.GraphBackgroundColor;
+            return new LightningScatterThemeColors(ColorTheme.LightGray, backgroundColor, graphBackgroundColor);
+        }
+
+        private sealed class LightningScatterThemeColors
+        {
+            public LightningScatterThemeColors(ColorTheme colorTheme, Color backgroundColor, Color graphBackgroundColor)
+            {
+                ColorTheme = colorTheme;
+                BackgroundColor = backgroundColor;
+                GraphBackgroundColor = graphBackgroundColor;
+            }
+
+            public ColorTheme ColorTheme { get; private set; }
+            public Color BackgroundColor { get; private set; }
+            public Color GraphBackgroundColor { get; private set; }
         }
 
         private void ApplyInteractionOptions(ViewXY view, LightningScatterInteractionOptions interactionOptions)

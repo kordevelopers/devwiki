@@ -237,9 +237,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
         private static bool IsNaSeriesName(string seriesName, PcaScatterSeriesOptions options)
         {
-            string naSeriesName = options == null || string.IsNullOrWhiteSpace(options.NaSeriesName)
-                ? "N/A"
-                : options.NaSeriesName.Trim();
+            if (options == null || string.IsNullOrWhiteSpace(options.NaSeriesName))
+            {
+                return false;
+            }
+
+            string naSeriesName = options.NaSeriesName.Trim();
             return string.Equals(seriesName, naSeriesName, StringComparison.OrdinalIgnoreCase);
         }
 

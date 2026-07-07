@@ -1538,9 +1538,9 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Series.UsePaletteColors = true;
             options.Series.ColorTransparencyPercent = 20f;
             options.Series.ColorAlpha = PcaScatterSeriesOptions.ResolveAlphaFromTransparencyPercent(options.Series.ColorTransparencyPercent, options.Series.ColorAlpha);
-            options.Series.NaSeriesName = "N/A";
-            options.Series.NaSeriesColor = Color.SkyBlue;
-            options.Series.SeriesOrder = new[] { "N/A", "Pass", "Review", "FAIL" };
+            options.Series.NaSeriesName = string.Empty;
+            options.Series.NaSeriesColor = Color.Empty;
+            options.Series.SeriesOrder = new[] { "Pass", "Review", "FAIL" };
             options.Series.PastelPalette = PcaScatterSeriesOptions.CreateCompanySeriesPalette();
             options.Series.PointSize = NormalizePointSize(SeriesPointSize, 7f);
             options.Series.HighlightColor = Color.Black;
@@ -1557,8 +1557,9 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Display.TitleColor = Color.Black;
             options.Display.BackgroundColor = Color.White;
             options.Display.GraphBackgroundColor = Color.FromArgb(230, 230, 230);
-            options.Display.XAxisTitle = "X1";
-            options.Display.YAxisTitle = "X2";
+            options.Display.ThemeMode = LightningScatterThemeMode.DarkGray;
+            options.Display.XAxisTitle = string.Empty;
+            options.Display.YAxisTitle = string.Empty;
             options.Display.MajorDivCount = 8;
             options.Display.AxisLabelFormat = "0.##";
             options.Display.GridLinesVisible = true;

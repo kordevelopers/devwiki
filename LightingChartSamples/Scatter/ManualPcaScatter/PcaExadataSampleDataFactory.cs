@@ -119,13 +119,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
         private static SampleSeriesProfile ResolveSampleSeriesProfile(int rowIndex)
         {
-            switch (Math.Abs(rowIndex) % 4)
+            switch (Math.Abs(rowIndex) % 3)
             {
                 case 0:
-                    return new SampleSeriesProfile("N/A", -3.2d, 2.1d);
-                case 1:
                     return new SampleSeriesProfile("Pass", -1.0d, -1.4d);
-                case 2:
+                case 1:
                     return new SampleSeriesProfile("Review", 1.2d, 1.1d);
                 default:
                     return new SampleSeriesProfile("FAIL", 3.1d, -1.8d);
@@ -135,11 +133,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         private static double ResolveSubClusterOffset(int rowIndex, SampleSeriesProfile profile)
         {
             int clusterIndex = rowIndex % 3;
-            if (string.Equals(profile.Label, "N/A", StringComparison.OrdinalIgnoreCase))
-            {
-                return clusterIndex == 0 ? -0.30d : clusterIndex == 1 ? 0.08d : 0.36d;
-            }
-
             if (string.Equals(profile.Label, "Pass", StringComparison.OrdinalIgnoreCase))
             {
                 return clusterIndex == 0 ? -0.45d : clusterIndex == 1 ? 0.05d : 0.48d;

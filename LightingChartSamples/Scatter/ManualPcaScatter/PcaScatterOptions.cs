@@ -65,8 +65,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             ColorAlpha = ResolveAlphaFromTransparencyPercent(ColorTransparencyPercent, 190);
             ApplyBorderTransparency = true;
             BorderTransparencyPercent = 20f;
-            NaSeriesName = "N/A";
-            NaSeriesColor = Color.SkyBlue;
+            NaSeriesName = string.Empty;
+            NaSeriesColor = Color.Empty;
             PassResultName = "Pass";
             ReviewResultName = "Review";
             PassColor = Color.Red;
@@ -81,7 +81,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             SelectedPointBorderColor = Color.Lime;
             SelectedPointBorderWidth = 2.2f;
             SelectedPointSize = 0f;
-            SeriesOrder = new[] { PassResultName, ReviewResultName };
+            SeriesOrder = new[] { PassResultName, ReviewResultName, "FAIL" };
             SeriesColors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
             PastelPalette = CreateCompanySeriesPalette();
         }
@@ -164,6 +164,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         {
             return new[]
             {
+                Color.DarkBlue,
                 Color.Red,
                 Color.Green,
                 Color.Black,
@@ -202,8 +203,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             TitleColor = Color.Black;
             BackgroundColor = Color.White;
             GraphBackgroundColor = Color.FromArgb(230, 230, 230);
-            XAxisTitle = "X1";
-            YAxisTitle = "X2";
+            ThemeMode = LightningScatterThemeMode.LightGray;
+            XAxisTitle = string.Empty;
+            YAxisTitle = string.Empty;
             AutoCalculateAxisRange = true;
             IncludeZeroInAxisRange = true;
             AxisPaddingRatio = 0.08d;
@@ -221,6 +223,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public Color TitleColor { get; set; }
         public Color BackgroundColor { get; set; }
         public Color GraphBackgroundColor { get; set; }
+        public LightningScatterThemeMode ThemeMode { get; set; }
         public string XAxisTitle { get; set; }
         public string YAxisTitle { get; set; }
         public bool AutoCalculateAxisRange { get; set; }
@@ -356,6 +359,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             scatterOptions.TitleColor = display.TitleColor.IsEmpty ? Color.Black : display.TitleColor;
             scatterOptions.BackgroundColor = display.BackgroundColor;
             scatterOptions.GraphBackgroundColor = display.GraphBackgroundColor;
+            scatterOptions.ThemeMode = display.ThemeMode;
             scatterOptions.Legend = snapshot.Legend ?? new LightningScatterLegendOptions();
             scatterOptions.Tooltip = snapshot.Tooltip ?? new LightningScatterTooltipOptions();
             scatterOptions.NoData = snapshot.NoData ?? new LightningScatterNoDataOptions();
