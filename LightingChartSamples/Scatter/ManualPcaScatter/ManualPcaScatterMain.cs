@@ -1699,6 +1699,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 return table;
             }
 
+            AddNearestNeighborRow(table, target, 0, target.DraftNo, 0d);
             foreach (KnnNeighbor neighbor in neighbors)
             {
                 if (neighbor.SourceIndex < 0 || neighbor.SourceIndex >= currentRecords.Count)
@@ -1707,19 +1708,24 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 }
 
                 PcaExperimentRecord similar = currentRecords[neighbor.SourceIndex];
-                DataRow row = table.NewRow();
-                row["DRAFT_NO"] = similar.DraftNo;
-                row["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(similar.ParameterType);
-                row["LABEL(Y)"] = similar.LabelY;
-                row["X1"] = similar.X1;
-                row["X2"] = similar.X2;
-                row["Rank"] = neighbor.Rank;
-                row["Target_Draft"] = target.DraftNo;
-                row["Distance"] = neighbor.Distance;
-                table.Rows.Add(row);
+                AddNearestNeighborRow(table, similar, neighbor.Rank, target.DraftNo, neighbor.Distance);
             }
 
             return table;
+        }
+
+        private static void AddNearestNeighborRow(DataTable table, PcaExperimentRecord record, int rank, string targetDraftNo, double distance)
+        {
+            DataRow row = table.NewRow();
+            row["DRAFT_NO"] = record.DraftNo;
+            row["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(record.ParameterType);
+            row["LABEL(Y)"] = record.LabelY;
+            row["X1"] = record.X1;
+            row["X2"] = record.X2;
+            row["Rank"] = rank;
+            row["Target_Draft"] = targetDraftNo;
+            row["Distance"] = distance;
+            table.Rows.Add(row);
         }
     }
 }
