@@ -564,6 +564,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         private readonly LightningChartUltimate chart;
         private readonly Panel legendStripPanel;
         private readonly FlowLayoutPanel legendItemsPanel;
+        private readonly ContextMenuStrip chartContextMenu;
+        private readonly ToolStripMenuItem openPropertiesWindowMenuItem;
         private readonly ToolTip pointToolTip = new ToolTip();
         private readonly Dictionary<PointLineSeries, ScatterSeriesBinding> seriesBindings =
             new Dictionary<PointLineSeries, ScatterSeriesBinding>();
@@ -617,6 +619,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             chart.MouseUp += Chart_MouseUp;
             chart.MouseLeave += delegate { HidePointToolTip(); };
             chart.Resize += Chart_Resize;
+
+            openPropertiesWindowMenuItem = new ToolStripMenuItem("Open Properties Window");
+            openPropertiesWindowMenuItem.Click += OpenPropertiesWindowMenuItem_Click;
+            chartContextMenu = new ContextMenuStrip();
+            chartContextMenu.Items.Add(openPropertiesWindowMenuItem);
 
             legendStripPanel = new Panel
             {
@@ -870,6 +877,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             if (disposing)
             {
                 pointToolTip.Dispose();
+                openPropertiesWindowMenuItem.Click -= OpenPropertiesWindowMenuItem_Click;
+                chartContextMenu.Dispose();
                 ClearSavedImage();
                 ClearGeneratedPointImages();
                 chart.MouseDown -= Chart_MouseDown;
@@ -1060,6 +1069,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 return;
             }
 
+            chartContextMenu.Show(chart, e.Location);
+        }
+
+        private void OpenPropertiesWindowMenuItem_Click(object sender, EventArgs e)
+        {
             chart.ShowPropertiesEditor();
         }
 
