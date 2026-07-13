@@ -1034,7 +1034,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 return;
             }
 
-            chart.ShowPropertiesEditor(e.X, e.Y);
+            chart.ShowPropertiesEditor();
         }
 
         private void ApplyAxisInteraction(AxisXYBase axis, LightningScatterInteractionOptions interactionOptions)
