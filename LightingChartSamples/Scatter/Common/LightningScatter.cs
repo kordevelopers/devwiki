@@ -293,12 +293,16 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             PanEnabled = false;
             MouseWheelZoomEnabled = false;
             AllowInternalMouseCursorChange = false;
+            PropertyEditorEnabled = false;
+            OpenPropertyEditorOnDoubleClick = false;
         }
 
         public bool ZoomEnabled { get; set; }
         public bool PanEnabled { get; set; }
         public bool MouseWheelZoomEnabled { get; set; }
         public bool AllowInternalMouseCursorChange { get; set; }
+        public bool PropertyEditorEnabled { get; set; }
+        public bool OpenPropertyEditorOnDoubleClick { get; set; }
 
         public LightningScatterInteractionOptions Clone()
         {
@@ -609,6 +613,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 Margin = new Padding(0)
             };
             chart.MouseMove += Chart_MouseMove;
+            chart.MouseDoubleClick += Chart_MouseDoubleClick;
             chart.MouseLeave += delegate { HidePointToolTip(); };
             chart.Resize += Chart_Resize;
 
@@ -867,6 +872,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 ClearSavedImage();
                 ClearGeneratedPointImages();
                 chart.MouseMove -= Chart_MouseMove;
+                chart.MouseDoubleClick -= Chart_MouseDoubleClick;
                 chart.Resize -= Chart_Resize;
                 pointToolTip.Popup -= PointToolTip_Popup;
                 pointToolTip.Draw -= PointToolTip_Draw;
@@ -1007,7 +1013,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             view.ZoomPanOptions.RightMouseButtonAction = effectiveOptions.PanEnabled
                 ? MouseButtonAction.Pan
                 : MouseButtonAction.None;
-            view.ZoomPanOptions.MiddleMouseButtonAction = MouseButtonAction.None;
+            view.ZoomPanOptions.MiddleMouseButtonAction = effectiveOptions.PanEnabled
+                ? MouseButtonAction.Pan
+                : MouseButtonAction.None;
             view.ZoomPanOptions.MouseWheelZooming = effectiveOptions.ZoomEnabled && effectiveOptions.MouseWheelZoomEnabled
                 ? MouseWheelZooming.HorizontalAndVertical
                 : MouseWheelZooming.Off;
@@ -1016,6 +1024,17 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 : RightToLeftZoomActionXY.Off;
             view.ZoomPanOptions.MultiTouchZoomEnabled = effectiveOptions.ZoomEnabled;
             view.ZoomPanOptions.MultiTouchPanEnabled = effectiveOptions.PanEnabled;
+        }
+
+        private void Chart_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            LightningScatterInteractionOptions interactionOptions = GetInteractionOptions(Options);
+            if (!interactionOptions.PropertyEditorEnabled || !interactionOptions.OpenPropertyEditorOnDoubleClick)
+            {
+                return;
+            }
+
+            chart.ShowPropertiesEditor(e.X, e.Y);
         }
 
         private void ApplyAxisInteraction(AxisXYBase axis, LightningScatterInteractionOptions interactionOptions)

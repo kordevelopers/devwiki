@@ -286,10 +286,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             };
             Interaction = new LightningScatterInteractionOptions
             {
-                ZoomEnabled = false,
-                PanEnabled = false,
-                MouseWheelZoomEnabled = false,
-                AllowInternalMouseCursorChange = false
+                ZoomEnabled = true,
+                PanEnabled = true,
+                MouseWheelZoomEnabled = true,
+                AllowInternalMouseCursorChange = true,
+                PropertyEditorEnabled = true,
+                OpenPropertyEditorOnDoubleClick = true
             };
         }
 

@@ -964,7 +964,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                     "DRAFT_NO: {0}\r\nPARAM_TYP: {1}\r\nY: {2}",
                     record.DraftNo,
                     sample.ParameterType,
-                    record.LabelY);
+                    string.IsNullOrWhiteSpace(record.LabelY) ? "-" : record.LabelY);
             }
 
             return new PcaExadataAnalysisResult(

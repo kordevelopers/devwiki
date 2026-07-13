@@ -349,17 +349,14 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 return;
             }
 
-            SetToolbarEnabled(false);
-            ShowBusyOverlay("Draft 조회 및 PCA 분석 중...");
             PcaParameterType parameterType = GetSelectedParameterType();
             PcaExadataRefreshMode refreshMode = preferMemoryCheckBox.Checked
                 ? PcaExadataRefreshMode.PreferMemorySnapshot
                 : PcaExadataRefreshMode.AlwaysReload;
             summaryLabel.Text = string.Format(
-                "{0} 전체 데이터에서 DRAFT_NO {1} 조회 및 PCA 분석 중...",
+                "{0} 전체 데이터에서 DRAFT_NO {1} 조회 중...",
                 PcaParameterTypeParser.ToDatabaseValue(parameterType),
                 draftNo);
-            UpdateBusyMessage(summaryLabel.Text);
 
             try
             {
@@ -381,6 +378,16 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 }
 
                 PcaScatterOptions chartOptions = CreateChartOptions();
+                PcaExperimentRecord currentTarget;
+                IList<KnnNeighbor> currentNeighbors;
+                if (TryQueryDraftFromCurrentAnalysis(draftNo, parameterType, chartOptions, out currentTarget, out currentNeighbors))
+                {
+                    pcaChart.HighlightDraft(currentTarget.DraftNo);
+                    BindNearestNeighborTable(CreateNearestNeighborTable(currentTarget, currentNeighbors));
+                    UpdateSummary(exadataAnalysis, "현재 차트");
+                    return;
+                }
+
                 PcaDraftQueryResult result = await exadataService.QueryDraftAsync(
                     draftNo,
                     parameterType,
@@ -397,10 +404,6 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             catch (Exception ex)
             {
                 ShowOperationError(ex, "DRAFT_NO 조회 실패");
-            }
-            finally
-            {
-                SetToolbarEnabled(true);
             }
         }
 
@@ -1243,6 +1246,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             }
 
             draftNoTextBox.Text = target.DraftNo;
+            pcaChart.HighlightDraft(target.DraftNo);
             BindNearestNeighborTable(CreateNearestNeighborTable(target, e.Neighbors));
         }
 
@@ -1543,14 +1547,14 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Series.SeriesOrder = new[] { "Pass", "Review", "FAIL" };
             options.Series.PastelPalette = PcaScatterSeriesOptions.CreateCompanySeriesPalette();
             options.Series.PointSize = NormalizePointSize(SeriesPointSize, 7f);
-            options.Series.HighlightColor = Color.Black;
-            options.Series.HighlightPointBorderColor = Color.Black;
+            options.Series.HighlightColor = Color.Yellow;
+            options.Series.HighlightPointBorderColor = Color.Yellow;
             options.Series.HighlightPointBorderWidth = 1f;
             options.Series.HighlightPointSize = ResolveHighlightedPointSize(options.Series.PointSize, HighlightPointSize);
             options.Series.SelectedPointSize = ResolveSelectedPointSize(options.Series.PointSize, SelectedPointSize);
-            options.Series.SelectedPointColor = Color.Empty;
-            options.Series.SelectedPointBorderColor = Color.Lime;
-            options.Series.SelectedPointBorderWidth = 2.2f;
+            options.Series.SelectedPointColor = Color.Yellow;
+            options.Series.SelectedPointBorderColor = Color.Red;
+            options.Series.SelectedPointBorderWidth = 2.8f;
             options.Display.FontName = "맑은 고딕";
             options.Display.ShowTitle = true;
             options.Display.Title = "Distribution Chart";
@@ -1575,6 +1579,12 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Tooltip.Format = "{5}\r\nX1:{1:0.###}, X2:{2:0.###}";
             options.NoData.Text = "PCA Scatter 데이터가 없습니다.";
             options.NoData.ShowWhenAllValuesZero = false;
+            options.Interaction.ZoomEnabled = true;
+            options.Interaction.PanEnabled = true;
+            options.Interaction.MouseWheelZoomEnabled = true;
+            options.Interaction.AllowInternalMouseCursorChange = true;
+            options.Interaction.PropertyEditorEnabled = true;
+            options.Interaction.OpenPropertyEditorOnDoubleClick = true;
             return options;
         }
 
@@ -1704,13 +1714,51 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             DataRow row = table.NewRow();
             row["DRAFT_NO"] = record.DraftNo;
             row["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(record.ParameterType);
-            row["LABEL(Y)"] = record.LabelY;
+            row["LABEL(Y)"] = FormatGridText(record.LabelY);
             row["X1"] = FormatGridNumber(record.X1);
             row["X2"] = FormatGridNumber(record.X2);
             row["Rank"] = rank <= 0 ? "-" : rank.ToString(CultureInfo.InvariantCulture);
             row["Target_Draft"] = targetDraftNo;
-            row["Distance"] = FormatGridNumber(distance);
+            row["Distance"] = rank <= 0 ? "-" : FormatGridNumber(distance);
             table.Rows.Add(row);
+        }
+
+        private bool TryQueryDraftFromCurrentAnalysis(
+            string draftNo,
+            PcaParameterType parameterType,
+            PcaScatterOptions chartOptions,
+            out PcaExperimentRecord target,
+            out IList<KnnNeighbor> neighbors)
+        {
+            target = null;
+            neighbors = new List<KnnNeighbor>();
+            if (exadataAnalysis == null
+                || exadataAnalysis.AnalysisResult == null
+                || exadataAnalysis.ParameterType != parameterType
+                || currentRecords == null
+                || pcaChart == null)
+            {
+                return false;
+            }
+
+            target = currentRecords.FirstOrDefault(record =>
+                record != null
+                && string.Equals(record.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
+            if (target == null)
+            {
+                return false;
+            }
+
+            int neighborCount = chartOptions == null || chartOptions.Analysis == null
+                ? 3
+                : Math.Max(1, chartOptions.Analysis.NeighborCount);
+            neighbors = pcaChart.FindNearest(target.DraftNo, neighborCount);
+            return true;
+        }
+
+        private static string FormatGridText(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? "-" : value.Trim();
         }
 
         private static string FormatGridNumber(double value)
