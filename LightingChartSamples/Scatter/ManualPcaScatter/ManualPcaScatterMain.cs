@@ -1583,6 +1583,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Interaction.PanEnabled = true;
             options.Interaction.MouseWheelZoomEnabled = true;
             options.Interaction.AllowInternalMouseCursorChange = true;
+            options.Interaction.OpenPropertyEditorOnRightClick = true;
             return options;
         }
 

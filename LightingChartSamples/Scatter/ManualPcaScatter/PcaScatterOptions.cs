@@ -289,7 +289,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 ZoomEnabled = true,
                 PanEnabled = true,
                 MouseWheelZoomEnabled = true,
-                AllowInternalMouseCursorChange = true
+                AllowInternalMouseCursorChange = true,
+                OpenPropertyEditorOnRightClick = true
             };
         }
 

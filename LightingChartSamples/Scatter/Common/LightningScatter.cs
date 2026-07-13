@@ -293,12 +293,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             PanEnabled = false;
             MouseWheelZoomEnabled = false;
             AllowInternalMouseCursorChange = false;
+            OpenPropertyEditorOnRightClick = false;
         }
 
         public bool ZoomEnabled { get; set; }
         public bool PanEnabled { get; set; }
         public bool MouseWheelZoomEnabled { get; set; }
         public bool AllowInternalMouseCursorChange { get; set; }
+        public bool OpenPropertyEditorOnRightClick { get; set; }
 
         public LightningScatterInteractionOptions Clone()
         {
@@ -577,6 +579,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         private string currentFontName = DefaultChartFontName;
         private bool legendClickAttached;
         private bool isCleared = true;
+        private bool rightMouseDown;
+        private Point rightMouseDownLocation;
 
         public event EventHandler<LightningScatterPointClickEventArgs> PointClicked;
         public event EventHandler<LightningScatterLegendClickEventArgs> LegendClicked;
@@ -608,7 +612,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 Font = new Font(DefaultChartFontName, 9F, FontStyle.Regular),
                 Margin = new Padding(0)
             };
+            chart.MouseDown += Chart_MouseDown;
             chart.MouseMove += Chart_MouseMove;
+            chart.MouseUp += Chart_MouseUp;
             chart.MouseLeave += delegate { HidePointToolTip(); };
             chart.Resize += Chart_Resize;
 
@@ -866,7 +872,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 pointToolTip.Dispose();
                 ClearSavedImage();
                 ClearGeneratedPointImages();
+                chart.MouseDown -= Chart_MouseDown;
                 chart.MouseMove -= Chart_MouseMove;
+                chart.MouseUp -= Chart_MouseUp;
                 chart.Resize -= Chart_Resize;
                 pointToolTip.Popup -= PointToolTip_Popup;
                 pointToolTip.Draw -= PointToolTip_Draw;
@@ -1018,6 +1026,41 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 : RightToLeftZoomActionXY.Off;
             view.ZoomPanOptions.MultiTouchZoomEnabled = effectiveOptions.ZoomEnabled;
             view.ZoomPanOptions.MultiTouchPanEnabled = effectiveOptions.PanEnabled;
+        }
+
+        private void Chart_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right)
+            {
+                return;
+            }
+
+            rightMouseDown = true;
+            rightMouseDownLocation = e.Location;
+        }
+
+        private void Chart_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right || !rightMouseDown)
+            {
+                return;
+            }
+
+            rightMouseDown = false;
+            LightningScatterInteractionOptions interactionOptions = GetInteractionOptions(Options);
+            if (!interactionOptions.OpenPropertyEditorOnRightClick)
+            {
+                return;
+            }
+
+            int dx = Math.Abs(e.X - rightMouseDownLocation.X);
+            int dy = Math.Abs(e.Y - rightMouseDownLocation.Y);
+            if (dx > 4 || dy > 4)
+            {
+                return;
+            }
+
+            chart.ShowPropertiesEditor();
         }
 
         private void ApplyAxisInteraction(AxisXYBase axis, LightningScatterInteractionOptions interactionOptions)
