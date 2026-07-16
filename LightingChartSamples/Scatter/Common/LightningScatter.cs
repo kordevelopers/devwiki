@@ -583,6 +583,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         private bool isCleared = true;
         private bool rightMouseDown;
         private Point rightMouseDownLocation;
+        private bool renderRefreshPending;
 
         public event EventHandler<LightningScatterPointClickEventArgs> PointClicked;
         public event EventHandler<LightningScatterLegendClickEventArgs> LegendClicked;
@@ -1056,13 +1057,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         {
             if (e.Button != MouseButtons.Right)
             {
-                ForceRenderRefresh();
+                RequestRenderRefresh();
                 return;
             }
 
             if (!rightMouseDown)
             {
-                ForceRenderRefresh();
+                RequestRenderRefresh();
                 return;
             }
 
@@ -1070,7 +1071,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             LightningScatterInteractionOptions interactionOptions = GetInteractionOptions(Options);
             if (!interactionOptions.OpenPropertyEditorOnRightClick)
             {
-                ForceRenderRefresh();
+                RequestRenderRefresh();
                 return;
             }
 
@@ -1078,7 +1079,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             int dy = Math.Abs(e.Y - rightMouseDownLocation.Y);
             if (dx > 4 || dy > 4)
             {
-                ForceRenderRefresh();
+                RequestRenderRefresh();
                 return;
             }
 
@@ -1087,12 +1088,32 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
 
         private void ViewXY_Panned(object sender, PannedXYEventArgs e)
         {
-            ForceRenderRefresh();
+            RequestRenderRefresh();
         }
 
         private void ViewXY_Zoomed(object sender, ZoomedXYEventArgs e)
         {
-            ForceRenderRefresh();
+            RequestRenderRefresh();
+        }
+
+        private void RequestRenderRefresh()
+        {
+            if (IsDisposed || chart == null || chart.IsDisposed)
+            {
+                return;
+            }
+
+            if (renderRefreshPending)
+            {
+                return;
+            }
+
+            renderRefreshPending = true;
+            BeginInvoke(new MethodInvoker(delegate
+            {
+                renderRefreshPending = false;
+                ForceRenderRefresh();
+            }));
         }
 
         private void ForceRenderRefresh()
@@ -1102,7 +1123,29 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 return;
             }
 
-            chart.UpdatePixelAlignment();
+            chart.BeginUpdate();
+            try
+            {
+                foreach (KeyValuePair<PointLineSeries, ScatterSeriesBinding> pair in seriesBindings.ToList())
+                {
+                    PointLineSeries chartSeries = pair.Key;
+                    ScatterSeriesBinding binding = pair.Value;
+                    if (chartSeries == null || binding == null || binding.SourceSeries == null)
+                    {
+                        continue;
+                    }
+
+                    chartSeries.Points = ToSeriesPoints(binding.SourceSeries).ToArray();
+                    chartSeries.InvalidateData();
+                }
+
+                chart.UpdatePixelAlignment();
+            }
+            finally
+            {
+                chart.EndUpdate();
+            }
+
             chart.Invalidate();
             chart.Refresh();
         }
@@ -1375,6 +1418,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 chartSeries.LineVisible = !forceBubbleStyle && sourceSeries.ShowLine;
                 chartSeries.LineStyle.Color = seriesColor;
                 chartSeries.LineStyle.Width = Math.Max(0.5f, sourceSeries.LineWidth);
+                chartSeries.PointsOptimization = PointsRenderOptimization.None;
                 ApplyPointStyle(
                     chartSeries.PointStyle,
                     ResolvePointShape(sourceSeries, styleOptions),
