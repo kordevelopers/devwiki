@@ -1405,6 +1405,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             for (int i = 0; i < currentSeries.Count; i++)
             {
                 LightningScatterSeries sourceSeries = currentSeries[i] ?? new LightningScatterSeries();
+                LightningScatterSeries renderSeries = CreateRenderSeries(sourceSeries);
                 PointLineSeries chartSeries = new PointLineSeries(view, xAxis, yAxis);
                 LightningScatterStyleOptions styleOptions = GetStyleOptions(currentOptions);
                 Color seriesColor = ResolveSeriesColor(sourceSeries, i, styleOptions);
@@ -1430,10 +1431,28 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 chartSeries.MouseInteraction = true;
                 chartSeries.CursorTrackEnabled = true;
                 chartSeries.MouseClick += PointSeries_MouseClick;
-                chartSeries.Points = ToSeriesPoints(sourceSeries).ToArray();
+                chartSeries.Points = ToSeriesPoints(renderSeries).ToArray();
                 view.PointLineSeries.Add(chartSeries);
-                seriesBindings[chartSeries] = new ScatterSeriesBinding(chartSeries, sourceSeries.Clone(), i);
+                seriesBindings[chartSeries] = new ScatterSeriesBinding(chartSeries, renderSeries, i);
             }
+        }
+
+        private static LightningScatterSeries CreateRenderSeries(LightningScatterSeries sourceSeries)
+        {
+            LightningScatterSeries renderSeries = sourceSeries == null
+                ? new LightningScatterSeries()
+                : sourceSeries.Clone();
+            if (renderSeries.Points == null || renderSeries.Points.Count <= 1)
+            {
+                return renderSeries;
+            }
+
+            renderSeries.Points = renderSeries.Points
+                .Where(point => point != null)
+                .OrderBy(point => point.X)
+                .ThenBy(point => point.Y)
+                .ToList();
+            return renderSeries;
         }
 
         private void ApplyPointStyle(
