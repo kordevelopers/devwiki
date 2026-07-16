@@ -885,6 +885,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 chart.MouseMove -= Chart_MouseMove;
                 chart.MouseUp -= Chart_MouseUp;
                 chart.Resize -= Chart_Resize;
+                chart.ViewXY.Panned -= ViewXY_Panned;
+                chart.ViewXY.Zoomed -= ViewXY_Zoomed;
                 pointToolTip.Popup -= PointToolTip_Popup;
                 pointToolTip.Draw -= PointToolTip_Draw;
                 if (legendClickAttached && chart.ViewXY.LegendBoxes.Count > 0)
@@ -908,6 +910,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 EnsureAxes();
                 EnsureLegendBox();
                 EnsureNoDataAnnotation();
+                chart.ViewXY.Panned += ViewXY_Panned;
+                chart.ViewXY.Zoomed += ViewXY_Zoomed;
             }
             finally
             {
@@ -1050,8 +1054,15 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
 
         private void Chart_MouseUp(object sender, MouseEventArgs e)
         {
-            if (e.Button != MouseButtons.Right || !rightMouseDown)
+            if (e.Button != MouseButtons.Right)
             {
+                ForceRenderRefresh();
+                return;
+            }
+
+            if (!rightMouseDown)
+            {
+                ForceRenderRefresh();
                 return;
             }
 
@@ -1059,6 +1070,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             LightningScatterInteractionOptions interactionOptions = GetInteractionOptions(Options);
             if (!interactionOptions.OpenPropertyEditorOnRightClick)
             {
+                ForceRenderRefresh();
                 return;
             }
 
@@ -1066,10 +1078,33 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             int dy = Math.Abs(e.Y - rightMouseDownLocation.Y);
             if (dx > 4 || dy > 4)
             {
+                ForceRenderRefresh();
                 return;
             }
 
             chartContextMenu.Show(chart, e.Location);
+        }
+
+        private void ViewXY_Panned(object sender, PannedXYEventArgs e)
+        {
+            ForceRenderRefresh();
+        }
+
+        private void ViewXY_Zoomed(object sender, ZoomedXYEventArgs e)
+        {
+            ForceRenderRefresh();
+        }
+
+        private void ForceRenderRefresh()
+        {
+            if (IsDisposed || chart == null || chart.IsDisposed)
+            {
+                return;
+            }
+
+            chart.UpdatePixelAlignment();
+            chart.Invalidate();
+            chart.Refresh();
         }
 
         private void OpenPropertiesWindowMenuItem_Click(object sender, EventArgs e)
