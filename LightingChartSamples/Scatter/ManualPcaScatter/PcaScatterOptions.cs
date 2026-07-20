@@ -73,8 +73,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             PassColor = Color.Red;
             ReviewColor = Color.Green;
             DefaultColor = Color.Red;
-            HighlightColor = Color.Black;
-            HighlightPointBorderColor = Color.Black;
+            HighlightColor = Color.Yellow;
+            HighlightPointBorderColor = Color.Yellow;
             HighlightPointBorderWidth = 1f;
             HighlightPointSize = 0f;
             SelectedDraftNo = string.Empty;

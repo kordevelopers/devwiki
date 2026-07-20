@@ -1549,8 +1549,8 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Series.SeriesOrder = new[] { "Pass", "Review", "FAIL" };
             options.Series.PastelPalette = PcaScatterSeriesOptions.CreateCompanySeriesPalette();
             options.Series.PointSize = NormalizePointSize(SeriesPointSize, 7f);
-            options.Series.HighlightColor = Color.Black;
-            options.Series.HighlightPointBorderColor = Color.Black;
+            options.Series.HighlightColor = Color.Yellow;
+            options.Series.HighlightPointBorderColor = Color.Yellow;
             options.Series.HighlightPointBorderWidth = 1f;
             options.Series.HighlightPointSize = ResolveHighlightedPointSize(options.Series.PointSize, HighlightPointSize);
             options.Series.SelectedPointSize = ResolveSelectedPointSize(options.Series.PointSize, SelectedPointSize);
@@ -1695,8 +1695,13 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 return table;
             }
 
-            AddNearestNeighborRow(table, target, 0, target.DraftNo, 0d);
-            foreach (KnnNeighbor neighbor in neighbors)
+            if (HasEngineeringResultLabel(target))
+            {
+                AddNearestNeighborRow(table, target, 0, target.DraftNo, 0d);
+            }
+
+            int displayRank = 1;
+            foreach (KnnNeighbor neighbor in ResolveLabeledNearestNeighbors(target, neighbors, GetNearestNeighborGridCount()))
             {
                 if (neighbor.SourceIndex < 0 || neighbor.SourceIndex >= currentRecords.Count)
                 {
@@ -1704,10 +1709,64 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 }
 
                 PcaExperimentRecord similar = currentRecords[neighbor.SourceIndex];
-                AddNearestNeighborRow(table, similar, neighbor.Rank, target.DraftNo, neighbor.Distance);
+                AddNearestNeighborRow(table, similar, displayRank, target.DraftNo, neighbor.Distance);
+                displayRank++;
             }
 
             return table;
+        }
+
+        private IEnumerable<KnnNeighbor> ResolveLabeledNearestNeighbors(PcaExperimentRecord target, IEnumerable<KnnNeighbor> neighbors, int desiredCount)
+        {
+            int safeDesiredCount = Math.Max(1, desiredCount);
+            IEnumerable<KnnNeighbor> source = neighbors ?? Enumerable.Empty<KnnNeighbor>();
+            List<KnnNeighbor> labeledNeighbors = source
+                .Where(IsLabeledNeighbor)
+                .Take(safeDesiredCount)
+                .ToList();
+            if (labeledNeighbors.Count >= safeDesiredCount
+                || target == null
+                || exadataAnalysis == null
+                || exadataAnalysis.AnalysisResult == null
+                || currentRecords == null
+                || currentRecords.Count == 0)
+            {
+                return labeledNeighbors;
+            }
+
+            int expandedCount = Math.Max(safeDesiredCount, currentRecords.Count - 1);
+            return exadataAnalysis.AnalysisResult
+                .FindNearest(target.DraftNo, expandedCount)
+                .Where(IsLabeledNeighbor)
+                .Take(safeDesiredCount)
+                .ToList();
+        }
+
+        private bool IsLabeledNeighbor(KnnNeighbor neighbor)
+        {
+            if (neighbor == null
+                || neighbor.SourceIndex < 0
+                || currentRecords == null
+                || neighbor.SourceIndex >= currentRecords.Count)
+            {
+                return false;
+            }
+
+            return HasEngineeringResultLabel(currentRecords[neighbor.SourceIndex]);
+        }
+
+        private int GetNearestNeighborGridCount()
+        {
+            try
+            {
+                return pcaChart == null || pcaChart.Options == null || pcaChart.Options.Analysis == null
+                    ? 3
+                    : Math.Max(1, pcaChart.Options.Analysis.NeighborCount);
+            }
+            catch
+            {
+                return 3;
+            }
         }
 
         private static void AddNearestNeighborRow(DataTable table, PcaExperimentRecord record, int rank, string targetDraftNo, double distance)
@@ -1760,6 +1819,11 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         private static string FormatGridText(string value)
         {
             return string.IsNullOrWhiteSpace(value) ? "-" : value.Trim();
+        }
+
+        private static bool HasEngineeringResultLabel(PcaExperimentRecord record)
+        {
+            return record != null && !string.IsNullOrWhiteSpace(record.LabelY);
         }
 
         private static string FormatGridNumber(double value)
