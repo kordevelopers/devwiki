@@ -1542,13 +1542,15 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Series.UsePaletteColors = true;
             options.Series.ColorTransparencyPercent = 20f;
             options.Series.ColorAlpha = PcaScatterSeriesOptions.ResolveAlphaFromTransparencyPercent(options.Series.ColorTransparencyPercent, options.Series.ColorAlpha);
+            options.Series.ApplyBorderTransparency = false;
+            options.Series.BorderTransparencyPercent = 0f;
             options.Series.NaSeriesName = string.Empty;
             options.Series.NaSeriesColor = Color.Empty;
             options.Series.SeriesOrder = new[] { "Pass", "Review", "FAIL" };
             options.Series.PastelPalette = PcaScatterSeriesOptions.CreateCompanySeriesPalette();
             options.Series.PointSize = NormalizePointSize(SeriesPointSize, 7f);
-            options.Series.HighlightColor = Color.Yellow;
-            options.Series.HighlightPointBorderColor = Color.Yellow;
+            options.Series.HighlightColor = Color.Black;
+            options.Series.HighlightPointBorderColor = Color.Black;
             options.Series.HighlightPointBorderWidth = 1f;
             options.Series.HighlightPointSize = ResolveHighlightedPointSize(options.Series.PointSize, HighlightPointSize);
             options.Series.SelectedPointSize = ResolveSelectedPointSize(options.Series.PointSize, SelectedPointSize);

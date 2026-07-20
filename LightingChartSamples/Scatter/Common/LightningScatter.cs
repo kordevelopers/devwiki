@@ -769,6 +769,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
 
         public void UpdateData(IEnumerable<LightningScatterSeries> newSeries, LightningScatterOptions scatterOptions)
         {
+            UpdateData(newSeries, scatterOptions, false);
+        }
+
+        public void UpdateData(IEnumerable<LightningScatterSeries> newSeries, LightningScatterOptions scatterOptions, bool preserveCurrentAxisRange)
+        {
             lock (syncRoot)
             {
                 options = scatterOptions == null ? new LightningScatterOptions() : scatterOptions.Clone();
@@ -778,7 +783,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 isCleared = false;
             }
 
-            RebuildChart();
+            RebuildChart(preserveCurrentAxisRange);
         }
 
         public void Clear()
@@ -922,6 +927,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
 
         private void RebuildChart()
         {
+            RebuildChart(false);
+        }
+
+        private void RebuildChart(bool preserveCurrentAxisRange)
+        {
             LightningScatterOptions snapshotOptions;
             List<LightningScatterSeries> snapshotSeries;
             bool snapshotIsCleared;
@@ -933,12 +943,21 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 snapshotIsCleared = isCleared;
             }
 
+            AxisRangeSnapshot axisRangeSnapshot = preserveCurrentAxisRange ? CaptureCurrentAxisRange() : null;
             chart.BeginUpdate();
             try
             {
                 ApplyChartOptions(snapshotOptions);
                 ApplySeries(snapshotSeries, snapshotOptions);
-                ApplyAxesRange(snapshotSeries, snapshotOptions);
+                if (axisRangeSnapshot == null)
+                {
+                    ApplyAxesRange(snapshotSeries, snapshotOptions);
+                }
+                else
+                {
+                    RestoreAxisRange(axisRangeSnapshot);
+                }
+
                 ApplyLegendOptions(GetLegendBox(), snapshotOptions.Legend);
                 ApplyNoDataState(snapshotSeries, snapshotOptions, snapshotIsCleared);
                 UpdateLegendStrip(snapshotSeries, snapshotOptions);
@@ -947,6 +966,31 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             {
                 chart.EndUpdate();
             }
+        }
+
+        private AxisRangeSnapshot CaptureCurrentAxisRange()
+        {
+            try
+            {
+                AxisX xAxis = GetXAxis();
+                AxisY yAxis = GetYAxis();
+                return new AxisRangeSnapshot(xAxis.Minimum, xAxis.Maximum, yAxis.Minimum, yAxis.Maximum);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private void RestoreAxisRange(AxisRangeSnapshot range)
+        {
+            if (range == null || !range.IsValid)
+            {
+                return;
+            }
+
+            GetXAxis().SetRange(range.XMinimum, range.XMaximum);
+            GetYAxis().SetRange(range.YMinimum, range.YMaximum);
         }
 
         private void ApplyChartOptions(LightningScatterOptions currentOptions)
@@ -1307,9 +1351,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             {
                 using (GraphicsPath path = CreateRoundedRectanglePath(new RectangleF(0, 0, 11, 11), 4f))
                 using (SolidBrush brush = new SolidBrush(markerColor))
+                using (Pen pen = new Pen(markerColor, 1f))
                 {
                     e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     e.Graphics.FillPath(brush, path);
+                    e.Graphics.DrawPath(pen, path);
                 }
             };
 
@@ -2419,6 +2465,40 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             public double Y { get; set; }
             public int PointIndex { get; set; }
             public double Distance { get; set; }
+        }
+
+        private sealed class AxisRangeSnapshot
+        {
+            public AxisRangeSnapshot(double xMinimum, double xMaximum, double yMinimum, double yMaximum)
+            {
+                XMinimum = xMinimum;
+                XMaximum = xMaximum;
+                YMinimum = yMinimum;
+                YMaximum = yMaximum;
+            }
+
+            public double XMinimum { get; private set; }
+            public double XMaximum { get; private set; }
+            public double YMinimum { get; private set; }
+            public double YMaximum { get; private set; }
+
+            public bool IsValid
+            {
+                get
+                {
+                    return IsRangeValid(XMinimum, XMaximum)
+                        && IsRangeValid(YMinimum, YMaximum);
+                }
+            }
+
+            private static bool IsRangeValid(double minimum, double maximum)
+            {
+                return !double.IsNaN(minimum)
+                    && !double.IsNaN(maximum)
+                    && !double.IsInfinity(minimum)
+                    && !double.IsInfinity(maximum)
+                    && maximum > minimum;
+            }
         }
     }
 }

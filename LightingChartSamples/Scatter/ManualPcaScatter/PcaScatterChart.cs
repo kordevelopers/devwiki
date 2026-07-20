@@ -363,7 +363,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         {
             options = nextOptions == null ? PcaScatterOptions.CreateDefault() : nextOptions.Clone();
             IEnumerable<LightningScatterSeries> series = seriesBuilder.Build(analysisResult, options.Series);
-            scatterChart.UpdateData(series, options.ToScatterOptions(analysisResult));
+            scatterChart.UpdateData(series, options.ToScatterOptions(analysisResult), true);
         }
 
         private void OnSampleClicked(PcaScatterSampleClickedEventArgs e)

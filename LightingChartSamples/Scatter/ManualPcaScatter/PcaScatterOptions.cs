@@ -64,8 +64,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             ApplyColorAlpha = true;
             ColorTransparencyPercent = 20f;
             ColorAlpha = ResolveAlphaFromTransparencyPercent(ColorTransparencyPercent, 190);
-            ApplyBorderTransparency = true;
-            BorderTransparencyPercent = 20f;
+            ApplyBorderTransparency = false;
+            BorderTransparencyPercent = 0f;
             NaSeriesName = string.Empty;
             NaSeriesColor = Color.Empty;
             PassResultName = "Pass";
