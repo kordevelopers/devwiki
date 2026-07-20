@@ -1315,7 +1315,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 LightningScatterSeries sourceSeries = legendSeries[index];
                 string legendLabel = GetLegendLabel(sourceSeries, index);
                 Color markerColor = ResolveSeriesColor(sourceSeries, index, styleOptions);
-                legendItemsPanel.Controls.Add(CreateLegendItem(sourceSeries, index, legendLabel, markerColor, effectiveOptions));
+                Color markerBorderColor = ResolvePointBorderColor(sourceSeries, markerColor, styleOptions);
+                legendItemsPanel.Controls.Add(CreateLegendItem(sourceSeries, index, legendLabel, markerColor, markerBorderColor, effectiveOptions));
             }
 
             CenterLegendItems();
@@ -1326,6 +1327,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             int seriesIndex,
             string legendLabel,
             Color markerColor,
+            Color markerBorderColor,
             LightningScatterLegendOptions legendOptions)
         {
             Font labelFont = CreateChartFont(legendOptions.FontSize, FontStyle.Regular);
@@ -1351,7 +1353,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             {
                 using (GraphicsPath path = CreateRoundedRectanglePath(new RectangleF(0, 0, 11, 11), 4f))
                 using (SolidBrush brush = new SolidBrush(markerColor))
-                using (Pen pen = new Pen(markerColor, 1f))
+                using (Pen pen = new Pen(markerBorderColor.IsEmpty ? markerColor : markerBorderColor, 1f))
                 {
                     e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     e.Graphics.FillPath(brush, path);
