@@ -1696,10 +1696,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 return table;
             }
 
-            if (HasEngineeringResultLabel(target))
-            {
-                AddNearestNeighborRow(table, target, 0, target.DraftNo, 0d);
-            }
+            AddNearestNeighborRow(table, target, 0, target.DraftNo, 0d);
 
             int displayRank = 1;
             foreach (KnnNeighbor neighbor in ResolveLabeledNearestNeighbors(target, neighbors, GetNearestNeighborGridCount()))
