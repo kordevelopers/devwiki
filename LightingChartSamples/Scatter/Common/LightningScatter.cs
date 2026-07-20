@@ -1368,7 +1368,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
                 Cursor = Cursors.Hand,
                 Font = labelFont,
                 ForeColor = legendOptions.TextColor,
-                Location = new Point(18, 2),
+                Location = new Point(18, 4),
                 Text = legendLabel
             };
 
