@@ -85,6 +85,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             SeriesOrder = new[] { PassResultName, ReviewResultName, "FAIL" };
             SeriesColors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
             PastelPalette = CreateCompanySeriesPalette();
+            BorderPalette = CreateCompanySeriesBorderPalette();
         }
 
         public float PointSize { get; set; }
@@ -118,6 +119,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public string[] SeriesOrder { get; set; }
         public IDictionary<string, Color> SeriesColors { get; set; }
         public Color[] PastelPalette { get; set; }
+        public Color[] BorderPalette { get; set; }
         public Func<ScatterSampleData, string> SeriesNameSelector { get; set; }
         public Func<string, string> LegendLabelFormatter { get; set; }
 
@@ -158,6 +160,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                     ? new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase)
                     : new Dictionary<string, Color>(SeriesColors, StringComparer.OrdinalIgnoreCase),
                 PastelPalette = PastelPalette == null ? CreateCompanySeriesPalette() : (Color[])PastelPalette.Clone(),
+                BorderPalette = BorderPalette == null ? CreateCompanySeriesBorderPalette() : (Color[])BorderPalette.Clone(),
                 SeriesNameSelector = SeriesNameSelector,
                 LegendLabelFormatter = LegendLabelFormatter
             };
@@ -180,6 +183,26 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 Color.Pink,
                 Color.MistyRose,
                 Color.LightCyan
+            };
+        }
+
+        public static Color[] CreateCompanySeriesBorderPalette()
+        {
+            return new[]
+            {
+                Color.FromArgb(255, 0, 0, 96),
+                Color.FromArgb(255, 160, 0, 0),
+                Color.FromArgb(255, 0, 110, 0),
+                Color.FromArgb(255, 0, 0, 0),
+                Color.FromArgb(255, 180, 150, 0),
+                Color.FromArgb(255, 0, 0, 100),
+                Color.FromArgb(255, 190, 90, 0),
+                Color.FromArgb(255, 75, 110, 25),
+                Color.FromArgb(255, 90, 0, 120),
+                Color.FromArgb(255, 0, 150, 0),
+                Color.FromArgb(255, 190, 80, 120),
+                Color.FromArgb(255, 190, 140, 140),
+                Color.FromArgb(255, 120, 190, 200)
             };
         }
 

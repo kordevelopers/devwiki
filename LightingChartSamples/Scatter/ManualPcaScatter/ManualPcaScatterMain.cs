@@ -1548,6 +1548,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Series.NaSeriesColor = Color.Empty;
             options.Series.SeriesOrder = new[] { "Pass", "Review", "FAIL" };
             options.Series.PastelPalette = PcaScatterSeriesOptions.CreateCompanySeriesPalette();
+            options.Series.BorderPalette = PcaScatterSeriesOptions.CreateCompanySeriesBorderPalette();
             options.Series.PointSize = NormalizePointSize(SeriesPointSize, 7f);
             options.Series.HighlightColor = Color.Yellow;
             options.Series.HighlightPointBorderColor = Color.Yellow;

@@ -45,6 +45,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
             List<string> orderedNames = ResolveSeriesOrder(allGroups.Keys, options);
             Dictionary<string, Color> seriesColors = ResolveSeriesColors(orderedNames, options);
+            Dictionary<string, Color> seriesBorderColors = ResolveSeriesBorderColors(orderedNames, options);
             var result = new List<LightningScatterSeries>();
             for (int index = 0; index < orderedNames.Count; index++)
             {
@@ -55,12 +56,16 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 }
 
                 Color seriesColor = seriesColors[seriesName];
+                Color seriesBorderColor = seriesBorderColors.ContainsKey(seriesName)
+                    ? seriesBorderColors[seriesName]
+                    : seriesColor;
                 result.Add(new LightningScatterSeries
                 {
                     Name = seriesName,
                     LegendLabel = ResolveLegendLabel(seriesName, options),
                     LineColor = seriesColor,
                     PointColor = seriesColor,
+                    PointBorderColor = seriesBorderColor,
                     PointSize = Math.Max(1f, options.PointSize),
                     PointShape = options.PointShape,
                     ShowLine = options.ShowLine,
@@ -228,6 +233,25 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 bool isNaSeries = IsNaSeriesName(seriesName, options);
                 int colorIndex = isNaSeries ? 0 : companyPaletteIndex++;
                 colors[seriesName] = ResolveSeriesColor(seriesName, colorIndex, options);
+            }
+
+            return colors;
+        }
+
+        private static Dictionary<string, Color> ResolveSeriesBorderColors(IEnumerable<string> orderedNames, PcaScatterSeriesOptions options)
+        {
+            var colors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
+            Color[] palette = options == null || options.BorderPalette == null || options.BorderPalette.Length == 0
+                ? PcaScatterSeriesOptions.CreateCompanySeriesBorderPalette()
+                : options.BorderPalette;
+            int companyPaletteIndex = 0;
+            foreach (string seriesName in orderedNames ?? Enumerable.Empty<string>())
+            {
+                bool isNaSeries = IsNaSeriesName(seriesName, options);
+                int colorIndex = isNaSeries ? 0 : companyPaletteIndex++;
+                colors[seriesName] = palette.Length == 0
+                    ? ResolveSeriesColor(seriesName, colorIndex, options)
+                    : palette[Math.Abs(colorIndex) % palette.Length];
             }
 
             return colors;
