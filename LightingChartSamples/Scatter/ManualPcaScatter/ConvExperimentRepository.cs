@@ -18,12 +18,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             JsonColumnName = "CONV_EXPER_CTN";
             DraftNoColumnName = "DRAFT_NO";
             ParameterTypeColumnName = "PARAM_TYP";
+            AiResultColumnName = "AI_RSLT_VAL";
             LabelColumnName = "ENGR_RSLT_VAL";
         }
 
         public string JsonColumnName { get; set; }
         public string DraftNoColumnName { get; set; }
         public string ParameterTypeColumnName { get; set; }
+        public string AiResultColumnName { get; set; }
         public string LabelColumnName { get; set; }
 
         public static ConvExperimentQueryOptions FromConfiguration()
@@ -90,6 +92,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             DataColumn jsonColumn = FindColumn(table, effectiveOptions.JsonColumnName);
             DataColumn draftNoColumn = FindColumn(table, effectiveOptions.DraftNoColumnName);
             DataColumn parameterTypeColumn = FindColumn(table, effectiveOptions.ParameterTypeColumnName);
+            DataColumn aiResultColumn = FindOptionalColumn(
+                table,
+                effectiveOptions.AiResultColumnName,
+                "AI_RSLT_VAL",
+                "AI_RSLT_Val");
             DataColumn labelColumn = FindColumn(
                 table,
                 effectiveOptions.LabelColumnName,
@@ -113,6 +120,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 string labelY = ReadOptionalText(
                     dataRow,
                     labelColumn);
+                string aiResultValue = aiResultColumn == null
+                    ? string.Empty
+                    : ReadOptionalText(dataRow, aiResultColumn);
 
                 PcaParameterType parameterType;
                 if (!PcaParameterTypeParser.TryParse(parameterTypeText, out parameterType))
@@ -129,6 +139,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                     rowIndex,
                     draftNo,
                     parameterType,
+                    aiResultValue,
                     labelY,
                     ReadJsonText(dataRow, jsonColumn)));
             }
@@ -183,6 +194,43 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
             throw new InvalidOperationException(
                 "The DataTable does not contain required column '" + string.Join("' or '", candidates.ToArray()) + "'.");
+        }
+
+        private static DataColumn FindOptionalColumn(DataTable table, string columnName, params string[] fallbackColumnNames)
+        {
+            var candidates = new List<string>();
+            if (!string.IsNullOrWhiteSpace(columnName))
+            {
+                candidates.Add(columnName.Trim());
+            }
+
+            if (fallbackColumnNames != null)
+            {
+                foreach (string fallback in fallbackColumnNames)
+                {
+                    if (!string.IsNullOrWhiteSpace(fallback)
+                        && !candidates.Exists(candidate => string.Equals(
+                            candidate,
+                            fallback.Trim(),
+                            StringComparison.OrdinalIgnoreCase)))
+                    {
+                        candidates.Add(fallback.Trim());
+                    }
+                }
+            }
+
+            foreach (string candidate in candidates)
+            {
+                foreach (DataColumn column in table.Columns)
+                {
+                    if (string.Equals(column.ColumnName, candidate, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return column;
+                    }
+                }
+            }
+
+            return null;
         }
 
         private static string ReadRequiredText(DataRow row, DataColumn column, int rowIndex)

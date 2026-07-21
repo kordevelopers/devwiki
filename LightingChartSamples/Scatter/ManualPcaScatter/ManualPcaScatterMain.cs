@@ -543,7 +543,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
 
             exadataAnalysis = result;
             currentRecords = result.Records.ToList();
-            pcaChart.Bind(result.AnalysisResult, chartOptions);
+            pcaChart.Bind(result, chartOptions);
             // 차트를 새로 그린 직후 같은 로그 파일을 덮어써서, 화면과 로그가 항상 같은 분석 결과를 가리키게 한다.
             WriteFeatureSelectionAuditLog(result, chartOptions);
         }

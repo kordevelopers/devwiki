@@ -92,6 +92,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             JsonColumnName = "CONV_EXPER_CTN";
             DraftNoColumnName = "DRAFT_NO";
             ParameterTypeColumnName = "PARAM_TYP";
+            AiResultColumnName = "AI_RSLT_VAL";
             LabelColumnName = "ENGR_RSLT_VAL";
             ParameterType = PcaParameterType.Response;
         }
@@ -100,6 +101,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public string JsonColumnName { get; set; }
         public string DraftNoColumnName { get; set; }
         public string ParameterTypeColumnName { get; set; }
+        public string AiResultColumnName { get; set; }
         public string LabelColumnName { get; set; }
         public PcaParameterType ParameterType { get; set; }
 
@@ -111,6 +113,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 JsonColumnName = configured.JsonColumnName,
                 DraftNoColumnName = configured.DraftNoColumnName,
                 ParameterTypeColumnName = configured.ParameterTypeColumnName,
+                AiResultColumnName = configured.AiResultColumnName,
                 LabelColumnName = configured.LabelColumnName,
                 ParameterType = PcaParameterType.Response
             };
@@ -137,6 +140,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 ParameterTypeColumnName = string.IsNullOrWhiteSpace(ParameterTypeColumnName)
                     ? "PARAM_TYP"
                     : ParameterTypeColumnName.Trim(),
+                AiResultColumnName = string.IsNullOrWhiteSpace(AiResultColumnName)
+                    ? "AI_RSLT_VAL"
+                    : AiResultColumnName.Trim(),
                 LabelColumnName = string.IsNullOrWhiteSpace(LabelColumnName)
                     ? "ENGR_RSLT_VAL"
                     : LabelColumnName.Trim()

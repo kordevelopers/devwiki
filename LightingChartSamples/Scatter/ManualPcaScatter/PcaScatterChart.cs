@@ -50,6 +50,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         private LightningScatter scatterChart;
         private PcaScatterOptions options;
         private PcaAnalysisResult analysisResult;
+        private DataTable rawData;
         private bool disposed;
 
         private PcaScatterChart(Control parent, PcaScatterOptions options)
@@ -79,6 +80,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public PcaAnalysisResult AnalysisResult
         {
             get { return analysisResult; }
+        }
+
+        public DataTable RawData
+        {
+            get { return rawData == null ? null : rawData.Copy(); }
         }
 
         public string LastSavedImagePath
@@ -152,9 +158,21 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
             options = newOptions == null ? PcaScatterOptions.CreateDefault() : newOptions.Clone();
             analysisResult = result;
+            rawData = null;
             IEnumerable<LightningScatterSeries> series = seriesBuilder.Build(analysisResult, options.Series);
             scatterChart.UpdateData(series, options.ToScatterOptions(analysisResult));
             OnAnalysisCompleted(new PcaScatterAnalysisCompletedEventArgs(analysisResult));
+        }
+
+        public void Bind(PcaExadataAnalysisResult result, PcaScatterOptions newOptions)
+        {
+            if (result == null)
+            {
+                throw new ArgumentNullException("result");
+            }
+
+            Bind(result.AnalysisResult, newOptions);
+            rawData = result.CreateRawDataTable();
         }
 
         public void BindFromDatabase(PcaScatterDatabaseOptions databaseOptions)
@@ -246,7 +264,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 var snapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
                 var service = new PcaExadataService(repository);
                 PcaExadataAnalysisResult result = service.AnalyzeSnapshot(snapshot, effectiveOptions.ParameterType, nextOptions.Analysis);
-                Bind(result.AnalysisResult, nextOptions);
+                Bind(result, nextOptions);
             }
             catch (Exception ex)
             {
@@ -318,6 +336,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public void Clear()
         {
             analysisResult = null;
+            rawData = null;
             scatterChart.Clear();
         }
 

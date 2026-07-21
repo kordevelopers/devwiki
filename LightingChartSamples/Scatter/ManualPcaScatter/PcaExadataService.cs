@@ -61,10 +61,16 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
     public sealed class PcaExadataSourceRow
     {
         public PcaExadataSourceRow(int sourceRowIndex, string draftNo, PcaParameterType parameterType, string labelY, string rawConvExperimentJson)
+            : this(sourceRowIndex, draftNo, parameterType, string.Empty, labelY, rawConvExperimentJson)
+        {
+        }
+
+        public PcaExadataSourceRow(int sourceRowIndex, string draftNo, PcaParameterType parameterType, string aiResultValue, string labelY, string rawConvExperimentJson)
         {
             SourceRowIndex = sourceRowIndex;
             DraftNo = (draftNo ?? string.Empty).Trim();
             ParameterType = parameterType;
+            AiResultValue = (aiResultValue ?? string.Empty).Trim();
             LabelY = (labelY ?? string.Empty).Trim();
             RawConvExperimentJson = rawConvExperimentJson ?? string.Empty;
         }
@@ -72,6 +78,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public int SourceRowIndex { get; private set; }
         public string DraftNo { get; private set; }
         public PcaParameterType ParameterType { get; private set; }
+        public string AiResultValue { get; private set; }
         public string LabelY { get; private set; }
         public string RawConvExperimentJson { get; private set; }
     }
@@ -104,6 +111,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             SourceRowIndex = source.SourceRowIndex;
             DraftNo = source.DraftNo;
             ParameterType = source.ParameterType;
+            AiResultValue = source.AiResultValue;
             LabelY = source.LabelY;
             RawConvExperimentJson = source.RawConvExperimentJson;
             FlattenedValues = new ReadOnlyDictionary<string, object>(
@@ -124,6 +132,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public int SourceRowIndex { get; private set; }
         public string DraftNo { get; private set; }
         public PcaParameterType ParameterType { get; private set; }
+        public string AiResultValue { get; private set; }
         public string LabelY { get; private set; }
         public string RawConvExperimentJson { get; private set; }
         public IReadOnlyDictionary<string, object> FlattenedValues { get; private set; }
@@ -215,6 +224,33 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                             : DBNull.Value;
                 }
 
+                table.Rows.Add(row);
+            }
+
+            return table;
+        }
+
+        public DataTable CreateRawDataTable()
+        {
+            DataTable table = new DataTable("RAWDATA");
+            table.Columns.Add("DRAFT_NO", typeof(string));
+            table.Columns.Add("PARAM_TYP", typeof(string));
+            table.Columns.Add("CONV_EXPER_CTN", typeof(string));
+            table.Columns.Add("AI_RSLT_VAL", typeof(string));
+            table.Columns.Add("ENGR_RSLT_VAL", typeof(string));
+            table.Columns.Add("X1", typeof(double));
+            table.Columns.Add("X2", typeof(double));
+
+            foreach (PcaExperimentRecord record in Records)
+            {
+                DataRow row = table.NewRow();
+                row["DRAFT_NO"] = record.DraftNo;
+                row["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(record.ParameterType);
+                row["CONV_EXPER_CTN"] = record.RawConvExperimentJson;
+                row["AI_RSLT_VAL"] = record.AiResultValue;
+                row["ENGR_RSLT_VAL"] = record.LabelY;
+                row["X1"] = record.X1;
+                row["X2"] = record.X2;
                 table.Rows.Add(row);
             }
 
