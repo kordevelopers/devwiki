@@ -257,6 +257,66 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             return table;
         }
 
+        public IList<KnnNeighbor> FindNearestByChartDistance(string draftNo, int count)
+        {
+            return FindNearestByChartDistance(draftNo, count, false);
+        }
+
+        public IList<KnnNeighbor> FindNearestByChartDistance(string draftNo, int count, bool labeledOnly)
+        {
+            if (string.IsNullOrWhiteSpace(draftNo))
+            {
+                return new List<KnnNeighbor>();
+            }
+
+            int targetIndex = -1;
+            for (int index = 0; index < Records.Count; index++)
+            {
+                PcaExperimentRecord record = Records[index];
+                if (record != null && string.Equals(record.DraftNo, draftNo.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    targetIndex = index;
+                    break;
+                }
+            }
+
+            if (targetIndex < 0)
+            {
+                return new List<KnnNeighbor>();
+            }
+
+            PcaExperimentRecord target = Records[targetIndex];
+            int safeCount = Math.Max(1, count);
+            List<KnnNeighbor> neighbors = Records
+                .Select((record, index) => new { Record = record, Index = index })
+                .Where(item => item.Record != null && item.Index != targetIndex)
+                .Where(item => !labeledOnly || !string.IsNullOrWhiteSpace(item.Record.LabelY))
+                .Select(item => new KnnNeighbor
+                {
+                    SourceIndex = item.Index,
+                    DraftNo = item.Record.DraftNo,
+                    Distance = CalculateChartDistance(target, item.Record)
+                })
+                .OrderBy(item => item.Distance)
+                .ThenBy(item => item.DraftNo, StringComparer.OrdinalIgnoreCase)
+                .Take(safeCount)
+                .ToList();
+
+            for (int index = 0; index < neighbors.Count; index++)
+            {
+                neighbors[index].Rank = index + 1;
+            }
+
+            return neighbors;
+        }
+
+        private static double CalculateChartDistance(PcaExperimentRecord left, PcaExperimentRecord right)
+        {
+            double dx = left.X1 - right.X1;
+            double dy = left.X2 - right.X2;
+            return Math.Sqrt(dx * dx + dy * dy);
+        }
+
         private static string ResolveFeatureColumnName(DataTable table, string featureName)
         {
             string baseName = string.IsNullOrWhiteSpace(featureName)
@@ -758,9 +818,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                     targetSource.DraftNo);
                 PcaExperimentRecord target = analysis.Records.First(record =>
                     string.Equals(record.DraftNo, resolvedDraftNo, StringComparison.OrdinalIgnoreCase));
-                IList<KnnNeighbor> neighbors = analysis.AnalysisResult.FindNearest(
+                IList<KnnNeighbor> neighbors = analysis.FindNearestByChartDistance(
                     target.DraftNo,
-                    Math.Max(1, (analysisOptions ?? new PcaScatterAnalysisOptions()).NeighborCount));
+                    Math.Max(1, (analysisOptions ?? new PcaScatterAnalysisOptions()).NeighborCount),
+                    true);
                 if (!usedMemorySnapshot)
                 {
                     lock (snapshotSync)
@@ -829,9 +890,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                     targetSource.DraftNo);
                 PcaExperimentRecord target = analysis.Records.First(record =>
                     string.Equals(record.DraftNo, resolvedDraftNo, StringComparison.OrdinalIgnoreCase));
-                IList<KnnNeighbor> neighbors = analysis.AnalysisResult.FindNearest(
+                IList<KnnNeighbor> neighbors = analysis.FindNearestByChartDistance(
                     target.DraftNo,
-                    Math.Max(1, effectiveAnalysisOptions.NeighborCount));
+                    Math.Max(1, effectiveAnalysisOptions.NeighborCount),
+                    true);
 
                 return new PcaDraftQueryResult(
                     analysis,

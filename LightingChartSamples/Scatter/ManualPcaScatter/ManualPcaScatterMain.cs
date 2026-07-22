@@ -693,7 +693,8 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             builder.AppendLine("- 살아남은 feature가 입력 수치행렬이 됩니다. 행은 Draft, 열은 feature입니다.");
             builder.AppendLine("- 입력 수치행렬은 StandardScaler로 평균 0, 표준편차 1이 되도록 정규화됩니다.");
             builder.AppendLine("- PCA는 정규화된 행렬의 공분산에서 PC1/PC2 방향을 찾고, 각 Draft를 그 방향으로 투영해 X1/X2를 만듭니다.");
-            builder.AppendLine("- KNN Distance는 화면의 2D 좌표가 아니라 정규화된 전체 feature 벡터 기준의 유클리드 거리입니다.");
+            builder.AppendLine("- 그리드 Distance는 기존 시스템과 비교하기 쉽도록 X1/X2 차트 좌표 기준의 유클리드 거리입니다.");
+            builder.AppendLine("- 기존 feature 벡터 기준 KNN 로직은 내부 분석용으로 유지됩니다.");
             builder.AppendLine();
         }
 
@@ -786,7 +787,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             builder.AppendLine("- 저분산 제거: 모든 row에서 거의 같은 값인 feature는 X1/X2와 Distance에 의미가 작아서 제외합니다.");
             builder.AppendLine("- 정규화 공식: 각 원래 값에서 그 feature의 전체 평균을 빼고, 그 feature의 표준편차로 나눕니다.");
             builder.AppendLine("- 말로 풀면: 정규화값 = (현재 Draft의 원래 값 - 전체 Draft 평균) / 전체 Draft 표준편차 입니다.");
-            builder.AppendLine("- PCA 입력 수치행렬은 이 정규화값 행렬입니다. KNN Distance도 같은 정규화값 행렬을 사용합니다.");
+            builder.AppendLine("- PCA 입력 수치행렬은 이 정규화값 행렬입니다. 내부 feature 기반 KNN도 같은 정규화값 행렬을 사용합니다.");
 
             PcaExperimentRecord target = ResolveAuditTargetRecord(result, chartOptions);
             if (analysis == null || analysis.Scaler == null || analysis.FeatureNames == null)
@@ -994,20 +995,17 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             int neighborCount = chartOptions == null || chartOptions.Analysis == null
                 ? 3
                 : Math.Max(1, chartOptions.Analysis.NeighborCount);
-            IList<KnnNeighbor> neighbors = analysis.FindNearest(target.DraftNo, neighborCount);
+            IList<KnnNeighbor> neighbors = result.FindNearestByChartDistance(target.DraftNo, neighborCount, true);
 
             builder.AppendLine("KNN distance explanation:");
-            builder.AppendLine("- 그리드 Distance는 화면의 X1/X2 거리만으로 계산하지 않습니다.");
-            builder.AppendLine("- Distance는 정규화된 전체 feature 공간에서 계산한 Euclidean distance입니다.");
-            builder.AppendLine("- 각 feature마다 대상 Draft의 정규화값과 비교 Draft의 정규화값 차이를 구합니다.");
-            builder.AppendLine("- 그 차이를 제곱하고 모든 feature의 제곱값을 더한 뒤, 마지막에 제곱근을 씌운 값입니다.");
-            builder.AppendLine("- feature가 많으면 제곱합이 누적되므로 Distance가 30 이상처럼 커질 수 있습니다.");
-            builder.AppendLine("- 다른 시스템의 작은 값은 원본값 거리, X1/X2 좌표 거리, feature 수로 나눈 거리 등 정의가 다를 수 있습니다.");
+            builder.AppendLine("- 그리드 Distance는 X1/X2 차트 좌표 기준 Euclidean distance입니다.");
+            builder.AppendLine("- 계산식은 sqrt((target.X1 - similar.X1)^2 + (target.X2 - similar.X2)^2) 입니다.");
+            builder.AppendLine("- 기존 feature 벡터 기준 거리는 내부 분석 로직으로 유지하며, 아래 로그에서 FeatureDistance로 함께 확인합니다.");
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                "- 비교용 RMS distance = distance / sqrt(featureCount)도 함께 표시합니다. FeatureCount={0:N0}",
+                "- FeatureDistance는 정규화된 전체 feature 벡터 기준입니다. FeatureCount={0:N0}",
                 featureCount));
             builder.AppendLine();
-            builder.AppendLine("Rank\tSimilarDraft\tDistance\tDistanceSquared\tRmsPerFeature\tPca2DChartDistance");
+            builder.AppendLine("Rank\tSimilarDraft\tChartDistance\tChartDistanceSquared\tFeatureDistance\tRmsPerFeature");
 
             foreach (KnnNeighbor neighbor in neighbors)
             {
@@ -1017,16 +1015,16 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 }
 
                 PcaExperimentRecord similar = result.Records[neighbor.SourceIndex];
-                double rms = featureCount <= 0 ? 0d : neighbor.Distance / Math.Sqrt(featureCount);
-                double pca2dDistance = Math.Sqrt(Math.Pow(target.X1 - similar.X1, 2d) + Math.Pow(target.X2 - similar.X2, 2d));
+                double featureDistance = CalculateStandardizedFeatureDistance(target, similar);
+                double rms = featureCount <= 0 ? 0d : featureDistance / Math.Sqrt(featureCount);
                 builder.AppendLine(string.Format(CultureInfo.InvariantCulture,
                     "{0}\t{1}\t{2}\t{3}\t{4}\t{5}",
                     neighbor.Rank,
                     similar.DraftNo,
                     FormatNumber(neighbor.Distance),
                     FormatNumber(neighbor.Distance * neighbor.Distance),
-                    FormatNumber(rms),
-                    FormatNumber(pca2dDistance)));
+                    FormatNumber(featureDistance),
+                    FormatNumber(rms)));
             }
 
             KnnNeighbor firstNeighbor = neighbors.FirstOrDefault(item => item.SourceIndex >= 0 && item.SourceIndex < result.Records.Count);
@@ -1717,6 +1715,16 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         private IEnumerable<KnnNeighbor> ResolveLabeledNearestNeighbors(PcaExperimentRecord target, IEnumerable<KnnNeighbor> neighbors, int desiredCount)
         {
             int safeDesiredCount = Math.Max(1, desiredCount);
+            if (target != null && exadataAnalysis != null)
+            {
+                IList<KnnNeighbor> chartDistanceNeighbors =
+                    exadataAnalysis.FindNearestByChartDistance(target.DraftNo, safeDesiredCount, true);
+                if (chartDistanceNeighbors.Count > 0)
+                {
+                    return chartDistanceNeighbors;
+                }
+            }
+
             IEnumerable<KnnNeighbor> source = neighbors ?? Enumerable.Empty<KnnNeighbor>();
             List<KnnNeighbor> labeledNeighbors = source
                 .Where(IsLabeledNeighbor)
@@ -1810,7 +1818,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             int neighborCount = chartOptions == null || chartOptions.Analysis == null
                 ? 3
                 : Math.Max(1, chartOptions.Analysis.NeighborCount);
-            neighbors = pcaChart.FindNearest(target.DraftNo, neighborCount);
+            neighbors = exadataAnalysis.FindNearestByChartDistance(target.DraftNo, neighborCount, true);
             return true;
         }
 
@@ -1822,6 +1830,26 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         private static bool HasEngineeringResultLabel(PcaExperimentRecord record)
         {
             return record != null && !string.IsNullOrWhiteSpace(record.LabelY);
+        }
+
+        private static double CalculateStandardizedFeatureDistance(PcaExperimentRecord left, PcaExperimentRecord right)
+        {
+            if (left == null || right == null)
+            {
+                return 0d;
+            }
+
+            double[] leftVector = left.StandardizedVector;
+            double[] rightVector = right.StandardizedVector;
+            int length = Math.Min(leftVector.Length, rightVector.Length);
+            double squaredDistance = 0d;
+            for (int index = 0; index < length; index++)
+            {
+                double difference = leftVector[index] - rightVector[index];
+                squaredDistance += difference * difference;
+            }
+
+            return Math.Sqrt(squaredDistance);
         }
 
         private static string FormatGridNumber(double value)
