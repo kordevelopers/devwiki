@@ -10,7 +10,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WinFormsControl = System.Windows.Forms.Control;
-using Accord.MachineLearning.Clustering;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.Common;
