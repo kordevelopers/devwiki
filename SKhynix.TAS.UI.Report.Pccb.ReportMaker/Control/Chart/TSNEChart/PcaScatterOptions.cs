@@ -220,7 +220,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             };
         }
 
-        internal static int ResolveAlphaFromTransparencyPercent(float transparencyPercent, int fallbackAlpha)
+        public static int ResolveAlphaFromTransparencyPercent(float transparencyPercent, int fallbackAlpha)
         {
             if (float.IsNaN(transparencyPercent) || float.IsInfinity(transparencyPercent))
             {
