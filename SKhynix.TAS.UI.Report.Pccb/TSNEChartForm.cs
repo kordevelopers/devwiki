@@ -25,7 +25,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         private TSNEAnalysisResult analysisResult;
         private TSNEExadataAnalysisResult exadataAnalysis;
         private DataTable pendingSourceTable;
-        private IList<ScatterSampleData> currentSamples;
+        private IList<TSNEPointData> currentSamples;
         private IList<TSNEExperimentRecord> currentRecords;
         private bool parameterChangeEnabled;
         private bool nearestNeighborGridBinding;
@@ -56,7 +56,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             TSNEIterations = 750;
             TSNELearningRate = 200d;
             TSNERandomSeed = 20260831;
-            currentSamples = new List<ScatterSampleData>();
+            currentSamples = new List<TSNEPointData>();
             currentRecords = new List<TSNEExperimentRecord>();
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
             {
@@ -255,7 +255,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             exadataService.ClearSnapshot();
             analysisResult = null;
             exadataAnalysis = null;
-            currentSamples = new List<ScatterSampleData>();
+            currentSamples = new List<TSNEPointData>();
             currentRecords = new List<TSNEExperimentRecord>();
             tsneChart.Clear();
             BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
@@ -847,9 +847,9 @@ namespace SKhynix.TAS.UI.Report.Pccb
             builder.AppendLine();
         }
 
-        private static AxisRangeAudit CalculateAxisRangeAudit(IList<ScatterSampleData> samples, bool useX, TSNEScatterDisplayOptions display)
+        private static AxisRangeAudit CalculateAxisRangeAudit(IList<TSNEPointData> samples, bool useX, TSNEScatterDisplayOptions display)
         {
-            List<ScatterSampleData> cleanSamples = (samples ?? new List<ScatterSampleData>())
+            List<TSNEPointData> cleanSamples = (samples ?? new List<TSNEPointData>())
                 .Where(sample =>
                 {
                     double value = useX ? sample.X1 : sample.X2;
@@ -862,8 +862,8 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 return new AxisRangeAudit(-1d, 1d, null, -1d, 1d, 0d, -1d, 1d, null);
             }
 
-            ScatterSampleData minSample = cleanSamples.OrderBy(sample => useX ? sample.X1 : sample.X2).First();
-            ScatterSampleData maxSample = cleanSamples.OrderByDescending(sample => useX ? sample.X1 : sample.X2).First();
+            TSNEPointData minSample = cleanSamples.OrderBy(sample => useX ? sample.X1 : sample.X2).First();
+            TSNEPointData maxSample = cleanSamples.OrderByDescending(sample => useX ? sample.X1 : sample.X2).First();
             double rawMin = useX ? minSample.X1 : minSample.X2;
             double rawMax = useX ? maxSample.X1 : maxSample.X2;
             double minimum = rawMin;
@@ -1007,9 +1007,9 @@ namespace SKhynix.TAS.UI.Report.Pccb
         private sealed class AxisRangeAudit
         {
             public AxisRangeAudit(
-                double rawMin, double rawMax, ScatterSampleData minSample,
+                double rawMin, double rawMax, TSNEPointData minSample,
                 double rangeMinAfterZero, double rangeMaxAfterZero,
-                double padding, double finalMin, double finalMax, ScatterSampleData maxSample)
+                double padding, double finalMin, double finalMax, TSNEPointData maxSample)
             {
                 RawMin = rawMin;
                 RawMax = rawMax;
@@ -1024,13 +1024,13 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
             public double RawMin { get; private set; }
             public double RawMax { get; private set; }
-            public ScatterSampleData MinSample { get; private set; }
+            public TSNEPointData MinSample { get; private set; }
             public double RangeMinAfterZero { get; private set; }
             public double RangeMaxAfterZero { get; private set; }
             public double Padding { get; private set; }
             public double FinalMin { get; private set; }
             public double FinalMax { get; private set; }
-            public ScatterSampleData MaxSample { get; private set; }
+            public TSNEPointData MaxSample { get; private set; }
         }
 
         private static void AppendExcludedReasonSummary(StringBuilder builder, TSNEFeatureSelectionReport report)
@@ -1170,7 +1170,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         {
             analysisResult = e.AnalysisResult;
             currentSamples = analysisResult == null || analysisResult.ScatterData == null
-                ? new List<ScatterSampleData>()
+                ? new List<TSNEPointData>()
                 : analysisResult.ScatterData.ToList();
         }
 

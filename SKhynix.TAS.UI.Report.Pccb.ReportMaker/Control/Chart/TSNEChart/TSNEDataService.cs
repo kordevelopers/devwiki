@@ -1340,7 +1340,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             var records = new List<TSNEExperimentRecord>(parsed.Count);
             for (int index = 0; index < parsed.Count; index++)
             {
-                ScatterSampleData sample = analysis.ScatterData[index];
+                TSNEPointData sample = analysis.ScatterData[index];
                 ParsedTSNEExperiment source = parsed[index];
                 // 4단계: 화면 좌표(X1/X2), 원본 feature, 정규화 벡터를 한 record에 묶어 클릭/로그/그리드에서 재사용한다.
                 var record = new TSNEExperimentRecord(

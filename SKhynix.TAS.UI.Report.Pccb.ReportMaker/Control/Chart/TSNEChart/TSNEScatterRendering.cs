@@ -17,7 +17,7 @@ using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.Common;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
-    public sealed class ScatterSampleData
+    public sealed class TSNEPointData
     {
         public int SourceIndex { get; set; }
         public string DraftNo { get; set; }
@@ -363,7 +363,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public IDictionary<string, Color> SeriesColors { get; set; }
         public Color[] PastelPalette { get; set; }
         public Color[] BorderPalette { get; set; }
-        public Func<ScatterSampleData, string> SeriesNameSelector { get; set; }
+        public Func<TSNEPointData, string> SeriesNameSelector { get; set; }
         public Func<string, string> LegendLabelFormatter { get; set; }
 
         public TSNEScatterSeriesOptions Clone()
@@ -662,7 +662,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
         private static void ApplyAxisOptions(LightningScatterOptions scatterOptions, TSNEAnalysisResult analysisResult, TSNEScatterDisplayOptions display, TSNEScatterSeriesOptions series)
         {
-            IList<ScatterSampleData> axisSamples = ResolveAxisSamples(analysisResult, series);
+            IList<TSNEPointData> axisSamples = ResolveAxisSamples(analysisResult, series);
             AxisRange xRange = CalculateRange(
                 axisSamples.Select(item => item.X1),
                 display);
@@ -691,10 +691,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             scatterOptions.YAxis.GridColor = display.GridColor;
         }
 
-        private static IList<ScatterSampleData> ResolveAxisSamples(TSNEAnalysisResult analysisResult, TSNEScatterSeriesOptions series)
+        private static IList<TSNEPointData> ResolveAxisSamples(TSNEAnalysisResult analysisResult, TSNEScatterSeriesOptions series)
         {
-            IList<ScatterSampleData> samples = analysisResult == null || analysisResult.ScatterData == null
-                ? new List<ScatterSampleData>()
+            IList<TSNEPointData> samples = analysisResult == null || analysisResult.ScatterData == null
+                ? new List<TSNEPointData>()
                 : analysisResult.ScatterData.Where(item => item != null).ToList();
             if (series == null || !series.RequireSeriesLabel)
             {
@@ -710,7 +710,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 .ToList();
         }
 
-        private static bool HasSeriesLabel(ScatterSampleData sample, TSNEScatterSeriesOptions series)
+        private static bool HasSeriesLabel(TSNEPointData sample, TSNEScatterSeriesOptions series)
         {
             if (sample == null)
             {
@@ -802,12 +802,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             TSNEScatterSeriesOptions options = seriesOptions == null
                 ? new TSNEScatterSeriesOptions()
                 : seriesOptions.Clone();
-            IList<ScatterSampleData> samples = analysisResult == null || analysisResult.ScatterData == null
-                ? new List<ScatterSampleData>()
+            IList<TSNEPointData> samples = analysisResult == null || analysisResult.ScatterData == null
+                ? new List<TSNEPointData>()
                 : analysisResult.ScatterData.Where(item => item != null).ToList();
-            ScatterSampleData highlightedSample = ResolveHighlightedSample(samples, options);
-            ScatterSampleData selectedSample = ResolveSelectedSample(samples, options);
-            IList<ScatterSampleData> regularSamples = samples
+            TSNEPointData highlightedSample = ResolveHighlightedSample(samples, options);
+            TSNEPointData selectedSample = ResolveSelectedSample(samples, options);
+            IList<TSNEPointData> regularSamples = samples
                 .Where(item => ShouldIncludeInRegularSeries(item, options))
                 .ToList();
             if (highlightedSample != null)
@@ -824,10 +824,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     .ToList();
             }
 
-            Dictionary<string, List<ScatterSampleData>> allGroups = regularSamples
+            Dictionary<string, List<TSNEPointData>> allGroups = regularSamples
                 .GroupBy(item => ResolveSeriesName(item, options), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
-            Dictionary<string, List<ScatterSampleData>> groups = regularSamples
+            Dictionary<string, List<TSNEPointData>> groups = regularSamples
                 .GroupBy(item => ResolveSeriesName(item, options), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
@@ -879,7 +879,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return result;
         }
 
-        private static ScatterSampleData ResolveHighlightedSample(IEnumerable<ScatterSampleData> samples, TSNEScatterSeriesOptions options)
+        private static TSNEPointData ResolveHighlightedSample(IEnumerable<TSNEPointData> samples, TSNEScatterSeriesOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.HighlightDraftNo))
             {
@@ -887,12 +887,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             }
 
             string draftNo = options.HighlightDraftNo.Trim();
-            return (samples ?? Enumerable.Empty<ScatterSampleData>()).FirstOrDefault(item =>
+            return (samples ?? Enumerable.Empty<TSNEPointData>()).FirstOrDefault(item =>
                 item != null
                 && string.Equals(item.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
         }
 
-        private static ScatterSampleData ResolveSelectedSample(IEnumerable<ScatterSampleData> samples, TSNEScatterSeriesOptions options)
+        private static TSNEPointData ResolveSelectedSample(IEnumerable<TSNEPointData> samples, TSNEScatterSeriesOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.SelectedDraftNo))
             {
@@ -900,13 +900,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             }
 
             string draftNo = options.SelectedDraftNo.Trim();
-            return (samples ?? Enumerable.Empty<ScatterSampleData>()).FirstOrDefault(item =>
+            return (samples ?? Enumerable.Empty<TSNEPointData>()).FirstOrDefault(item =>
                 item != null
                 && string.Equals(item.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
         }
 
         private static LightningScatterSeries CreateSinglePointSeries(
-            ScatterSampleData sample, string seriesName, Color fillColor, Color borderColor,
+            TSNEPointData sample, string seriesName, Color fillColor, Color borderColor,
             LightningScatterPointShape pointShape, float pointSize, float borderWidth, bool showInLegend)
         {
             return new LightningScatterSeries
@@ -929,13 +929,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             };
         }
 
-        private static string ResolveSeriesName(ScatterSampleData sample, TSNEScatterSeriesOptions options)
+        private static string ResolveSeriesName(TSNEPointData sample, TSNEScatterSeriesOptions options)
         {
             string seriesName = ResolveRawSeriesName(sample, options);
             return string.IsNullOrWhiteSpace(seriesName) ? "Unknown" : seriesName.Trim();
         }
 
-        private static string ResolveRawSeriesName(ScatterSampleData sample, TSNEScatterSeriesOptions options)
+        private static string ResolveRawSeriesName(TSNEPointData sample, TSNEScatterSeriesOptions options)
         {
             if (sample == null)
             {
@@ -947,7 +947,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 : sample.AiResultValue;
         }
 
-        private static bool ShouldIncludeInRegularSeries(ScatterSampleData sample, TSNEScatterSeriesOptions options)
+        private static bool ShouldIncludeInRegularSeries(TSNEPointData sample, TSNEScatterSeriesOptions options)
         {
             if (sample == null)
             {

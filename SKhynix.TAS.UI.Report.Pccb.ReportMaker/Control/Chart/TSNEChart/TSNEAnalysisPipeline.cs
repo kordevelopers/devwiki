@@ -618,14 +618,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
     {
         internal TSNEAnalysisResult()
         {
-            ScatterData = new List<ScatterSampleData>();
+            ScatterData = new List<TSNEPointData>();
             FeatureNames = new string[0];
             ExcludedFeatureNames = new string[0];
             StandardizedMatrix = new double[0][];
             FeatureSelectionReport = TSNEFeatureSelectionReport.Empty();
         }
 
-        public IList<ScatterSampleData> ScatterData { get; internal set; }
+        public IList<TSNEPointData> ScatterData { get; internal set; }
         public string[] FeatureNames { get; internal set; }
         public string[] ExcludedFeatureNames { get; internal set; }
         public double[][] StandardizedMatrix { get; internal set; }
@@ -730,10 +730,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 options.TSNERandomSeed);
             scores = tsne.Coordinates;
 
-            var scatterData = new List<ScatterSampleData>(rows.Count);
+            var scatterData = new List<TSNEPointData>(rows.Count);
             for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
             {
-                scatterData.Add(new ScatterSampleData
+                scatterData.Add(new TSNEPointData
                 {
                     SourceIndex = rowIndex,
                     DraftNo = rows[rowIndex].DraftNo,

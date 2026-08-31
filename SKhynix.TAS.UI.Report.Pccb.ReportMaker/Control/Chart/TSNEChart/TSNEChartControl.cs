@@ -19,14 +19,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
     public sealed class TSNESampleClickedEventArgs : EventArgs
     {
-        public TSNESampleClickedEventArgs(ScatterSampleData sample, IList<KnnNeighbor> neighbors, LightningScatterPointClickEventArgs sourceEventArgs)
+        public TSNESampleClickedEventArgs(TSNEPointData sample, IList<KnnNeighbor> neighbors, LightningScatterPointClickEventArgs sourceEventArgs)
         {
             Sample = sample;
             Neighbors = neighbors == null ? new List<KnnNeighbor>() : neighbors.ToList();
             SourceEventArgs = sourceEventArgs;
         }
 
-        public ScatterSampleData Sample { get; private set; }
+        public TSNEPointData Sample { get; private set; }
         public IList<KnnNeighbor> Neighbors { get; private set; }
         public LightningScatterPointClickEventArgs SourceEventArgs { get; private set; }
     }
@@ -376,7 +376,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
         private void ScatterChart_PointClicked(object sender, LightningScatterPointClickEventArgs e)
         {
-            ScatterSampleData sample = e == null || e.Point == null ? null : e.Point.Tag as ScatterSampleData;
+            TSNEPointData sample = e == null || e.Point == null ? null : e.Point.Tag as TSNEPointData;
             if (sample == null)
             {
                 return;
