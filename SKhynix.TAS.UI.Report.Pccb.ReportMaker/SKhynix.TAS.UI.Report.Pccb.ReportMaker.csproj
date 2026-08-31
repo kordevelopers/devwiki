@@ -38,7 +38,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Control\Chart\Common\LightningScatter.cs" />
-    <Compile Include="Control\Chart\TSNEChart\*.cs" />
+    <Compile Include="Control\Chart\TSNEChart\TSNEAnalysisPipeline.cs" />
+    <Compile Include="Control\Chart\TSNEChart\TSNEChartControl.cs" />
+    <Compile Include="Control\Chart\TSNEChart\TSNEDataService.cs" />
+    <Compile Include="Control\Chart\TSNEChart\TSNEInputProcessing.cs" />
+    <Compile Include="Control\Chart\TSNEChart\TSNEProjection.cs" />
+    <Compile Include="Control\Chart\TSNEChart\TSNEScatterRendering.cs" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
