@@ -17,7 +17,12 @@ using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.Common;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
-    internal static class TSNEJsonUtility
+    /// <summary>
+    /// Public JSON conversion entry points used by the t-SNE analysis pipeline.
+    /// Keeping this API public allows the Pccb host to prepare and inspect the
+    /// same JSON representation without depending on an internal helper type.
+    /// </summary>
+    public static class TSNEJsonUtility
     {
         private const int DefaultMaxDepth = 256;
 
