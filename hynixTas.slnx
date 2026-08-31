@@ -2,4 +2,6 @@
   <Project Path="hynixTas/hynixTas.csproj" Id="8649b65c-1bfc-415d-9396-23ea4f257f78" />
   <Project Path="LightingChartSamples/LightingChartSamples.csproj" Id="1f03fc25-a770-4b71-bdd5-e268a934480f" />
   <Project Path="ExcelRpcDiagnostic/ExcelRpcDiagnostic.csproj" Id="b71ce94b-8d51-4ec6-a448-52c9371d5330" />
+  <Project Path="SKhynix.TAS.UI.Report.Pccb.ReportMaker/SKhynix.TAS.UI.Report.Pccb.ReportMaker.csproj" Id="c4be4f25-9a0d-4d06-8b7e-1b2a9f4d5b01" />
+  <Project Path="SKhynix.TAS.UI.Report.Pccb/SKhynix.TAS.UI.Report.Pccb.csproj" Id="8d2a5c90-7a7b-4d0e-9d10-31f3b21b0c22" />
 </Solution>
