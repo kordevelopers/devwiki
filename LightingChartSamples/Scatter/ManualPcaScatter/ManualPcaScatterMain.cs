@@ -39,6 +39,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         private bool showAnalysisLogButton;
         private bool showPreferMemoryOption;
         private bool showFeatureAuditMessageBox;
+        private DimensionalityReductionMethod projectionMethod;
 
         public ManualPcaScatterMain()
             : this(null)
@@ -54,6 +55,10 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             SeriesPointSize = 7f;
             HighlightPointSize = 0f;
             SelectedPointSize = 0f;
+            TsnePerplexity = 30d;
+            TsneIterations = 750;
+            TsneLearningRate = 200d;
+            TsneRandomSeed = 20260831;
             currentSamples = new List<ScatterSampleData>();
             currentRecords = new List<PcaExperimentRecord>();
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
@@ -103,6 +108,24 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         /// 그리드에서 선택한 행의 포인트 크기다. 0 이하이면 일반 포인트보다 10% 크게 표시한다.
         /// </summary>
         public float SelectedPointSize { get; set; }
+
+        /// <summary>
+        /// 차트에 사용할 2차원 축소 방식이다. 기본값은 기존 호환을 위한 PCA다.
+        /// </summary>
+        public DimensionalityReductionMethod ProjectionMethod
+        {
+            get { return projectionMethod; }
+            set
+            {
+                projectionMethod = value;
+                ApplyProjectionUiText();
+            }
+        }
+
+        public double TsnePerplexity { get; set; }
+        public int TsneIterations { get; set; }
+        public double TsneLearningRate { get; set; }
+        public int TsneRandomSeed { get; set; }
 
         /// <summary>
         /// 상단 분석 상태 텍스트 표시 여부다. 기본값은 숨김이다.
@@ -242,8 +265,9 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             preferMemoryCheckBox.Checked = true;
             summaryLabel.Text = string.Format(
                 CultureInfo.InvariantCulture,
-                "DataTable {0:N0}행을 받았습니다. 차트 그리기 버튼을 눌러 PCA 분석을 실행하세요.",
-                sourceTable.Rows.Count);
+                "DataTable {0:N0}행을 받았습니다. 차트 그리기 버튼을 눌러 {1} 분석을 실행하세요.",
+                sourceTable.Rows.Count,
+                GetProjectionDisplayName());
             SetToolbarEnabled(true);
             UpdateAnalysisLogButtonState();
             return Task.FromResult(0);
@@ -257,12 +281,12 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         private async Task DrawLoadedDataAsync()
         {
             SetToolbarEnabled(false);
-            ShowBusyOverlay("DataTable 변환 및 PCA 차트 그리기 중...");
+            ShowBusyOverlay("DataTable 변환 및 " + GetProjectionDisplayName() + " 차트 그리기 중...");
             try
             {
                 PcaExadataSnapshot snapshot = await LoadCurrentSourceSnapshotAsync();
                 preferMemoryCheckBox.Checked = true;
-                UpdateBusyMessage("메모리 데이터 PCA 분석 및 차트 렌더링 중...");
+                UpdateBusyMessage("메모리 데이터 " + GetProjectionDisplayName() + " 분석 및 차트 렌더링 중...");
                 await AnalyzeCurrentSnapshotAsync(snapshot, false);
             }
             finally
@@ -284,7 +308,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             }
             catch (Exception ex)
             {
-                ShowOperationError(ex, "PCA 차트 그리기 실패");
+                ShowOperationError(ex, GetProjectionDisplayName() + " 차트 그리기 실패");
             }
         }
 
@@ -364,8 +388,8 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
                 {
                     MessageBox.Show(
                         this,
-                        "먼저 차트 그리기 버튼을 눌러 PCA 분석을 실행하세요.",
-                        "PCA 분석 필요",
+                        "먼저 차트 그리기 버튼을 눌러 " + GetProjectionDisplayName() + " 분석을 실행하세요.",
+                        GetProjectionDisplayName() + " 분석 필요",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
                     return;
@@ -465,9 +489,9 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         private async Task RefreshAllAsync()
         {
             SetToolbarEnabled(false);
-            ShowBusyOverlay("전체 데이터 조회 및 PCA 분석 중...");
+            ShowBusyOverlay("전체 데이터 조회 및 " + GetProjectionDisplayName() + " 분석 중...");
             PcaParameterType parameterType = GetSelectedParameterType();
-            summaryLabel.Text = "서비스 DataTable 전체 데이터 PCA 분석 중...";
+            summaryLabel.Text = "서비스 DataTable 전체 데이터 " + GetProjectionDisplayName() + " 분석 중...";
 
             try
             {
@@ -504,12 +528,12 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             if (manageToolbar)
             {
                 SetToolbarEnabled(false);
-                ShowBusyOverlay("메모리 데이터 필터링 및 PCA 분석 중...");
+                ShowBusyOverlay("메모리 데이터 필터링 및 " + GetProjectionDisplayName() + " 분석 중...");
             }
 
             PcaParameterType parameterType = GetSelectedParameterType();
             summaryLabel.Text = PcaParameterTypeParser.ToDatabaseValue(parameterType)
-                + " 메모리 데이터 PCA 분석 중...";
+                + " 메모리 데이터 " + GetProjectionDisplayName() + " 분석 중...";
             try
             {
                 PcaScatterOptions chartOptions = CreateChartOptions();
@@ -587,7 +611,7 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             PcaFeatureSelectionReport report = result.FeatureSelectionReport;
             DataTable survivingPopulation = result.CreateSurvivingPopulationDataTable();
             var builder = new StringBuilder();
-            builder.AppendLine("PCA Feature Selection Audit");
+            builder.AppendLine(GetProjectionDisplayName() + " Feature Selection Audit");
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "CreatedAt: {0:yyyy-MM-dd HH:mm:ss.fff}", DateTime.Now));
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "ParameterType: {0}", PcaParameterTypeParser.ToDatabaseValue(result.ParameterType)));
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "LogMode: {0}", includeFullDetails ? "Detailed" : "Summary"));
@@ -653,14 +677,17 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         {
             try
             {
+                bool isTsne = result != null
+                    && result.AnalysisResult != null
+                    && result.AnalysisResult.ProjectionMethod == DimensionalityReductionMethod.Tsne;
                 string root = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "SKhynix",
                     "TAS",
-                    "PcaScatter",
+                    isTsne ? "TsneScatter" : "PcaScatter",
                     "AnalysisLogs");
                 Directory.CreateDirectory(root);
-                string path = Path.Combine(root, "manual_pca_latest_analysis.log");
+                string path = Path.Combine(root, isTsne ? "manual_tsne_latest_analysis.log" : "manual_pca_latest_analysis.log");
                 File.WriteAllText(path, logText ?? string.Empty, Encoding.UTF8);
                 return path;
             }
@@ -1533,10 +1560,19 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
         private PcaScatterOptions CreateChartOptions()
         {
             PcaScatterOptions options = PcaScatterOptions.CreateDefault600x400();
+            options.Analysis.ProjectionMethod = projectionMethod;
+            options.Analysis.TsnePerplexity = TsnePerplexity;
+            options.Analysis.TsneIterations = TsneIterations;
+            options.Analysis.TsneLearningRate = TsneLearningRate;
+            options.Analysis.TsneRandomSeed = TsneRandomSeed;
             options.Analysis.MinimumNumericFeatureCoverageRatio =
                 ConvertCoveragePercentToRatio(MinimumNumericCoveragePercent);
-            options.Series.PassColor = Color.Red;
-            options.Series.ReviewColor = Color.Green;
+            options.Series.PassColor = projectionMethod == DimensionalityReductionMethod.Tsne
+                ? Color.FromArgb(30, 64, 175)
+                : Color.Red;
+            options.Series.ReviewColor = projectionMethod == DimensionalityReductionMethod.Tsne
+                ? Color.FromArgb(217, 119, 6)
+                : Color.Green;
             options.Series.UsePaletteColors = true;
             options.Series.ColorTransparencyPercent = 20f;
             options.Series.ColorAlpha = PcaScatterSeriesOptions.ResolveAlphaFromTransparencyPercent(options.Series.ColorTransparencyPercent, options.Series.ColorAlpha);
@@ -1547,6 +1583,12 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Series.SeriesOrder = new[] { "Pass", "Review", "FAIL" };
             options.Series.PastelPalette = PcaScatterSeriesOptions.CreateCompanySeriesPalette();
             options.Series.BorderPalette = PcaScatterSeriesOptions.CreateCompanySeriesBorderPalette();
+            if (projectionMethod == DimensionalityReductionMethod.Tsne)
+            {
+                options.Series.SeriesColors["Pass"] = Color.FromArgb(30, 64, 175);
+                options.Series.SeriesColors["Review"] = Color.FromArgb(217, 119, 6);
+                options.Series.SeriesColors["FAIL"] = Color.FromArgb(220, 38, 38);
+            }
             options.Series.PointSize = NormalizePointSize(SeriesPointSize, 7f);
             options.Series.HighlightColor = Color.Yellow;
             options.Series.HighlightPointBorderColor = Color.Yellow;
@@ -1558,13 +1600,15 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Series.SelectedPointBorderWidth = 2.8f;
             options.Display.FontName = "맑은 고딕";
             options.Display.ShowTitle = true;
-            options.Display.Title = "Distribution Chart";
+            options.Display.Title = projectionMethod == DimensionalityReductionMethod.Tsne
+                ? "t-SNE Distribution Chart"
+                : "PCA Distribution Chart";
             options.Display.TitleColor = Color.Black;
             options.Display.BackgroundColor = Color.White;
             options.Display.GraphBackgroundColor = Color.FromArgb(230, 230, 230);
             options.Display.ThemeMode = LightningScatterThemeMode.DarkGray;
-            options.Display.XAxisTitle = string.Empty;
-            options.Display.YAxisTitle = string.Empty;
+            options.Display.XAxisTitle = projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE 1" : string.Empty;
+            options.Display.YAxisTitle = projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE 2" : string.Empty;
             options.Display.MajorDivCount = 8;
             options.Display.AxisLabelFormat = "0.##";
             options.Display.GridLinesVisible = true;
@@ -1577,8 +1621,10 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Legend.TransparentBackground = true;
             options.Tooltip.Enabled = true;
             options.Tooltip.HitPixelTolerance = 14;
-            options.Tooltip.Format = "{5}\r\nX1:{1:0.###}, X2:{2:0.###}";
-            options.NoData.Text = "PCA Scatter 데이터가 없습니다.";
+            options.Tooltip.Format = projectionMethod == DimensionalityReductionMethod.Tsne
+                ? "{5}\r\nt-SNE 1:{1:0.###}, t-SNE 2:{2:0.###}"
+                : "{5}\r\nX1:{1:0.###}, X2:{2:0.###}";
+            options.NoData.Text = GetProjectionDisplayName() + " Scatter 데이터가 없습니다.";
             options.NoData.ShowWhenAllValuesZero = false;
             options.Interaction.ZoomEnabled = true;
             options.Interaction.PanEnabled = true;
@@ -1586,6 +1632,23 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             options.Interaction.AllowInternalMouseCursorChange = true;
             options.Interaction.OpenPropertyEditorOnRightClick = true;
             return options;
+        }
+
+        private string GetProjectionDisplayName()
+        {
+            return projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE" : "PCA";
+        }
+
+        private void ApplyProjectionUiText()
+        {
+            if (titleLabel != null)
+            {
+                titleLabel.Text = GetProjectionDisplayName() + " Scatter";
+            }
+
+            Text = projectionMethod == DimensionalityReductionMethod.Tsne
+                ? "Manual t-SNE Scatter"
+                : "Manual PCA Scatter";
         }
 
         private static float NormalizePointSize(float value, float defaultValue)
@@ -1683,8 +1746,8 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             table.Columns.Add("DRAFT_NO", typeof(string));
             table.Columns.Add("PARAM_TYP", typeof(string));
             table.Columns.Add("LABEL(Y)", typeof(string));
-            table.Columns.Add("X1", typeof(string));
-            table.Columns.Add("X2", typeof(string));
+            table.Columns.Add(projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE 1" : "X1", typeof(string));
+            table.Columns.Add(projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE 2" : "X2", typeof(string));
             table.Columns.Add("Rank", typeof(string));
             table.Columns.Add("Target_Draft", typeof(string));
             table.Columns.Add("Distance", typeof(string));
@@ -1775,14 +1838,16 @@ namespace LightingChartSamples.Scatter.ManualPcaScatter
             }
         }
 
-        private static void AddNearestNeighborRow(DataTable table, PcaExperimentRecord record, int rank, string targetDraftNo, double distance)
+        private void AddNearestNeighborRow(DataTable table, PcaExperimentRecord record, int rank, string targetDraftNo, double distance)
         {
             DataRow row = table.NewRow();
             row["DRAFT_NO"] = record.DraftNo;
             row["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(record.ParameterType);
             row["LABEL(Y)"] = FormatGridText(record.LabelY);
-            row["X1"] = FormatGridNumber(record.X1);
-            row["X2"] = FormatGridNumber(record.X2);
+            string xColumn = projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE 1" : "X1";
+            string yColumn = projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE 2" : "X2";
+            row[xColumn] = FormatGridNumber(record.X1);
+            row[yColumn] = FormatGridNumber(record.X2);
             row["Rank"] = rank <= 0 ? "-" : rank.ToString(CultureInfo.InvariantCulture);
             row["Target_Draft"] = targetDraftNo;
             row["Distance"] = rank <= 0 ? "-" : FormatGridNumber(distance);

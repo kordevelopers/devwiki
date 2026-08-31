@@ -19,6 +19,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             ConvergenceTolerance = 1e-10d;
             NeighborCount = 3;
             KnnSearchAlgorithm = KnnSearchAlgorithm.Auto;
+            ProjectionMethod = DimensionalityReductionMethod.Pca;
+            TsnePerplexity = 30d;
+            TsneIterations = 750;
+            TsneLearningRate = 200d;
+            TsneRandomSeed = 20260831;
         }
 
         public double ConstantVarianceThreshold { get; set; }
@@ -29,6 +34,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public double ConvergenceTolerance { get; set; }
         public int NeighborCount { get; set; }
         public KnnSearchAlgorithm KnnSearchAlgorithm { get; set; }
+        public DimensionalityReductionMethod ProjectionMethod { get; set; }
+        public double TsnePerplexity { get; set; }
+        public int TsneIterations { get; set; }
+        public double TsneLearningRate { get; set; }
+        public int TsneRandomSeed { get; set; }
 
         internal PcaAnalysisOptions ToPipelineOptions()
         {
@@ -41,7 +51,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 MaxIterations = MaxIterations,
                 ConvergenceTolerance = ConvergenceTolerance,
                 NeighborCount = NeighborCount,
-                KnnSearchAlgorithm = KnnSearchAlgorithm
+                KnnSearchAlgorithm = KnnSearchAlgorithm,
+                ProjectionMethod = ProjectionMethod,
+                TsnePerplexity = TsnePerplexity,
+                TsneIterations = TsneIterations,
+                TsneLearningRate = TsneLearningRate,
+                TsneRandomSeed = TsneRandomSeed
             };
         }
 

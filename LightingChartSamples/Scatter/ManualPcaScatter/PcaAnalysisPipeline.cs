@@ -7,6 +7,12 @@ using System.Linq;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 {
+    public enum DimensionalityReductionMethod
+    {
+        Pca,
+        Tsne
+    }
+
     #region Analysis Result Models
 
     public enum KnnSearchAlgorithm
@@ -29,6 +35,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             ConvergenceTolerance = 1e-10d;
             NeighborCount = 3;
             KnnSearchAlgorithm = KnnSearchAlgorithm.Auto;
+            ProjectionMethod = DimensionalityReductionMethod.Pca;
+            TsnePerplexity = 30d;
+            TsneIterations = 750;
+            TsneLearningRate = 200d;
+            TsneRandomSeed = 20260831;
         }
 
         public double ConstantVarianceThreshold { get; set; }
@@ -39,6 +50,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public double ConvergenceTolerance { get; set; }
         public int NeighborCount { get; set; }
         public KnnSearchAlgorithm KnnSearchAlgorithm { get; set; }
+        public DimensionalityReductionMethod ProjectionMethod { get; set; }
+        public double TsnePerplexity { get; set; }
+        public int TsneIterations { get; set; }
+        public double TsneLearningRate { get; set; }
+        public int TsneRandomSeed { get; set; }
     }
 
     public sealed class KnnNeighbor
@@ -94,19 +110,36 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             string knnReason = analysisResult == null || analysisResult.Knn == null
                 ? string.Empty
                 : analysisResult.Knn.SelectionReason;
-            string shapeCode = ResolveShapeCode(rowCount, featureCount, pc1, pc2);
-            string compactText = string.Format(
-                CultureInfo.InvariantCulture,
-                "DIAG R={0} F={1} X={2} M={3} PC1={4:0.0} PC2={5:0.0} SUM={6:0.0} SHAPE={7} KNN={8}",
-                rowCount,
-                featureCount,
-                excludedCount,
-                missingExperimentCount,
-                pc1,
-                pc2,
-                pc1 + pc2,
-                shapeCode,
-                knnAlgorithm);
+            bool isTsne = analysisResult != null
+                && analysisResult.ProjectionMethod == DimensionalityReductionMethod.Tsne;
+            string shapeCode = isTsne
+                ? ResolveTsneShapeCode(rowCount, featureCount)
+                : ResolveShapeCode(rowCount, featureCount, pc1, pc2);
+            string compactText = isTsne
+                ? string.Format(
+                    CultureInfo.InvariantCulture,
+                    "DIAG R={0} F={1} X={2} M={3} TSNE PERP={4:0.##} ITER={5} KL={6:0.####} SHAPE={7} KNN={8}",
+                    rowCount,
+                    featureCount,
+                    excludedCount,
+                    missingExperimentCount,
+                    analysisResult.TsneModel == null ? 0d : analysisResult.TsneModel.EffectivePerplexity,
+                    analysisResult.TsneModel == null ? 0 : analysisResult.TsneModel.Iterations,
+                    analysisResult.TsneModel == null ? 0d : analysisResult.TsneModel.KullbackLeiblerDivergence,
+                    shapeCode,
+                    knnAlgorithm)
+                : string.Format(
+                    CultureInfo.InvariantCulture,
+                    "DIAG R={0} F={1} X={2} M={3} PC1={4:0.0} PC2={5:0.0} SUM={6:0.0} SHAPE={7} KNN={8}",
+                    rowCount,
+                    featureCount,
+                    excludedCount,
+                    missingExperimentCount,
+                    pc1,
+                    pc2,
+                    pc1 + pc2,
+                    shapeCode,
+                    knnAlgorithm);
 
             return new PcaAnalysisDiagnosticReport
             {
@@ -198,6 +231,21 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             }
 
             return "OK";
+        }
+
+        private static string ResolveTsneShapeCode(int rowCount, int featureCount)
+        {
+            if (rowCount < 3)
+            {
+                return "ROWS_LT3";
+            }
+
+            if (rowCount < 30)
+            {
+                return "ROWS_LOW";
+            }
+
+            return featureCount < 2 ? "FEATURE_LT2" : "OK";
         }
     }
 
@@ -590,6 +638,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
         public double[][] StandardizedMatrix { get; internal set; }
         public StandardScalerModel Scaler { get; internal set; }
         public PcaProjectionModel PcaModel { get; internal set; }
+        public TsneProjectionModel TsneModel { get; internal set; }
+        public DimensionalityReductionMethod ProjectionMethod { get; internal set; }
         public KnnSimilarityService Knn { get; internal set; }
         public PcaVerificationReport Verification { get; internal set; }
         public PcaAnalysisDiagnosticReport Diagnostic { get; internal set; }
@@ -680,14 +730,29 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             StandardScalerModel scaler = StandardScalerModel.Fit(features.Matrix, features.FeatureNames);
             // standardized: 각 feature별 평균을 빼고 표준편차로 나눈 정규화 행렬이다.
             double[][] standardized = scaler.Transform(features.Matrix);
-            PcaProjectionModel pca = PcaProjectionModel.Fit(
-                standardized,
-                options.ComponentCount,
-                options.MaxIterations,
-                options.ConvergenceTolerance,
-                scaler);
-            // scores[row][0]이 X1, scores[row][1]이 X2가 되며 차트 좌표로 사용된다.
-            double[][] scores = pca.Transform(standardized);
+            PcaProjectionModel pca = null;
+            TsneProjectionModel tsne = null;
+            double[][] scores;
+            if (options.ProjectionMethod == DimensionalityReductionMethod.Tsne)
+            {
+                tsne = TsneProjectionModel.FitTransform(
+                    standardized,
+                    options.TsnePerplexity,
+                    options.TsneIterations,
+                    options.TsneLearningRate,
+                    options.TsneRandomSeed);
+                scores = tsne.Coordinates;
+            }
+            else
+            {
+                pca = PcaProjectionModel.Fit(
+                    standardized,
+                    options.ComponentCount,
+                    options.MaxIterations,
+                    options.ConvergenceTolerance,
+                    scaler);
+                scores = pca.Transform(standardized);
+            }
 
             var scatterData = new List<ScatterSampleData>(rows.Count);
             for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
@@ -708,17 +773,25 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 standardized,
                 scaler,
                 options.KnnSearchAlgorithm);
-            PcaVerificationReport verification = PcaAlgorithmVerifier.Verify(
-                standardized,
-                scaler,
-                pca,
-                knn,
-                rows[0].DraftNo,
-                options.NeighborCount);
+            PcaVerificationReport verification = options.ProjectionMethod == DimensionalityReductionMethod.Tsne
+                ? PcaAlgorithmVerifier.VerifyTsne(
+                    standardized,
+                    scores,
+                    scaler,
+                    knn,
+                    rows[0].DraftNo,
+                    options.NeighborCount)
+                : PcaAlgorithmVerifier.Verify(
+                    standardized,
+                    scaler,
+                    pca,
+                    knn,
+                    rows[0].DraftNo,
+                    options.NeighborCount);
 
             if (!verification.IsValid)
             {
-                throw new InvalidOperationException("PCA/KNN verification failed: " + verification.Message);
+                throw new InvalidOperationException("Projection/KNN verification failed: " + verification.Message);
             }
 
             var result = new PcaAnalysisResult
@@ -729,6 +802,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 StandardizedMatrix = standardized,
                 Scaler = scaler,
                 PcaModel = pca,
+                TsneModel = tsne,
+                ProjectionMethod = options.ProjectionMethod,
                 Knn = knn,
                 Verification = verification,
                 FeatureSelectionReport = features.FeatureSelectionReport
@@ -1966,6 +2041,65 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
 
     internal static class PcaAlgorithmVerifier
     {
+        public static PcaVerificationReport VerifyTsne(
+            double[][] standardized,
+            double[][] coordinates,
+            StandardScalerModel scaler,
+            KnnSimilarityService knn,
+            string firstDraftNo,
+            int neighborCount)
+        {
+            int rowCount = standardized.Length;
+            int columnCount = standardized[0].Length;
+            double maxMean = 0d;
+            double maxStandardDeviationError = 0d;
+            for (int column = 0; column < columnCount; column++)
+            {
+                double mean = standardized.Average(row => row[column]);
+                double variance = standardized.Average(row =>
+                {
+                    double difference = row[column] - mean;
+                    return difference * difference;
+                });
+                maxMean = Math.Max(maxMean, Math.Abs(mean));
+                maxStandardDeviationError = Math.Max(maxStandardDeviationError, Math.Abs(Math.Sqrt(variance) - 1d));
+            }
+
+            bool finiteCoordinates = coordinates != null
+                && coordinates.Length == rowCount
+                && coordinates.All(row => row != null
+                    && row.Length == 2
+                    && row.All(value => !double.IsNaN(value) && !double.IsInfinity(value)));
+            IList<KnnNeighbor> neighbors = knn.FindNearest(firstDraftNo, neighborCount);
+            bool knnValid = neighbors.Count == Math.Min(Math.Max(0, neighborCount), rowCount - 1)
+                && neighbors.All(item => !string.Equals(item.DraftNo, firstDraftNo, StringComparison.OrdinalIgnoreCase))
+                && neighbors.Select(item => item.Distance).SequenceEqual(neighbors.Select(item => item.Distance).OrderBy(value => value));
+            bool sharedScaler = scaler != null
+                && object.ReferenceEquals(scaler, knn.Scaler)
+                && scaler.FeatureNames != null
+                && scaler.FeatureNames.Length == columnCount;
+            bool valid = maxMean <= 1e-8d
+                && maxStandardDeviationError <= 1e-8d
+                && finiteCoordinates
+                && knnValid
+                && sharedScaler;
+
+            return new PcaVerificationReport
+            {
+                IsValid = valid,
+                MaximumAbsoluteStandardizedMean = maxMean,
+                MaximumStandardDeviationError = maxStandardDeviationError,
+                ComponentDotProduct = 0d,
+                EigenValuesDescending = true,
+                AllScoresFinite = finiteCoordinates,
+                KnnResultValid = knnValid,
+                SharedScalerInstance = sharedScaler,
+                Message = valid
+                    ? "Shared StandardScaler, finite t-SNE coordinates and KNN ordering verified."
+                    : "One or more StandardScaler/t-SNE/KNN invariants failed."
+            };
+        }
+
         public static PcaVerificationReport Verify(
             double[][] standardized,
             StandardScalerModel scaler,

@@ -131,7 +131,11 @@
     <Compile Include="Scatter\ManualPcaScatter\PcaScatterDataSource.cs" />
     <Compile Include="Scatter\ManualPcaScatter\PcaScatterOptions.cs" />
     <Compile Include="Scatter\ManualPcaScatter\PcaScatterSeriesBuilder.cs" />
+    <Compile Include="Scatter\ManualPcaScatter\TsneProjectionModel.cs" />
     <Compile Include="Scatter\ManualPcaScatter\ManualPcaScatterMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Scatter\ManualPcaScatter\ManualTsneScatterMain.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Scatter\ManualPcaScatter\ManualPcaScatterMain.Designer.cs">
@@ -194,6 +198,7 @@
       <DependentUpon>TextDocument.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="packages.config" />
+    <None Include="Scatter\ManualPcaScatter\README_ManualTsneScatter.md" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
