@@ -7,22 +7,13 @@ using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart;
 
 namespace SKhynix.TAS.UI.Report.Pccb
 {
-    public sealed class TSNEChartForm : Form
+    public sealed partial class TSNEChartForm : Form
     {
-        private readonly Panel chartHost;
-        private readonly Label statusLabel;
         private TSNEChart chart;
 
         public TSNEChartForm()
         {
-            Text = "t-SNE Scatter";
-            Width = 1200;
-            Height = 800;
-            StartPosition = FormStartPosition.CenterScreen;
-            chartHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.White };
-            statusLabel = new Label { Dock = DockStyle.Bottom, Height = 28, Text = "샘플 데이터를 분석하는 중...", Padding = new Padding(8, 6, 0, 0) };
-            Controls.Add(chartHost);
-            Controls.Add(statusLabel);
+            InitializeComponent();
             Shown += TSNEChartForm_Shown;
         }
 
