@@ -19,7 +19,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             statusLabel.Height = 28;
             statusLabel.Name = "statusLabel";
             statusLabel.Padding = new System.Windows.Forms.Padding(8, 6, 0, 0);
-            statusLabel.Text = "샘플 데이터를 분석하는 중...";
+            statusLabel.Text = "Analyzing sample data...";
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             ClientSize = new System.Drawing.Size(1200, 800);
@@ -32,3 +32,4 @@ namespace SKhynix.TAS.UI.Report.Pccb
         }
     }
 }
+

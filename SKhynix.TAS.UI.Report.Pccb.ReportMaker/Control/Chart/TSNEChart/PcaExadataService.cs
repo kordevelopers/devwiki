@@ -370,7 +370,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
     public sealed class PcaExperimentDataMissingException : InvalidOperationException
     {
         public PcaExperimentDataMissingException(string draftNo)
-            : base("DRAFT_NO '" + (draftNo ?? string.Empty) + "'의 실험 데이터가 없습니다.")
+            : base("No experiment data found for DRAFT_NO '" + (draftNo ?? string.Empty) + "'.")
         {
             DraftNo = draftNo ?? string.Empty;
         }
@@ -409,7 +409,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             {
                 throw new FormatException(
                     string.Format(
-                        "CONV_EXPER_CTN[{0}] JSON 파싱에 실패했습니다. DRAFT_NO={1}: {2}",
+                        "CONV_EXPER_CTN[{0}] JSON parsing failed. DRAFT_NO={1}: {2}",
                         source.SourceRowIndex,
                         source.DraftNo,
                         ex.Message),
@@ -426,7 +426,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             {
                 throw new FormatException(
                     string.Format(
-                        "CONV_EXPER_CTN[{0}]에는 실험 객체가 한 건이어야 합니다. DRAFT_NO={1}, Count={2}",
+                        "CONV_EXPER_CTN[{0}] must contain exactly one experiment object. DRAFT_NO={1}, Count={2}",
                         source.SourceRowIndex,
                         source.DraftNo,
                         items.Count));
@@ -437,7 +437,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             {
                 throw new FormatException(
                     string.Format(
-                        "CONV_EXPER_CTN[{0}]의 배열 요소가 JSON 객체가 아닙니다. DRAFT_NO={1}",
+                        "CONV_EXPER_CTN[{0}] array element is not a JSON object. DRAFT_NO={1}",
                         source.SourceRowIndex,
                         source.DraftNo));
             }
@@ -497,7 +497,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         {
             if (depth > 64)
             {
-                throw new FormatException("CONV_EXPER_CTN의 JSON 중첩 깊이가 허용 범위를 초과했습니다.");
+                throw new FormatException("CONV_EXPER_CTN exceeds the allowed JSON nesting depth.");
             }
 
             foreach (KeyValuePair<string, object> pair in source)
@@ -791,7 +791,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             string resolvedDraftNo = (draftNo ?? string.Empty).Trim();
             if (resolvedDraftNo.Length == 0)
             {
-                throw new ArgumentException("조회할 DRAFT_NO를 입력해야 합니다.", "draftNo");
+                throw new ArgumentException("A DRAFT_NO is required.", "draftNo");
             }
 
             return Task.Run(delegate
@@ -805,7 +805,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 {
                     throw new KeyNotFoundException(
                         string.Format(
-                            "선택한 PARAM_TYP '{0}'에 DRAFT_NO '{1}'가 없습니다.",
+                            "Selected PARAM_TYP '{0}' does not contain DRAFT_NO '{1}'.",
                             PcaParameterTypeParser.ToDatabaseValue(parameterType),
                             resolvedDraftNo));
                 }
@@ -862,7 +862,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             string resolvedDraftNo = (draftNo ?? string.Empty).Trim();
             if (resolvedDraftNo.Length == 0)
             {
-                throw new ArgumentException("조회할 DRAFT_NO를 입력해야 합니다.", "draftNo");
+                throw new ArgumentException("A DRAFT_NO is required.", "draftNo");
             }
 
             return Task.Run(delegate
@@ -875,7 +875,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 {
                     throw new KeyNotFoundException(
                         string.Format(
-                            "선택한 PARAM_TYP '{0}'에 DRAFT_NO '{1}'가 없습니다.",
+                            "Selected PARAM_TYP '{0}' does not contain DRAFT_NO '{1}'.",
                             PcaParameterTypeParser.ToDatabaseValue(parameterType),
                             resolvedDraftNo));
                 }
@@ -953,8 +953,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             if (population.Count == 0)
             {
                 throw new InvalidOperationException(
-                    "선택한 PARAM_TYP '" + PcaParameterTypeParser.ToDatabaseValue(parameterType)
-                    + "'의 PCA 데이터가 없습니다.");
+                    "Selected PARAM_TYP '" + PcaParameterTypeParser.ToDatabaseValue(parameterType)
+                    + "' has no t-SNE data.");
             }
 
             string duplicateDraft = population
@@ -965,7 +965,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             if (!string.IsNullOrEmpty(duplicateDraft))
             {
                 throw new InvalidOperationException(
-                    "선택한 PARAM_TYP에서 DRAFT_NO가 중복되었습니다. " + duplicateDraft);
+                    "Selected PARAM_TYP contains duplicate DRAFT_NO: " + duplicateDraft);
             }
 
             return population;
@@ -1012,7 +1012,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             if (parsed.Count < 3)
             {
                 throw new InvalidOperationException(
-                    "PCA 분석에는 실험 데이터가 있는 행이 최소 3건 필요합니다.");
+                    "At least three rows with experiment data are required for analysis.");
             }
 
             // 2단계: 파싱된 수치 feature를 PCA 파이프라인이 받는 JSON row 형식으로 정규화한다.
@@ -1075,5 +1075,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 }
+
 
 

@@ -1538,7 +1538,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             int targetIndex;
             if (string.IsNullOrWhiteSpace(draftNo) || !indexByDraftNo.TryGetValue(draftNo.Trim(), out targetIndex))
             {
-                throw new KeyNotFoundException("존재하지 않는 Draft_NO입니다. " + (draftNo ?? string.Empty));
+                throw new KeyNotFoundException("Draft_NO was not found: " + (draftNo ?? string.Empty));
             }
 
             int safeCount = Math.Max(0, count);
@@ -2173,5 +2173,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
     #endregion
 }
+
 
 

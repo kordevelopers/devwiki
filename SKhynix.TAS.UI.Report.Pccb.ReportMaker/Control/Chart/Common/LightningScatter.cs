@@ -332,7 +332,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.Common
     {
         public LightningScatterNoDataOptions()
         {
-            Text = "데이터가 없습니다.";
+            Text = "No data available.";
             ShowWhenDataMissing = true;
             ShowWhenAllValuesZero = false;
             FontSize = 11f;
@@ -559,7 +559,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.Common
 
     public class LightningScatter : UserControl
     {
-        public const string DefaultChartFontName = "맑은 고딕";
+        public const string DefaultChartFontName = "Segoe UI";
 
         private readonly TableLayoutPanel chartLayoutPanel;
         private readonly LightningChartUltimate chart;
@@ -2505,6 +2505,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.Common
         }
     }
 }
+
 
 
 

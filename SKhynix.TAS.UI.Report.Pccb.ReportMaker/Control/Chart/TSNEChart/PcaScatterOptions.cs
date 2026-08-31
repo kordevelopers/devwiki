@@ -237,7 +237,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
     {
         public PcaScatterDisplayOptions()
         {
-            FontName = "맑은 고딕";
+            FontName = "Segoe UI";
             ShowTitle = true;
             Title = "Distribution Chart";
             TitleColor = Color.Black;
@@ -306,7 +306,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             };
             NoData = new LightningScatterNoDataOptions
             {
-                Text = "t-SNE Scatter 데이터가 없습니다.",
+                Text = "t-SNE Scatter No data available.",
                 ShowWhenDataMissing = true,
                 ShowWhenAllValuesZero = false,
                 FontSize = 11f,
@@ -394,7 +394,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             LightningScatterOptions scatterOptions = LightningScatterOptions.CreateDefaultBubble();
             PcaScatterDisplayOptions display = snapshot.Display ?? new PcaScatterDisplayOptions();
 
-            scatterOptions.FontName = string.IsNullOrWhiteSpace(display.FontName) ? "맑은 고딕" : display.FontName.Trim();
+            scatterOptions.FontName = string.IsNullOrWhiteSpace(display.FontName) ? "Segoe UI" : display.FontName.Trim();
             scatterOptions.ShowTitle = display.ShowTitle;
             scatterOptions.Title = display.Title ?? string.Empty;
             scatterOptions.TitleColor = display.TitleColor.IsEmpty ? Color.Black : display.TitleColor;
@@ -543,6 +543,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 }
+
 
 
 

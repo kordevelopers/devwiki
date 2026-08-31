@@ -30,7 +30,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 : jsonDocuments.ToArray();
             if (source.Length == 0)
             {
-                throw new ArgumentException(resolvedSourceName + " JSON 문서가 비어 있습니다.", "jsonDocuments");
+                throw new ArgumentException(resolvedSourceName + " JSON document is empty.", "jsonDocuments");
             }
 
             var normalizedRows = new List<string>();
@@ -38,7 +38,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             {
                 if (string.IsNullOrWhiteSpace(source[documentIndex]))
                 {
-                    throw new FormatException(string.Format("{0}[{1}] JSON 문자열이 비어 있습니다.", resolvedSourceName, documentIndex));
+                    throw new FormatException(string.Format("{0}[{1}] JSON string is empty.", resolvedSourceName, documentIndex));
                 }
 
                 object root;
@@ -48,7 +48,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 }
                 catch (Exception ex) when (PcaJsonUtility.IsJsonException(ex))
                 {
-                    throw new FormatException(string.Format("{0}[{1}] JSON 파싱에 실패했습니다: {2}",
+                    throw new FormatException(string.Format("{0}[{1}] JSON parsing failed: {2}",
                         resolvedSourceName, documentIndex, ex.Message), ex);
                 }
 
@@ -56,7 +56,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 CollectExperimentRows(root, normalizedRows, resolvedSourceName + "[" + documentIndex + "]", 0);
                 if (normalizedRows.Count == beforeCount)
                 {
-                    throw new FormatException(string.Format("{0}[{1}]에서 Draft_NO를 가진 실험 객체를 찾지 못했습니다.",
+                    throw new FormatException(string.Format("{0}[{1}] does not contain an experiment object with Draft_NO.",
                         resolvedSourceName, documentIndex));
                 }
             }
@@ -73,7 +73,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
             if (depth > 64)
             {
-                throw new FormatException(path + "의 JSON 중첩 깊이가 허용 범위를 초과했습니다.");
+                throw new FormatException(path + " exceeds the allowed JSON nesting depth.");
             }
 
             var dictionary = node as IDictionary<string, object>;
@@ -110,7 +110,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 }
                 catch (Exception ex) when (PcaJsonUtility.IsJsonException(ex))
                 {
-                    throw new FormatException(path + "의 중첩 JSON 문자열 파싱에 실패했습니다.", ex);
+                    throw new FormatException(path + " failed to parse nested JSON string.", ex);
                 }
 
                 return;
@@ -140,7 +140,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         {
             if (depth > 64)
             {
-                throw new FormatException("실험 JSON 객체의 중첩 깊이가 허용 범위를 초과했습니다.");
+                throw new FormatException("Experiment JSON nesting depth exceeds the allowed limit.");
             }
 
             foreach (KeyValuePair<string, object> pair in source)
@@ -200,5 +200,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
     #endregion
 }
+
 
 
