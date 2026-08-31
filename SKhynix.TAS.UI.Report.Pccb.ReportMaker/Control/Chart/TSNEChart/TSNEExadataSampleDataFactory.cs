@@ -5,57 +5,57 @@ using System.Globalization;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
-    public sealed class PcaExadataSampleDataFactory
+    public sealed class TSNEExadataSampleDataFactory
     {
         private const int DefaultVisibleSampleCount = 300;
         private const int DefaultHiddenSampleCount = 30;
 
         private readonly Random random;
 
-        public PcaExadataSampleDataFactory(int seed)
+        public TSNEExadataSampleDataFactory(int seed)
         {
             random = new Random(seed);
         }
 
         public DataTable CreateDefaultDataTable()
         {
-            PcaExadataSnapshot snapshot = CreateDefaultSnapshot();
+            TSNEExadataSnapshot snapshot = CreateDefaultSnapshot();
             return ToDataTable(snapshot);
         }
 
         public DataTable CreateDefaultDataTable(int countPerVisibleParameterType)
         {
-            PcaExadataSnapshot snapshot = CreateDefaultSnapshot(countPerVisibleParameterType);
+            TSNEExadataSnapshot snapshot = CreateDefaultSnapshot(countPerVisibleParameterType);
             return ToDataTable(snapshot);
         }
 
-        public PcaExadataSnapshot CreateDefaultSnapshot()
+        public TSNEExadataSnapshot CreateDefaultSnapshot()
         {
             return CreateDefaultSnapshot(DefaultVisibleSampleCount);
         }
 
-        public PcaExadataSnapshot CreateDefaultSnapshot(int countPerVisibleParameterType)
+        public TSNEExadataSnapshot CreateDefaultSnapshot(int countPerVisibleParameterType)
         {
-            var rows = new List<PcaExadataSourceRow>();
+            var rows = new List<TSNEExadataSourceRow>();
             int visibleCount = Math.Max(0, countPerVisibleParameterType);
-            AddRows(rows, PcaParameterType.Response, "SAMPLE-R", visibleCount, -0.9d);
-            AddRows(rows, PcaParameterType.Defect, "SAMPLE-D", visibleCount, 0.8d);
-            AddRows(rows, PcaParameterType.Epm, "SAMPLE-E", DefaultHiddenSampleCount, -0.2d);
-            AddRows(rows, PcaParameterType.Probe, "SAMPLE-P", DefaultHiddenSampleCount, 0.2d);
-            return new PcaExadataSnapshot(rows, DateTime.UtcNow);
+            AddRows(rows, TSNEParameterType.Response, "SAMPLE-R", visibleCount, -0.9d);
+            AddRows(rows, TSNEParameterType.Defect, "SAMPLE-D", visibleCount, 0.8d);
+            AddRows(rows, TSNEParameterType.Epm, "SAMPLE-E", DefaultHiddenSampleCount, -0.2d);
+            AddRows(rows, TSNEParameterType.Probe, "SAMPLE-P", DefaultHiddenSampleCount, 0.2d);
+            return new TSNEExadataSnapshot(rows, DateTime.UtcNow);
         }
 
         public DataTable CreateDatabaseLikeDataTable(int responseCount, int defectCount, int epmCount, int probeCount)
         {
-            var rows = new List<PcaExadataSourceRow>();
-            AddRows(rows, PcaParameterType.Response, "DRAFT-R", Math.Max(0, responseCount), -0.9d);
-            AddRows(rows, PcaParameterType.Defect, "DRAFT-D", Math.Max(0, defectCount), 0.8d);
-            AddRows(rows, PcaParameterType.Epm, "DRAFT-E", Math.Max(0, epmCount), -0.2d);
-            AddRows(rows, PcaParameterType.Probe, "DRAFT-P", Math.Max(0, probeCount), 0.2d);
-            return ToDataTable(new PcaExadataSnapshot(rows, DateTime.UtcNow));
+            var rows = new List<TSNEExadataSourceRow>();
+            AddRows(rows, TSNEParameterType.Response, "DRAFT-R", Math.Max(0, responseCount), -0.9d);
+            AddRows(rows, TSNEParameterType.Defect, "DRAFT-D", Math.Max(0, defectCount), 0.8d);
+            AddRows(rows, TSNEParameterType.Epm, "DRAFT-E", Math.Max(0, epmCount), -0.2d);
+            AddRows(rows, TSNEParameterType.Probe, "DRAFT-P", Math.Max(0, probeCount), 0.2d);
+            return ToDataTable(new TSNEExadataSnapshot(rows, DateTime.UtcNow));
         }
 
-        public static DataTable ToDataTable(PcaExadataSnapshot snapshot)
+        public static DataTable ToDataTable(TSNEExadataSnapshot snapshot)
         {
             DataTable table = new DataTable("PCCB_INFER_RSLT_INF");
             table.Columns.Add("DRAFT_NO", typeof(string));
@@ -70,11 +70,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 return table;
             }
 
-            foreach (PcaExadataSourceRow row in snapshot.Rows)
+            foreach (TSNEExadataSourceRow row in snapshot.Rows)
             {
                 DataRow dataRow = table.NewRow();
                 dataRow["DRAFT_NO"] = row.DraftNo;
-                dataRow["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(row.ParameterType);
+                dataRow["PARAM_TYP"] = TSNEParameterTypeParser.ToDatabaseValue(row.ParameterType);
                 dataRow["AI_RSLT_VAL"] = row.LabelY;
                 dataRow["ENGR_RSLT_VAL"] = row.LabelY;
                 dataRow["CONV_EXPER_CTN"] = row.RawConvExperimentJson;
@@ -85,7 +85,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return table;
         }
 
-        private void AddRows(IList<PcaExadataSourceRow> rows, PcaParameterType parameterType, string draftPrefix, int count, double typeOffset)
+        private void AddRows(IList<TSNEExadataSourceRow> rows, TSNEParameterType parameterType, string draftPrefix, int count, double typeOffset)
         {
             for (int rowIndex = 0; rowIndex < count; rowIndex++)
             {
@@ -94,8 +94,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 double subClusterOffset = ResolveSubClusterOffset(rowIndex, profile);
                 double clusterCenterX = profile.CenterX;
                 double clusterCenterY = profile.CenterY;
-                double pcaFactorX = clusterCenterX + typeOffset + subClusterOffset + NextGaussian(0d, 0.42d);
-                double pcaFactorY = clusterCenterY - (subClusterOffset * 0.45d) + NextGaussian(0d, 0.38d);
+                double tsneFactorX = clusterCenterX + typeOffset + subClusterOffset + NextGaussian(0d, 0.42d);
+                double tsneFactorY = clusterCenterY - (subClusterOffset * 0.45d) + NextGaussian(0d, 0.38d);
                 double batchNoise = NextGaussian(0d, 0.18d);
 
                 var experiment = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
@@ -110,12 +110,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     double angle = featureNumber * 0.17d;
                     double loadingX = Math.Cos(angle) * 4.2d;
                     double loadingY = Math.Sin(angle * 0.9d) * 3.4d;
-                    double value = 40d + (featureNumber * 0.35d) + (pcaFactorX * loadingX) + (pcaFactorY * loadingY) + batchNoise + NextGaussian(0d, 0.28d);
+                    double value = 40d + (featureNumber * 0.35d) + (tsneFactorX * loadingX) + (tsneFactorY * loadingY) + batchNoise + NextGaussian(0d, 0.28d);
                     experiment[string.Format(CultureInfo.InvariantCulture, "FEATURE_{0:000}", featureNumber)] = Math.Round(value, 6);
                 }
 
-                string json = PcaJsonUtility.SerializeObject(new[] { experiment });
-                rows.Add(new PcaExadataSourceRow(rows.Count, draftNo, parameterType, profile.Label, json));
+                string json = TSNEJsonUtility.SerializeObject(new[] { experiment });
+                rows.Add(new TSNEExadataSourceRow(rows.Count, draftNo, parameterType, profile.Label, json));
             }
         }
 
@@ -172,6 +172,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 }
+
+
 
 
 

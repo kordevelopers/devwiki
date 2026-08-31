@@ -3,12 +3,14 @@ using System.Threading.Tasks;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
-    public interface IPcaScatterPopupDataProvider
+    public interface ITSNEScatterPopupDataProvider
     {
         string SourceDescription { get; }
         Task<DataTable> LoadAllAsync();
     }
 }
+
+
 
 
 

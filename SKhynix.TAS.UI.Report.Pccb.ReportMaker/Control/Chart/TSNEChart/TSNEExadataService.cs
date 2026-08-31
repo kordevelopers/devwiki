@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
-    public enum PcaParameterType
+    public enum TSNEParameterType
     {
         Response,
         Defect,
@@ -17,17 +17,17 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         Probe
     }
 
-    public enum PcaExadataRefreshMode
+    public enum TSNEExadataRefreshMode
     {
         AlwaysReload,
         PreferMemorySnapshot
     }
 
-    public static class PcaParameterTypeParser
+    public static class TSNEParameterTypeParser
     {
-        public static bool TryParse(string value, out PcaParameterType parameterType)
+        public static bool TryParse(string value, out TSNEParameterType parameterType)
         {
-            parameterType = PcaParameterType.Response;
+            parameterType = TSNEParameterType.Response;
             if (string.IsNullOrWhiteSpace(value))
             {
                 return false;
@@ -36,36 +36,36 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             switch (value.Trim().ToUpperInvariant())
             {
                 case "RESPONSE":
-                    parameterType = PcaParameterType.Response;
+                    parameterType = TSNEParameterType.Response;
                     return true;
                 case "DEFECT":
-                    parameterType = PcaParameterType.Defect;
+                    parameterType = TSNEParameterType.Defect;
                     return true;
                 case "EPM":
-                    parameterType = PcaParameterType.Epm;
+                    parameterType = TSNEParameterType.Epm;
                     return true;
                 case "PROBE":
-                    parameterType = PcaParameterType.Probe;
+                    parameterType = TSNEParameterType.Probe;
                     return true;
                 default:
                     return false;
             }
         }
 
-        public static string ToDatabaseValue(PcaParameterType parameterType)
+        public static string ToDatabaseValue(TSNEParameterType parameterType)
         {
             return parameterType.ToString().ToUpperInvariant();
         }
     }
 
-    public sealed class PcaExadataSourceRow
+    public sealed class TSNEExadataSourceRow
     {
-        public PcaExadataSourceRow(int sourceRowIndex, string draftNo, PcaParameterType parameterType, string labelY, string rawConvExperimentJson)
+        public TSNEExadataSourceRow(int sourceRowIndex, string draftNo, TSNEParameterType parameterType, string labelY, string rawConvExperimentJson)
             : this(sourceRowIndex, draftNo, parameterType, string.Empty, labelY, rawConvExperimentJson)
         {
         }
 
-        public PcaExadataSourceRow(int sourceRowIndex, string draftNo, PcaParameterType parameterType, string aiResultValue, string labelY, string rawConvExperimentJson)
+        public TSNEExadataSourceRow(int sourceRowIndex, string draftNo, TSNEParameterType parameterType, string aiResultValue, string labelY, string rawConvExperimentJson)
         {
             SourceRowIndex = sourceRowIndex;
             DraftNo = (draftNo ?? string.Empty).Trim();
@@ -77,31 +77,31 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
         public int SourceRowIndex { get; private set; }
         public string DraftNo { get; private set; }
-        public PcaParameterType ParameterType { get; private set; }
+        public TSNEParameterType ParameterType { get; private set; }
         public string AiResultValue { get; private set; }
         public string LabelY { get; private set; }
         public string RawConvExperimentJson { get; private set; }
     }
 
-    public sealed class PcaExadataSnapshot
+    public sealed class TSNEExadataSnapshot
     {
-        public PcaExadataSnapshot(IEnumerable<PcaExadataSourceRow> rows, DateTime loadedAtUtc)
+        public TSNEExadataSnapshot(IEnumerable<TSNEExadataSourceRow> rows, DateTime loadedAtUtc)
         {
-            Rows = new ReadOnlyCollection<PcaExadataSourceRow>(
-                (rows ?? Enumerable.Empty<PcaExadataSourceRow>()).ToList());
+            Rows = new ReadOnlyCollection<TSNEExadataSourceRow>(
+                (rows ?? Enumerable.Empty<TSNEExadataSourceRow>()).ToList());
             LoadedAtUtc = DateTime.SpecifyKind(loadedAtUtc, DateTimeKind.Utc);
         }
 
-        public IList<PcaExadataSourceRow> Rows { get; private set; }
+        public IList<TSNEExadataSourceRow> Rows { get; private set; }
         public DateTime LoadedAtUtc { get; private set; }
     }
 
-    public sealed class PcaExperimentRecord
+    public sealed class TSNEExperimentRecord
     {
         private readonly double[] standardizedVector;
 
-        internal PcaExperimentRecord(
-            PcaExadataSourceRow source,
+        internal TSNEExperimentRecord(
+            TSNEExadataSourceRow source,
             IDictionary<string, object> flattenedValues,
             IDictionary<string, double> numericFeatures,
             double[] standardizedVector,
@@ -131,7 +131,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
         public int SourceRowIndex { get; private set; }
         public string DraftNo { get; private set; }
-        public PcaParameterType ParameterType { get; private set; }
+        public TSNEParameterType ParameterType { get; private set; }
         public string AiResultValue { get; private set; }
         public string LabelY { get; private set; }
         public string RawConvExperimentJson { get; private set; }
@@ -145,47 +145,47 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public double X2 { get; private set; }
     }
 
-    public sealed class PcaExadataAnalysisResult
+    public sealed class TSNEExadataAnalysisResult
     {
-        internal PcaExadataAnalysisResult(
-            PcaExadataSnapshot snapshot,
-            PcaParameterType parameterType,
-            PcaAnalysisResult analysisResult,
-            IList<PcaExperimentRecord> records,
+        internal TSNEExadataAnalysisResult(
+            TSNEExadataSnapshot snapshot,
+            TSNEParameterType parameterType,
+            TSNEAnalysisResult analysisResult,
+            IList<TSNEExperimentRecord> records,
             int missingExperimentCount,
-            PcaFeatureSelectionReport featureSelectionReport)
+            TSNEFeatureSelectionReport featureSelectionReport)
         {
             Snapshot = snapshot;
             ParameterType = parameterType;
             AnalysisResult = analysisResult;
-            Records = new ReadOnlyCollection<PcaExperimentRecord>(
-                (records ?? new List<PcaExperimentRecord>()).ToList());
+            Records = new ReadOnlyCollection<TSNEExperimentRecord>(
+                (records ?? new List<TSNEExperimentRecord>()).ToList());
             MissingExperimentCount = missingExperimentCount;
             FeatureSelectionReport = featureSelectionReport
                 ?? (analysisResult == null ? null : analysisResult.FeatureSelectionReport)
-                ?? PcaFeatureSelectionReport.Empty();
-            Diagnostic = PcaAnalysisDiagnosticReport.Create(
+                ?? TSNEFeatureSelectionReport.Empty();
+            Diagnostic = TSNEAnalysisDiagnosticReport.Create(
                 analysisResult,
                 Records.Count,
                 MissingExperimentCount);
         }
 
-        public PcaExadataSnapshot Snapshot { get; private set; }
-        public PcaParameterType ParameterType { get; private set; }
-        public PcaAnalysisResult AnalysisResult { get; private set; }
-        public IList<PcaExperimentRecord> Records { get; private set; }
+        public TSNEExadataSnapshot Snapshot { get; private set; }
+        public TSNEParameterType ParameterType { get; private set; }
+        public TSNEAnalysisResult AnalysisResult { get; private set; }
+        public IList<TSNEExperimentRecord> Records { get; private set; }
         public int MissingExperimentCount { get; private set; }
-        public PcaAnalysisDiagnosticReport Diagnostic { get; private set; }
-        public PcaFeatureSelectionReport FeatureSelectionReport { get; private set; }
+        public TSNEAnalysisDiagnosticReport Diagnostic { get; private set; }
+        public TSNEFeatureSelectionReport FeatureSelectionReport { get; private set; }
 
         public DataTable CreateFeatureSelectionDataTable()
         {
-            return (FeatureSelectionReport ?? PcaFeatureSelectionReport.Empty()).ToDataTable();
+            return (FeatureSelectionReport ?? TSNEFeatureSelectionReport.Empty()).ToDataTable();
         }
 
         public DataTable CreateSurvivingPopulationDataTable()
         {
-            DataTable table = new DataTable("PCA_SURVIVING_POPULATION");
+            DataTable table = new DataTable("TSNE_SURVIVING_POPULATION");
             table.Columns.Add("DRAFT_NO", typeof(string));
             table.Columns.Add("PARAM_TYP", typeof(string));
             table.Columns.Add("LABEL_Y", typeof(string));
@@ -206,11 +206,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 }
             }
 
-            foreach (PcaExperimentRecord record in Records)
+            foreach (TSNEExperimentRecord record in Records)
             {
                 DataRow row = table.NewRow();
                 row["DRAFT_NO"] = record.DraftNo;
-                row["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(record.ParameterType);
+                row["PARAM_TYP"] = TSNEParameterTypeParser.ToDatabaseValue(record.ParameterType);
                 row["LABEL_Y"] = record.LabelY;
                 row["X1"] = record.X1;
                 row["X2"] = record.X2;
@@ -241,11 +241,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             table.Columns.Add("X1", typeof(double));
             table.Columns.Add("X2", typeof(double));
 
-            foreach (PcaExperimentRecord record in Records)
+            foreach (TSNEExperimentRecord record in Records)
             {
                 DataRow row = table.NewRow();
                 row["DRAFT_NO"] = record.DraftNo;
-                row["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(record.ParameterType);
+                row["PARAM_TYP"] = TSNEParameterTypeParser.ToDatabaseValue(record.ParameterType);
                 row["CONV_EXPER_CTN"] = record.RawConvExperimentJson;
                 row["AI_RSLT_VAL"] = record.AiResultValue;
                 row["ENGR_RSLT_VAL"] = record.LabelY;
@@ -272,7 +272,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             int targetIndex = -1;
             for (int index = 0; index < Records.Count; index++)
             {
-                PcaExperimentRecord record = Records[index];
+                TSNEExperimentRecord record = Records[index];
                 if (record != null && string.Equals(record.DraftNo, draftNo.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
                     targetIndex = index;
@@ -285,7 +285,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 return new List<KnnNeighbor>();
             }
 
-            PcaExperimentRecord target = Records[targetIndex];
+            TSNEExperimentRecord target = Records[targetIndex];
             int safeCount = Math.Max(1, count);
             List<KnnNeighbor> neighbors = Records
                 .Select((record, index) => new { Record = record, Index = index })
@@ -310,7 +310,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return neighbors;
         }
 
-        private static double CalculateChartDistance(PcaExperimentRecord left, PcaExperimentRecord right)
+        private static double CalculateChartDistance(TSNEExperimentRecord left, TSNEExperimentRecord right)
         {
             double dx = left.X1 - right.X1;
             double dy = left.X2 - right.X2;
@@ -345,9 +345,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 
-    public sealed class PcaDraftQueryResult
+    public sealed class TSNEDraftQueryResult
     {
-        internal PcaDraftQueryResult(PcaExadataAnalysisResult analysis, PcaExperimentRecord target, IList<KnnNeighbor> neighbors, bool usedMemorySnapshot)
+        internal TSNEDraftQueryResult(TSNEExadataAnalysisResult analysis, TSNEExperimentRecord target, IList<KnnNeighbor> neighbors, bool usedMemorySnapshot)
         {
             Analysis = analysis;
             Target = target;
@@ -356,20 +356,20 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             UsedMemorySnapshot = usedMemorySnapshot;
         }
 
-        public PcaExadataAnalysisResult Analysis { get; private set; }
-        public PcaAnalysisResult AnalysisResult
+        public TSNEExadataAnalysisResult Analysis { get; private set; }
+        public TSNEAnalysisResult AnalysisResult
         {
             get { return Analysis == null ? null : Analysis.AnalysisResult; }
         }
 
-        public PcaExperimentRecord Target { get; private set; }
+        public TSNEExperimentRecord Target { get; private set; }
         public IList<KnnNeighbor> Neighbors { get; private set; }
         public bool UsedMemorySnapshot { get; private set; }
     }
 
-    public sealed class PcaExperimentDataMissingException : InvalidOperationException
+    public sealed class TSNEExperimentDataMissingException : InvalidOperationException
     {
-        public PcaExperimentDataMissingException(string draftNo)
+        public TSNEExperimentDataMissingException(string draftNo)
             : base("No experiment data found for DRAFT_NO '" + (draftNo ?? string.Empty) + "'.")
         {
             DraftNo = draftNo ?? string.Empty;
@@ -378,9 +378,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public string DraftNo { get; private set; }
     }
 
-    internal sealed class ParsedPcaExperiment
+    internal sealed class ParsedTSNEExperiment
     {
-        public PcaExadataSourceRow Source { get; set; }
+        public TSNEExadataSourceRow Source { get; set; }
         public IDictionary<string, object> FlattenedValues { get; set; }
         public IDictionary<string, double> NumericFeatures { get; set; }
     }
@@ -388,9 +388,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
     internal sealed class ConvExperimentRowParser
     {
         /// <summary>
-        /// CONV_EXPER_CTN JSON 한 건을 PCA가 사용할 수 있는 원본값 사전과 수치 feature 사전으로 바꾼다.
+        /// CONV_EXPER_CTN JSON 한 건을 TSNE가 사용할 수 있는 원본값 사전과 수치 feature 사전으로 바꾼다.
         /// </summary>
-        public bool TryParse(PcaExadataSourceRow source, out ParsedPcaExperiment experiment)
+        public bool TryParse(TSNEExadataSourceRow source, out ParsedTSNEExperiment experiment)
         {
             experiment = null;
             if (source == null || string.IsNullOrWhiteSpace(source.RawConvExperimentJson))
@@ -402,10 +402,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             try
             {
                 // Newtonsoft 기반 유틸로 JSON 문자열을 Dictionary/List 구조로 변환한다.
-                root = PcaJsonUtility.DeserializeObject(
+                root = TSNEJsonUtility.DeserializeObject(
                     source.RawConvExperimentJson.Trim().TrimStart('\uFEFF'));
             }
-            catch (Exception ex) when (PcaJsonUtility.IsJsonException(ex))
+            catch (Exception ex) when (TSNEJsonUtility.IsJsonException(ex))
             {
                 throw new FormatException(
                     string.Format(
@@ -449,7 +449,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             foreach (KeyValuePair<string, object> pair in flattened)
             {
                 double value;
-                // 메타데이터와 문자열 설명값은 제외하고, 유한한 숫자로 바뀌는 값만 PCA feature가 된다.
+                // 메타데이터와 문자열 설명값은 제외하고, 유한한 숫자로 바뀌는 값만 TSNE feature가 된다.
                 if (!IsMetadataFeature(pair.Key)
                     && TryConvertFiniteNumber(pair.Value, out value))
                 {
@@ -462,7 +462,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 return false;
             }
 
-            experiment = new ParsedPcaExperiment
+            experiment = new ParsedTSNEExperiment
             {
                 Source = source,
                 FlattenedValues = flattened,
@@ -599,43 +599,43 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 
-    public sealed class PcaExadataService
+    public sealed class TSNEExadataService
     {
-        private sealed class DelegateRowRepository : IPcaExadataRowRepository
+        private sealed class DelegateRowRepository : ITSNEExadataRowRepository
         {
-            private readonly Func<IList<PcaExadataSourceRow>> loader;
+            private readonly Func<IList<TSNEExadataSourceRow>> loader;
 
-            public DelegateRowRepository(Func<IList<PcaExadataSourceRow>> loader)
+            public DelegateRowRepository(Func<IList<TSNEExadataSourceRow>> loader)
             {
                 this.loader = loader;
             }
 
-            public IList<PcaExadataSourceRow> LoadAll()
+            public IList<TSNEExadataSourceRow> LoadAll()
             {
                 return loader();
             }
         }
 
-        private readonly IPcaExadataRowRepository repository;
+        private readonly ITSNEExadataRowRepository repository;
         private readonly object snapshotSync;
-        private PcaExadataSnapshot currentSnapshot;
+        private TSNEExadataSnapshot currentSnapshot;
 
-        public PcaExadataService()
+        public TSNEExadataService()
             : this(new ConvExperimentRepository())
         {
         }
 
-        public PcaExadataService(DataTable sourceTable)
+        public TSNEExadataService(DataTable sourceTable)
             : this(new ConvExperimentRepository(sourceTable))
         {
         }
 
-        public PcaExadataService(DataTable sourceTable, ConvExperimentQueryOptions tableOptions)
+        public TSNEExadataService(DataTable sourceTable, ConvExperimentQueryOptions tableOptions)
             : this(new ConvExperimentRepository(sourceTable, tableOptions))
         {
         }
 
-        public PcaExadataService(IPcaExadataRowRepository repository)
+        public TSNEExadataService(ITSNEExadataRowRepository repository)
         {
             if (repository == null)
             {
@@ -646,12 +646,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             snapshotSync = new object();
         }
 
-        public PcaExadataService(Func<IList<PcaExadataSourceRow>> rowLoader)
+        public TSNEExadataService(Func<IList<TSNEExadataSourceRow>> rowLoader)
             : this(new DelegateRowRepository(ValidateRowLoader(rowLoader)))
         {
         }
 
-        private static Func<IList<PcaExadataSourceRow>> ValidateRowLoader(Func<IList<PcaExadataSourceRow>> rowLoader)
+        private static Func<IList<TSNEExadataSourceRow>> ValidateRowLoader(Func<IList<TSNEExadataSourceRow>> rowLoader)
         {
             if (rowLoader == null)
             {
@@ -661,7 +661,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return rowLoader;
         }
 
-        public PcaExadataSnapshot CurrentSnapshot
+        public TSNEExadataSnapshot CurrentSnapshot
         {
             get
             {
@@ -672,7 +672,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             }
         }
 
-        public void SetSnapshot(PcaExadataSnapshot snapshot)
+        public void SetSnapshot(TSNEExadataSnapshot snapshot)
         {
             if (snapshot == null)
             {
@@ -685,27 +685,27 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             }
         }
 
-        public PcaExadataSnapshot SetDataTable(DataTable sourceTable)
+        public TSNEExadataSnapshot SetDataTable(DataTable sourceTable)
         {
             return SetDataTable(sourceTable, ConvExperimentQueryOptions.FromConfiguration());
         }
 
-        public PcaExadataSnapshot SetDataTable(DataTable sourceTable, ConvExperimentQueryOptions tableOptions)
+        public TSNEExadataSnapshot SetDataTable(DataTable sourceTable, ConvExperimentQueryOptions tableOptions)
         {
-            IList<PcaExadataSourceRow> rows = ConvExperimentRepository.LoadFromDataTable(
+            IList<TSNEExadataSourceRow> rows = ConvExperimentRepository.LoadFromDataTable(
                 sourceTable,
                 tableOptions);
-            var snapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
+            var snapshot = new TSNEExadataSnapshot(rows, DateTime.UtcNow);
             SetSnapshot(snapshot);
             return snapshot;
         }
 
-        public Task<PcaExadataSnapshot> LoadAllAsync()
+        public Task<TSNEExadataSnapshot> LoadAllAsync()
         {
             return Task.Run(delegate
             {
-                IList<PcaExadataSourceRow> rows = repository.LoadAll();
-                var snapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
+                IList<TSNEExadataSourceRow> rows = repository.LoadAll();
+                var snapshot = new TSNEExadataSnapshot(rows, DateTime.UtcNow);
                 lock (snapshotSync)
                 {
                     currentSnapshot = snapshot;
@@ -715,14 +715,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             });
         }
 
-        public Task<PcaExadataSnapshot> LoadFromDataTableAsync(DataTable sourceTable)
+        public Task<TSNEExadataSnapshot> LoadFromDataTableAsync(DataTable sourceTable)
         {
             return LoadFromDataTableAsync(
                 sourceTable,
                 ConvExperimentQueryOptions.FromConfiguration());
         }
 
-        public Task<PcaExadataSnapshot> LoadFromDataTableAsync(DataTable sourceTable, ConvExperimentQueryOptions tableOptions)
+        public Task<TSNEExadataSnapshot> LoadFromDataTableAsync(DataTable sourceTable, ConvExperimentQueryOptions tableOptions)
         {
             return Task.Run(delegate
             {
@@ -730,13 +730,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             });
         }
 
-        public Task<PcaExadataAnalysisResult> RefreshAndAnalyzeAsync(PcaParameterType parameterType, PcaScatterAnalysisOptions analysisOptions)
+        public Task<TSNEExadataAnalysisResult> RefreshAndAnalyzeAsync(TSNEParameterType parameterType, TSNEScatterAnalysisOptions analysisOptions)
         {
             return Task.Run(delegate
             {
-                IList<PcaExadataSourceRow> rows = repository.LoadAll();
-                var snapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
-                PcaExadataAnalysisResult result = AnalyzePopulation(
+                IList<TSNEExadataSourceRow> rows = repository.LoadAll();
+                var snapshot = new TSNEExadataSnapshot(rows, DateTime.UtcNow);
+                TSNEExadataAnalysisResult result = AnalyzePopulation(
                     snapshot,
                     parameterType,
                     FilterPopulation(snapshot, parameterType),
@@ -751,7 +751,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             });
         }
 
-        public Task<PcaExadataAnalysisResult> AnalyzeDataTableAsync(DataTable sourceTable, PcaParameterType parameterType, PcaScatterAnalysisOptions analysisOptions)
+        public Task<TSNEExadataAnalysisResult> AnalyzeDataTableAsync(DataTable sourceTable, TSNEParameterType parameterType, TSNEScatterAnalysisOptions analysisOptions)
         {
             return AnalyzeDataTableAsync(
                 sourceTable,
@@ -760,33 +760,33 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 ConvExperimentQueryOptions.FromConfiguration());
         }
 
-        public Task<PcaExadataAnalysisResult> AnalyzeDataTableAsync(
+        public Task<TSNEExadataAnalysisResult> AnalyzeDataTableAsync(
             DataTable sourceTable,
-            PcaParameterType parameterType,
-            PcaScatterAnalysisOptions analysisOptions,
+            TSNEParameterType parameterType,
+            TSNEScatterAnalysisOptions analysisOptions,
             ConvExperimentQueryOptions tableOptions)
         {
             return Task.Run(delegate
             {
-                PcaExadataSnapshot snapshot = SetDataTable(sourceTable, tableOptions);
+                TSNEExadataSnapshot snapshot = SetDataTable(sourceTable, tableOptions);
                 return AnalyzeSnapshot(snapshot, parameterType, analysisOptions);
             });
         }
 
-        public Task<PcaDraftQueryResult> QueryDraftAsync(string draftNo, PcaParameterType parameterType, PcaExadataRefreshMode refreshMode)
+        public Task<TSNEDraftQueryResult> QueryDraftAsync(string draftNo, TSNEParameterType parameterType, TSNEExadataRefreshMode refreshMode)
         {
             return QueryDraftAsync(
                 draftNo,
                 parameterType,
                 refreshMode,
-                new PcaScatterAnalysisOptions());
+                new TSNEScatterAnalysisOptions());
         }
 
-        public Task<PcaDraftQueryResult> QueryDraftAsync(
+        public Task<TSNEDraftQueryResult> QueryDraftAsync(
             string draftNo,
-            PcaParameterType parameterType,
-            PcaExadataRefreshMode refreshMode,
-            PcaScatterAnalysisOptions analysisOptions)
+            TSNEParameterType parameterType,
+            TSNEExadataRefreshMode refreshMode,
+            TSNEScatterAnalysisOptions analysisOptions)
         {
             string resolvedDraftNo = (draftNo ?? string.Empty).Trim();
             if (resolvedDraftNo.Length == 0)
@@ -797,30 +797,30 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return Task.Run(delegate
             {
                 bool usedMemorySnapshot;
-                PcaExadataSnapshot snapshot = ResolveSnapshot(refreshMode, out usedMemorySnapshot);
-                IList<PcaExadataSourceRow> population = FilterPopulation(snapshot, parameterType);
-                PcaExadataSourceRow targetSource = population.FirstOrDefault(row =>
+                TSNEExadataSnapshot snapshot = ResolveSnapshot(refreshMode, out usedMemorySnapshot);
+                IList<TSNEExadataSourceRow> population = FilterPopulation(snapshot, parameterType);
+                TSNEExadataSourceRow targetSource = population.FirstOrDefault(row =>
                     string.Equals(row.DraftNo, resolvedDraftNo, StringComparison.OrdinalIgnoreCase));
                 if (targetSource == null)
                 {
                     throw new KeyNotFoundException(
                         string.Format(
                             "Selected PARAM_TYP '{0}' does not contain DRAFT_NO '{1}'.",
-                            PcaParameterTypeParser.ToDatabaseValue(parameterType),
+                            TSNEParameterTypeParser.ToDatabaseValue(parameterType),
                             resolvedDraftNo));
                 }
 
-                PcaExadataAnalysisResult analysis = AnalyzePopulation(
+                TSNEExadataAnalysisResult analysis = AnalyzePopulation(
                     snapshot,
                     parameterType,
                     population,
                     analysisOptions,
                     targetSource.DraftNo);
-                PcaExperimentRecord target = analysis.Records.First(record =>
+                TSNEExperimentRecord target = analysis.Records.First(record =>
                     string.Equals(record.DraftNo, resolvedDraftNo, StringComparison.OrdinalIgnoreCase));
                 IList<KnnNeighbor> neighbors = analysis.FindNearestByChartDistance(
                     target.DraftNo,
-                    Math.Max(1, (analysisOptions ?? new PcaScatterAnalysisOptions()).NeighborCount),
+                    Math.Max(1, (analysisOptions ?? new TSNEScatterAnalysisOptions()).NeighborCount),
                     true);
                 if (!usedMemorySnapshot)
                 {
@@ -830,7 +830,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     }
                 }
 
-                return new PcaDraftQueryResult(
+                return new TSNEDraftQueryResult(
                     analysis,
                     target,
                     neighbors,
@@ -838,11 +838,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             });
         }
 
-        public Task<PcaDraftQueryResult> QueryDraftFromDataTableAsync(
+        public Task<TSNEDraftQueryResult> QueryDraftFromDataTableAsync(
             string draftNo,
-            PcaParameterType parameterType,
+            TSNEParameterType parameterType,
             DataTable sourceTable,
-            PcaScatterAnalysisOptions analysisOptions)
+            TSNEScatterAnalysisOptions analysisOptions)
         {
             return QueryDraftFromDataTableAsync(
                 draftNo,
@@ -852,11 +852,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 ConvExperimentQueryOptions.FromConfiguration());
         }
 
-        public Task<PcaDraftQueryResult> QueryDraftFromDataTableAsync(
+        public Task<TSNEDraftQueryResult> QueryDraftFromDataTableAsync(
             string draftNo,
-            PcaParameterType parameterType,
+            TSNEParameterType parameterType,
             DataTable sourceTable,
-            PcaScatterAnalysisOptions analysisOptions,
+            TSNEScatterAnalysisOptions analysisOptions,
             ConvExperimentQueryOptions tableOptions)
         {
             string resolvedDraftNo = (draftNo ?? string.Empty).Trim();
@@ -867,35 +867,35 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
             return Task.Run(delegate
             {
-                PcaExadataSnapshot snapshot = SetDataTable(sourceTable, tableOptions);
-                IList<PcaExadataSourceRow> population = FilterPopulation(snapshot, parameterType);
-                PcaExadataSourceRow targetSource = population.FirstOrDefault(row =>
+                TSNEExadataSnapshot snapshot = SetDataTable(sourceTable, tableOptions);
+                IList<TSNEExadataSourceRow> population = FilterPopulation(snapshot, parameterType);
+                TSNEExadataSourceRow targetSource = population.FirstOrDefault(row =>
                     string.Equals(row.DraftNo, resolvedDraftNo, StringComparison.OrdinalIgnoreCase));
                 if (targetSource == null)
                 {
                     throw new KeyNotFoundException(
                         string.Format(
                             "Selected PARAM_TYP '{0}' does not contain DRAFT_NO '{1}'.",
-                            PcaParameterTypeParser.ToDatabaseValue(parameterType),
+                            TSNEParameterTypeParser.ToDatabaseValue(parameterType),
                             resolvedDraftNo));
                 }
 
-                PcaScatterAnalysisOptions effectiveAnalysisOptions =
-                    analysisOptions ?? new PcaScatterAnalysisOptions();
-                PcaExadataAnalysisResult analysis = AnalyzePopulation(
+                TSNEScatterAnalysisOptions effectiveAnalysisOptions =
+                    analysisOptions ?? new TSNEScatterAnalysisOptions();
+                TSNEExadataAnalysisResult analysis = AnalyzePopulation(
                     snapshot,
                     parameterType,
                     population,
                     effectiveAnalysisOptions,
                     targetSource.DraftNo);
-                PcaExperimentRecord target = analysis.Records.First(record =>
+                TSNEExperimentRecord target = analysis.Records.First(record =>
                     string.Equals(record.DraftNo, resolvedDraftNo, StringComparison.OrdinalIgnoreCase));
                 IList<KnnNeighbor> neighbors = analysis.FindNearestByChartDistance(
                     target.DraftNo,
                     Math.Max(1, effectiveAnalysisOptions.NeighborCount),
                     true);
 
-                return new PcaDraftQueryResult(
+                return new TSNEDraftQueryResult(
                     analysis,
                     target,
                     neighbors,
@@ -903,7 +903,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             });
         }
 
-        public PcaExadataAnalysisResult AnalyzeSnapshot(PcaExadataSnapshot snapshot, PcaParameterType parameterType, PcaScatterAnalysisOptions analysisOptions)
+        public TSNEExadataAnalysisResult AnalyzeSnapshot(TSNEExadataSnapshot snapshot, TSNEParameterType parameterType, TSNEScatterAnalysisOptions analysisOptions)
         {
             if (snapshot == null)
             {
@@ -926,9 +926,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             }
         }
 
-        private PcaExadataSnapshot ResolveSnapshot(PcaExadataRefreshMode refreshMode, out bool usedMemorySnapshot)
+        private TSNEExadataSnapshot ResolveSnapshot(TSNEExadataRefreshMode refreshMode, out bool usedMemorySnapshot)
         {
-            if (refreshMode == PcaExadataRefreshMode.PreferMemorySnapshot)
+            if (refreshMode == TSNEExadataRefreshMode.PreferMemorySnapshot)
             {
                 lock (snapshotSync)
                 {
@@ -940,20 +940,20 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 }
             }
 
-            IList<PcaExadataSourceRow> rows = repository.LoadAll();
+            IList<TSNEExadataSourceRow> rows = repository.LoadAll();
             usedMemorySnapshot = false;
-            return new PcaExadataSnapshot(rows, DateTime.UtcNow);
+            return new TSNEExadataSnapshot(rows, DateTime.UtcNow);
         }
 
-        private static IList<PcaExadataSourceRow> FilterPopulation(PcaExadataSnapshot snapshot, PcaParameterType parameterType)
+        private static IList<TSNEExadataSourceRow> FilterPopulation(TSNEExadataSnapshot snapshot, TSNEParameterType parameterType)
         {
-            List<PcaExadataSourceRow> population = snapshot.Rows
+            List<TSNEExadataSourceRow> population = snapshot.Rows
                 .Where(row => row != null && row.ParameterType == parameterType)
                 .ToList();
             if (population.Count == 0)
             {
                 throw new InvalidOperationException(
-                    "Selected PARAM_TYP '" + PcaParameterTypeParser.ToDatabaseValue(parameterType)
+                    "Selected PARAM_TYP '" + TSNEParameterTypeParser.ToDatabaseValue(parameterType)
                     + "' has no t-SNE data.");
             }
 
@@ -971,27 +971,27 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return population;
         }
 
-        private static PcaExadataAnalysisResult AnalyzePopulation(
-            PcaExadataSnapshot snapshot,
-            PcaParameterType parameterType,
-            IList<PcaExadataSourceRow> population,
-            PcaScatterAnalysisOptions analysisOptions,
+        private static TSNEExadataAnalysisResult AnalyzePopulation(
+            TSNEExadataSnapshot snapshot,
+            TSNEParameterType parameterType,
+            IList<TSNEExadataSourceRow> population,
+            TSNEScatterAnalysisOptions analysisOptions,
             string requiredDraftNo)
         {
             // 1단계: DB 행의 CONV_EXPER_CTN JSON을 파싱해 Draft별 실험 객체와 수치 feature 사전을 만든다.
             var parser = new ConvExperimentRowParser();
-            var parsed = new List<ParsedPcaExperiment>();
+            var parsed = new List<ParsedTSNEExperiment>();
             int missingCount = 0;
-            foreach (PcaExadataSourceRow source in population)
+            foreach (TSNEExadataSourceRow source in population)
             {
-                ParsedPcaExperiment experiment;
+                ParsedTSNEExperiment experiment;
                 if (!parser.TryParse(source, out experiment))
                 {
                     missingCount++;
                     if (!string.IsNullOrEmpty(requiredDraftNo)
                         && string.Equals(source.DraftNo, requiredDraftNo, StringComparison.OrdinalIgnoreCase))
                     {
-                        throw new PcaExperimentDataMissingException(source.DraftNo);
+                        throw new TSNEExperimentDataMissingException(source.DraftNo);
                     }
 
                     continue;
@@ -1006,7 +1006,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     requiredDraftNo,
                     StringComparison.OrdinalIgnoreCase)))
             {
-                throw new PcaExperimentDataMissingException(requiredDraftNo);
+                throw new TSNEExperimentDataMissingException(requiredDraftNo);
             }
 
             if (parsed.Count < 3)
@@ -1015,8 +1015,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     "At least three rows with experiment data are required for analysis.");
             }
 
-            // 2단계: 파싱된 수치 feature를 PCA 파이프라인이 받는 JSON row 형식으로 정규화한다.
-            // Draft_NO와 AI_RSLT_Val은 식별/라벨로만 쓰고, 실제 PCA feature에서는 제외된다.
+            // 2단계: 파싱된 수치 feature를 TSNE 파이프라인이 받는 JSON row 형식으로 정규화한다.
+            // Draft_NO와 AI_RSLT_Val은 식별/라벨로만 쓰고, 실제 TSNE feature에서는 제외된다.
             IList<string> normalizedRows = parsed.Select(item =>
             {
                 var row = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
@@ -1029,26 +1029,26 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     row[feature.Key] = feature.Value;
                 }
 
-                return PcaJsonUtility.SerializeObject(row);
+                return TSNEJsonUtility.SerializeObject(row);
             }).ToList();
 
-            PcaAnalysisOptions pipelineOptions =
-                (analysisOptions ?? new PcaScatterAnalysisOptions()).ToPipelineOptions();
-            // 3단계: 수치 feature 선택, 정규화, PCA 좌표 생성, KNN 인덱스 생성을 한 번에 수행한다.
-            PcaAnalysisResult analysis = new PcaAnalysisPipeline(pipelineOptions).Analyze(normalizedRows);
-            PcaFeatureSelectionReport featureSelectionReport =
-                PcaFeatureSelectionReport.CreateFromParsedExperiments(
+            TSNEAnalysisOptions pipelineOptions =
+                (analysisOptions ?? new TSNEScatterAnalysisOptions()).ToPipelineOptions();
+            // 3단계: 수치 feature 선택, 정규화, TSNE 좌표 생성, KNN 인덱스 생성을 한 번에 수행한다.
+            TSNEAnalysisResult analysis = new TSNEAnalysisPipeline(pipelineOptions).Analyze(normalizedRows);
+            TSNEFeatureSelectionReport featureSelectionReport =
+                TSNEFeatureSelectionReport.CreateFromParsedExperiments(
                     parsed,
                     analysis.FeatureNames,
                     pipelineOptions.ConstantVarianceThreshold);
             analysis.FeatureSelectionReport = featureSelectionReport;
-            var records = new List<PcaExperimentRecord>(parsed.Count);
+            var records = new List<TSNEExperimentRecord>(parsed.Count);
             for (int index = 0; index < parsed.Count; index++)
             {
                 ScatterSampleData sample = analysis.ScatterData[index];
-                ParsedPcaExperiment source = parsed[index];
+                ParsedTSNEExperiment source = parsed[index];
                 // 4단계: 화면 좌표(X1/X2), 원본 feature, 정규화 벡터를 한 record에 묶어 클릭/로그/그리드에서 재사용한다.
-                var record = new PcaExperimentRecord(
+                var record = new TSNEExperimentRecord(
                     source.Source,
                     source.FlattenedValues,
                     source.NumericFeatures,
@@ -1056,7 +1056,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     sample.X1,
                     sample.X2);
                 records.Add(record);
-                sample.ParameterType = PcaParameterTypeParser.ToDatabaseValue(parameterType);
+                sample.ParameterType = TSNEParameterTypeParser.ToDatabaseValue(parameterType);
                 sample.UserData = record;
                 sample.TooltipText = string.Format(
                     "DRAFT_NO: {0}\r\nPARAM_TYP: {1}\r\nY: {2}",
@@ -1065,7 +1065,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     string.IsNullOrWhiteSpace(record.LabelY) ? "-" : record.LabelY);
             }
 
-            return new PcaExadataAnalysisResult(
+            return new TSNEExadataAnalysisResult(
                 snapshot,
                 parameterType,
                 analysis,
@@ -1075,6 +1075,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 }
+
+
 
 
 

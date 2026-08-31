@@ -6,12 +6,12 @@ using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.Common;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
-    public sealed class PcaScatterSeriesBuilder
+    public sealed class TSNEScatterSeriesBuilder
     {
-        public IEnumerable<LightningScatterSeries> Build(PcaAnalysisResult analysisResult, PcaScatterSeriesOptions seriesOptions)
+        public IEnumerable<LightningScatterSeries> Build(TSNEAnalysisResult analysisResult, TSNEScatterSeriesOptions seriesOptions)
         {
-            PcaScatterSeriesOptions options = seriesOptions == null
-                ? new PcaScatterSeriesOptions()
+            TSNEScatterSeriesOptions options = seriesOptions == null
+                ? new TSNEScatterSeriesOptions()
                 : seriesOptions.Clone();
             IList<ScatterSampleData> samples = analysisResult == null || analysisResult.ScatterData == null
                 ? new List<ScatterSampleData>()
@@ -90,7 +90,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return result;
         }
 
-        private static ScatterSampleData ResolveHighlightedSample(IEnumerable<ScatterSampleData> samples, PcaScatterSeriesOptions options)
+        private static ScatterSampleData ResolveHighlightedSample(IEnumerable<ScatterSampleData> samples, TSNEScatterSeriesOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.HighlightDraftNo))
             {
@@ -103,7 +103,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 && string.Equals(item.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
         }
 
-        private static ScatterSampleData ResolveSelectedSample(IEnumerable<ScatterSampleData> samples, PcaScatterSeriesOptions options)
+        private static ScatterSampleData ResolveSelectedSample(IEnumerable<ScatterSampleData> samples, TSNEScatterSeriesOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.SelectedDraftNo))
             {
@@ -140,13 +140,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             };
         }
 
-        private static string ResolveSeriesName(ScatterSampleData sample, PcaScatterSeriesOptions options)
+        private static string ResolveSeriesName(ScatterSampleData sample, TSNEScatterSeriesOptions options)
         {
             string seriesName = ResolveRawSeriesName(sample, options);
             return string.IsNullOrWhiteSpace(seriesName) ? "Unknown" : seriesName.Trim();
         }
 
-        private static string ResolveRawSeriesName(ScatterSampleData sample, PcaScatterSeriesOptions options)
+        private static string ResolveRawSeriesName(ScatterSampleData sample, TSNEScatterSeriesOptions options)
         {
             if (sample == null)
             {
@@ -158,7 +158,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 : sample.AiResultValue;
         }
 
-        private static bool ShouldIncludeInRegularSeries(ScatterSampleData sample, PcaScatterSeriesOptions options)
+        private static bool ShouldIncludeInRegularSeries(ScatterSampleData sample, TSNEScatterSeriesOptions options)
         {
             if (sample == null)
             {
@@ -173,7 +173,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return !string.IsNullOrWhiteSpace(ResolveRawSeriesName(sample, options));
         }
 
-        private static string ResolveLegendLabel(string seriesName, PcaScatterSeriesOptions options)
+        private static string ResolveLegendLabel(string seriesName, TSNEScatterSeriesOptions options)
         {
             if (options.LegendLabelFormatter == null)
             {
@@ -184,7 +184,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return string.IsNullOrWhiteSpace(formatted) ? seriesName ?? string.Empty : formatted.Trim();
         }
 
-        private static Color ResolveSeriesColor(string seriesName, int seriesIndex, PcaScatterSeriesOptions options)
+        private static Color ResolveSeriesColor(string seriesName, int seriesIndex, TSNEScatterSeriesOptions options)
         {
             if (IsNaSeriesName(seriesName, options))
             {
@@ -198,7 +198,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             }
 
             Color[] palette = options.PastelPalette == null || options.PastelPalette.Length == 0
-                ? PcaScatterSeriesOptions.CreateCompanySeriesPalette()
+                ? TSNEScatterSeriesOptions.CreateCompanySeriesPalette()
                 : options.PastelPalette;
             if (options.UsePaletteColors && palette.Length > 0)
             {
@@ -223,7 +223,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return ApplyColorAlpha(options.DefaultColor, options);
         }
 
-        private static Dictionary<string, Color> ResolveSeriesColors(IEnumerable<string> orderedNames, PcaScatterSeriesOptions options)
+        private static Dictionary<string, Color> ResolveSeriesColors(IEnumerable<string> orderedNames, TSNEScatterSeriesOptions options)
         {
             var colors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
             int companyPaletteIndex = 0;
@@ -237,11 +237,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return colors;
         }
 
-        private static Dictionary<string, Color> ResolveSeriesBorderColors(IEnumerable<string> orderedNames, PcaScatterSeriesOptions options)
+        private static Dictionary<string, Color> ResolveSeriesBorderColors(IEnumerable<string> orderedNames, TSNEScatterSeriesOptions options)
         {
             var colors = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
             Color[] palette = options == null || options.BorderPalette == null || options.BorderPalette.Length == 0
-                ? PcaScatterSeriesOptions.CreateCompanySeriesBorderPalette()
+                ? TSNEScatterSeriesOptions.CreateCompanySeriesBorderPalette()
                 : options.BorderPalette;
             int companyPaletteIndex = 0;
             foreach (string seriesName in orderedNames ?? Enumerable.Empty<string>())
@@ -256,7 +256,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return colors;
         }
 
-        private static Color ResolveSelectedPointColor(string selectedSeriesName, IDictionary<string, Color> seriesColors, PcaScatterSeriesOptions options)
+        private static Color ResolveSelectedPointColor(string selectedSeriesName, IDictionary<string, Color> seriesColors, TSNEScatterSeriesOptions options)
         {
             if (options != null && !options.SelectedPointColor.IsEmpty)
             {
@@ -269,7 +269,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 : ResolveSeriesColor(selectedSeriesName, 0, options);
         }
 
-        private static float ResolveSelectedPointSize(PcaScatterSeriesOptions options)
+        private static float ResolveSelectedPointSize(TSNEScatterSeriesOptions options)
         {
             float basePointSize = options == null ? 7f : Math.Max(1f, options.PointSize);
             return options != null && options.SelectedPointSize > 0f
@@ -277,7 +277,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 : Math.Max(1f, basePointSize * 1.1f);
         }
 
-        private static float ResolveHighlightedPointSize(PcaScatterSeriesOptions options)
+        private static float ResolveHighlightedPointSize(TSNEScatterSeriesOptions options)
         {
             float basePointSize = options == null ? 7f : Math.Max(1f, options.PointSize);
             return options != null && options.HighlightPointSize > 0f
@@ -285,12 +285,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 : Math.Max(1f, basePointSize * 1.1f);
         }
 
-        private static Color ApplyColorAlpha(Color color, PcaScatterSeriesOptions options)
+        private static Color ApplyColorAlpha(Color color, TSNEScatterSeriesOptions options)
         {
             return color;
         }
 
-        private static bool IsNaSeriesName(string seriesName, PcaScatterSeriesOptions options)
+        private static bool IsNaSeriesName(string seriesName, TSNEScatterSeriesOptions options)
         {
             if (options == null || string.IsNullOrWhiteSpace(options.NaSeriesName))
             {
@@ -301,7 +301,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return string.Equals(seriesName, naSeriesName, StringComparison.OrdinalIgnoreCase);
         }
 
-        private static List<string> ResolveSeriesOrder(IEnumerable<string> groupNames, PcaScatterSeriesOptions options)
+        private static List<string> ResolveSeriesOrder(IEnumerable<string> groupNames, TSNEScatterSeriesOptions options)
         {
             HashSet<string> remaining = new HashSet<string>(
                 groupNames ?? Enumerable.Empty<string>(),
@@ -327,6 +327,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 }
+
+
 
 
 

@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
-    internal static class PcaJsonUtility
+    internal static class TSNEJsonUtility
     {
         private const int DefaultMaxDepth = 256;
 
@@ -94,6 +94,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 }
+
+
 
 
 

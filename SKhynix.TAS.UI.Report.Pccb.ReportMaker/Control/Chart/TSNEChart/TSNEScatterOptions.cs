@@ -6,9 +6,9 @@ using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.Common;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
-    public sealed class PcaScatterAnalysisOptions
+    public sealed class TSNEScatterAnalysisOptions
     {
-        public PcaScatterAnalysisOptions()
+        public TSNEScatterAnalysisOptions()
         {
             ConstantVarianceThreshold = 1e-10d;
             MinimumNumericFeatureCoverageRatio = 0.90d;
@@ -18,11 +18,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             ConvergenceTolerance = 1e-10d;
             NeighborCount = 3;
             KnnSearchAlgorithm = KnnSearchAlgorithm.Auto;
-            ProjectionMethod = DimensionalityReductionMethod.Tsne;
-            TsnePerplexity = 30d;
-            TsneIterations = 750;
-            TsneLearningRate = 200d;
-            TsneRandomSeed = 20260831;
+            ProjectionMethod = DimensionalityReductionMethod.TSNE;
+            TSNEPerplexity = 30d;
+            TSNEIterations = 750;
+            TSNELearningRate = 200d;
+            TSNERandomSeed = 20260831;
         }
 
         public double ConstantVarianceThreshold { get; set; }
@@ -34,14 +34,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public int NeighborCount { get; set; }
         public KnnSearchAlgorithm KnnSearchAlgorithm { get; set; }
         public DimensionalityReductionMethod ProjectionMethod { get; set; }
-        public double TsnePerplexity { get; set; }
-        public int TsneIterations { get; set; }
-        public double TsneLearningRate { get; set; }
-        public int TsneRandomSeed { get; set; }
+        public double TSNEPerplexity { get; set; }
+        public int TSNEIterations { get; set; }
+        public double TSNELearningRate { get; set; }
+        public int TSNERandomSeed { get; set; }
 
-        internal PcaAnalysisOptions ToPipelineOptions()
+        internal TSNEAnalysisOptions ToPipelineOptions()
         {
-            return new PcaAnalysisOptions
+            return new TSNEAnalysisOptions
             {
                 ConstantVarianceThreshold = ConstantVarianceThreshold,
                 MinimumNumericFeatureCoverageRatio = MinimumNumericFeatureCoverageRatio,
@@ -52,22 +52,22 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 NeighborCount = NeighborCount,
                 KnnSearchAlgorithm = KnnSearchAlgorithm,
                 ProjectionMethod = ProjectionMethod,
-                TsnePerplexity = TsnePerplexity,
-                TsneIterations = TsneIterations,
-                TsneLearningRate = TsneLearningRate,
-                TsneRandomSeed = TsneRandomSeed
+                TSNEPerplexity = TSNEPerplexity,
+                TSNEIterations = TSNEIterations,
+                TSNELearningRate = TSNELearningRate,
+                TSNERandomSeed = TSNERandomSeed
             };
         }
 
-        public PcaScatterAnalysisOptions Clone()
+        public TSNEScatterAnalysisOptions Clone()
         {
-            return (PcaScatterAnalysisOptions)MemberwiseClone();
+            return (TSNEScatterAnalysisOptions)MemberwiseClone();
         }
     }
 
-    public sealed class PcaScatterSeriesOptions
+    public sealed class TSNEScatterSeriesOptions
     {
-        public PcaScatterSeriesOptions()
+        public TSNEScatterSeriesOptions()
         {
             PointSize = 7f;
             PointShape = LightningScatterPointShape.RoundedRectangle;
@@ -137,9 +137,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public Func<ScatterSampleData, string> SeriesNameSelector { get; set; }
         public Func<string, string> LegendLabelFormatter { get; set; }
 
-        public PcaScatterSeriesOptions Clone()
+        public TSNEScatterSeriesOptions Clone()
         {
-            return new PcaScatterSeriesOptions
+            return new TSNEScatterSeriesOptions
             {
                 PointSize = PointSize,
                 PointShape = PointShape,
@@ -233,9 +233,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 
-    public sealed class PcaScatterDisplayOptions
+    public sealed class TSNEScatterDisplayOptions
     {
-        public PcaScatterDisplayOptions()
+        public TSNEScatterDisplayOptions()
         {
             FontName = "Segoe UI";
             ShowTitle = true;
@@ -276,19 +276,19 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public bool MinorGridLinesVisible { get; set; }
         public Color GridColor { get; set; }
 
-        public PcaScatterDisplayOptions Clone()
+        public TSNEScatterDisplayOptions Clone()
         {
-            return (PcaScatterDisplayOptions)MemberwiseClone();
+            return (TSNEScatterDisplayOptions)MemberwiseClone();
         }
     }
 
-    public sealed class PcaScatterOptions
+    public sealed class TSNEScatterOptions
     {
-        public PcaScatterOptions()
+        public TSNEScatterOptions()
         {
-            Analysis = new PcaScatterAnalysisOptions();
-            Series = new PcaScatterSeriesOptions();
-            Display = new PcaScatterDisplayOptions();
+            Analysis = new TSNEScatterAnalysisOptions();
+            Series = new TSNEScatterSeriesOptions();
+            Display = new TSNEScatterDisplayOptions();
             Legend = new LightningScatterLegendOptions
             {
                 Position = LightningScatterLegendPosition.BottomCenter,
@@ -319,7 +319,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             {
                 Width = 600,
                 Height = 400,
-                SubDirectoryName = "TsneScatterImages"
+                SubDirectoryName = "TSNEScatterImages"
             };
             Interaction = new LightningScatterInteractionOptions
             {
@@ -331,9 +331,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             };
         }
 
-        public PcaScatterAnalysisOptions Analysis { get; set; }
-        public PcaScatterSeriesOptions Series { get; set; }
-        public PcaScatterDisplayOptions Display { get; set; }
+        public TSNEScatterAnalysisOptions Analysis { get; set; }
+        public TSNEScatterSeriesOptions Series { get; set; }
+        public TSNEScatterDisplayOptions Display { get; set; }
         public LightningScatterLegendOptions Legend { get; set; }
         public LightningScatterTooltipOptions Tooltip { get; set; }
         public LightningScatterNoDataOptions NoData { get; set; }
@@ -341,30 +341,30 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public LightningScatterInteractionOptions Interaction { get; set; }
         public Action<LightningScatterOptions> CustomizeScatterOptions { get; set; }
 
-        public static PcaScatterOptions CreateDefault()
+        public static TSNEScatterOptions CreateDefault()
         {
-            return new PcaScatterOptions();
+            return new TSNEScatterOptions();
         }
 
-        public static PcaScatterOptions CreateDefault600x400()
+        public static TSNEScatterOptions CreateDefault600x400()
         {
-            return new PcaScatterOptions
+            return new TSNEScatterOptions
             {
                 Image = new LightningScatterImageOptions
                 {
                     Width = 600,
                     Height = 400,
-                    SubDirectoryName = "TsneScatterImages"
+                    SubDirectoryName = "TSNEScatterImages"
                 }
             };
         }
 
-        public static PcaScatterOptions CreateExcelImageOptimized()
+        public static TSNEScatterOptions CreateExcelImageOptimized()
         {
-            PcaScatterOptions options = CreateDefault600x400();
+            TSNEScatterOptions options = CreateDefault600x400();
             options.Image.Width = 900;
             options.Image.Height = 600;
-            options.Image.SubDirectoryName = "PcaScatterExcelImages";
+            options.Image.SubDirectoryName = "TSNEScatterExcelImages";
             options.Display.AxisPaddingRatio = 0.05d;
             options.Display.MinimumAxisPadding = 0.1d;
             options.Legend.FontSize = 8f;
@@ -372,13 +372,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return options;
         }
 
-        public PcaScatterOptions Clone()
+        public TSNEScatterOptions Clone()
         {
-            return new PcaScatterOptions
+            return new TSNEScatterOptions
             {
-                Analysis = Analysis == null ? new PcaScatterAnalysisOptions() : Analysis.Clone(),
-                Series = Series == null ? new PcaScatterSeriesOptions() : Series.Clone(),
-                Display = Display == null ? new PcaScatterDisplayOptions() : Display.Clone(),
+                Analysis = Analysis == null ? new TSNEScatterAnalysisOptions() : Analysis.Clone(),
+                Series = Series == null ? new TSNEScatterSeriesOptions() : Series.Clone(),
+                Display = Display == null ? new TSNEScatterDisplayOptions() : Display.Clone(),
                 Legend = Legend == null ? new LightningScatterLegendOptions() : Legend.Clone(),
                 Tooltip = Tooltip == null ? new LightningScatterTooltipOptions() : Tooltip.Clone(),
                 NoData = NoData == null ? new LightningScatterNoDataOptions() : NoData.Clone(),
@@ -388,11 +388,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             };
         }
 
-        internal LightningScatterOptions ToScatterOptions(PcaAnalysisResult analysisResult)
+        internal LightningScatterOptions ToScatterOptions(TSNEAnalysisResult analysisResult)
         {
-            PcaScatterOptions snapshot = Clone();
+            TSNEScatterOptions snapshot = Clone();
             LightningScatterOptions scatterOptions = LightningScatterOptions.CreateDefaultBubble();
-            PcaScatterDisplayOptions display = snapshot.Display ?? new PcaScatterDisplayOptions();
+            TSNEScatterDisplayOptions display = snapshot.Display ?? new TSNEScatterDisplayOptions();
 
             scatterOptions.FontName = string.IsNullOrWhiteSpace(display.FontName) ? "Segoe UI" : display.FontName.Trim();
             scatterOptions.ShowTitle = display.ShowTitle;
@@ -408,12 +408,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             scatterOptions.Interaction = snapshot.Interaction ?? new LightningScatterInteractionOptions();
             scatterOptions.Style.UsePastelPalette = false;
             scatterOptions.Style.ForceBubbleStyle = true;
-            PcaScatterSeriesOptions series = snapshot.Series ?? new PcaScatterSeriesOptions();
+            TSNEScatterSeriesOptions series = snapshot.Series ?? new TSNEScatterSeriesOptions();
             scatterOptions.Style.BubbleSize = Math.Max(1f, series.PointSize);
             scatterOptions.Style.PointShape = series.PointShape;
             scatterOptions.Style.ApplyColorAlpha = series.ApplyColorAlpha;
             scatterOptions.Style.ColorTransparencyPercent = series.ColorTransparencyPercent;
-            scatterOptions.Style.ColorAlpha = PcaScatterSeriesOptions.ResolveAlphaFromTransparencyPercent(series.ColorTransparencyPercent, series.ColorAlpha);
+            scatterOptions.Style.ColorAlpha = TSNEScatterSeriesOptions.ResolveAlphaFromTransparencyPercent(series.ColorTransparencyPercent, series.ColorAlpha);
             scatterOptions.Style.ApplyColorTransparencyBlend = true;
             scatterOptions.Style.ColorBlendBackground = display.GraphBackgroundColor.IsEmpty ? display.BackgroundColor : display.GraphBackgroundColor;
             scatterOptions.Style.ApplyBorderTransparency = series.ApplyBorderTransparency;
@@ -431,7 +431,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return scatterOptions;
         }
 
-        private static void ApplyAxisOptions(LightningScatterOptions scatterOptions, PcaAnalysisResult analysisResult, PcaScatterDisplayOptions display, PcaScatterSeriesOptions series)
+        private static void ApplyAxisOptions(LightningScatterOptions scatterOptions, TSNEAnalysisResult analysisResult, TSNEScatterDisplayOptions display, TSNEScatterSeriesOptions series)
         {
             IList<ScatterSampleData> axisSamples = ResolveAxisSamples(analysisResult, series);
             AxisRange xRange = CalculateRange(
@@ -462,7 +462,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             scatterOptions.YAxis.GridColor = display.GridColor;
         }
 
-        private static IList<ScatterSampleData> ResolveAxisSamples(PcaAnalysisResult analysisResult, PcaScatterSeriesOptions series)
+        private static IList<ScatterSampleData> ResolveAxisSamples(TSNEAnalysisResult analysisResult, TSNEScatterSeriesOptions series)
         {
             IList<ScatterSampleData> samples = analysisResult == null || analysisResult.ScatterData == null
                 ? new List<ScatterSampleData>()
@@ -481,7 +481,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 .ToList();
         }
 
-        private static bool HasSeriesLabel(ScatterSampleData sample, PcaScatterSeriesOptions series)
+        private static bool HasSeriesLabel(ScatterSampleData sample, TSNEScatterSeriesOptions series)
         {
             if (sample == null)
             {
@@ -501,7 +501,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 && string.Equals(left.Trim(), right.Trim(), StringComparison.OrdinalIgnoreCase);
         }
 
-        private static AxisRange CalculateRange(IEnumerable<double> values, PcaScatterDisplayOptions display)
+        private static AxisRange CalculateRange(IEnumerable<double> values, TSNEScatterDisplayOptions display)
         {
             List<double> cleanValues = values == null
                 ? new List<double>()
@@ -543,6 +543,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 }
+
+
 
 
 

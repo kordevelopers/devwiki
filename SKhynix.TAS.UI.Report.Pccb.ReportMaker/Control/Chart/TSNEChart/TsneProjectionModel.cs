@@ -4,11 +4,11 @@ using Accord.MachineLearning.Clustering;
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
     /// <summary>Accord.NET 3.8 Barnes-Hut t-SNE adapter.</summary>
-    public sealed class TsneProjectionModel
+    public sealed class TSNEProjectionModel
     {
         private readonly double[][] coordinates;
 
-        private TsneProjectionModel(double[][] coordinates, double effectivePerplexity)
+        private TSNEProjectionModel(double[][] coordinates, double effectivePerplexity)
         {
             this.coordinates = CloneMatrix(coordinates);
             EffectivePerplexity = effectivePerplexity;
@@ -22,7 +22,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public double KullbackLeiblerDivergence { get { return double.NaN; } }
         public string EngineName { get { return "Accord.NET TSNE (Barnes-Hut)"; } }
 
-        public static TsneProjectionModel FitTransform(double[][] standardizedMatrix, double perplexity, int iterations, double learningRate, int randomSeed)
+        public static TSNEProjectionModel FitTransform(double[][] standardizedMatrix, double perplexity, int iterations, double learningRate, int randomSeed)
         {
             ValidateMatrix(standardizedMatrix);
             int rowCount = standardizedMatrix.Length;
@@ -34,7 +34,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 NumberOfOutputs = 2
             };
             double[][] transformed = model.Transform(standardizedMatrix, CreateMatrix(rowCount, 2));
-            return new TsneProjectionModel(transformed, effectivePerplexity);
+            return new TSNEProjectionModel(transformed, effectivePerplexity);
         }
 
         private static double[][] CreateMatrix(int rowCount, int columnCount)
@@ -68,6 +68,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 }
+
+
 
 
 

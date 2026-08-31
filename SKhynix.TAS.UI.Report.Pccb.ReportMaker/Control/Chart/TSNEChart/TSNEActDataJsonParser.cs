@@ -44,9 +44,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 object root;
                 try
                 {
-                    root = PcaJsonUtility.DeserializeObject(PcaJsonUtility.RemoveBom(source[documentIndex].Trim()));
+                    root = TSNEJsonUtility.DeserializeObject(TSNEJsonUtility.RemoveBom(source[documentIndex].Trim()));
                 }
-                catch (Exception ex) when (PcaJsonUtility.IsJsonException(ex))
+                catch (Exception ex) when (TSNEJsonUtility.IsJsonException(ex))
                 {
                     throw new FormatException(string.Format("{0}[{1}] JSON parsing failed: {2}",
                         resolvedSourceName, documentIndex, ex.Message), ex);
@@ -82,10 +82,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 if (ContainsDraftNo(dictionary))
                 {
                     // 중첩 객체와 숫자 배열은 점 표기와 [index] 표기로 평탄화한다.
-                    // 이후 PCA 파이프라인은 평탄화된 사전의 수치 leaf 값만 특징으로 사용한다.
+                    // 이후 TSNE 파이프라인은 평탄화된 사전의 수치 leaf 값만 특징으로 사용한다.
                     var flattened = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                     FlattenDictionary(dictionary, flattened, string.Empty, 0);
-                    rows.Add(PcaJsonUtility.SerializeObject(flattened));
+                    rows.Add(TSNEJsonUtility.SerializeObject(flattened));
                     return;
                 }
 
@@ -103,12 +103,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 try
                 {
                     CollectExperimentRows(
-                        PcaJsonUtility.DeserializeObject(PcaJsonUtility.RemoveBom(nestedJson.Trim())),
+                        TSNEJsonUtility.DeserializeObject(TSNEJsonUtility.RemoveBom(nestedJson.Trim())),
                         rows,
                         path + "(json-string)",
                         depth + 1);
                 }
-                catch (Exception ex) when (PcaJsonUtility.IsJsonException(ex))
+                catch (Exception ex) when (TSNEJsonUtility.IsJsonException(ex))
                 {
                     throw new FormatException(path + " failed to parse nested JSON string.", ex);
                 }
@@ -194,12 +194,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
         private static string RemoveBom(string value)
         {
-            return PcaJsonUtility.RemoveBom(value);
+            return TSNEJsonUtility.RemoveBom(value);
         }
     }
 
     #endregion
 }
+
+
 
 
 

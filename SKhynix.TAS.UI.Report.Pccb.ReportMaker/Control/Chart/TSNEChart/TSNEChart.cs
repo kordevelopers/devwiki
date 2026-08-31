@@ -25,12 +25,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
     public sealed class TSNEAnalysisCompletedEventArgs : EventArgs
     {
-        public TSNEAnalysisCompletedEventArgs(PcaAnalysisResult analysisResult)
+        public TSNEAnalysisCompletedEventArgs(TSNEAnalysisResult analysisResult)
         {
             AnalysisResult = analysisResult;
         }
 
-        public PcaAnalysisResult AnalysisResult { get; private set; }
+        public TSNEAnalysisResult AnalysisResult { get; private set; }
     }
 
     public sealed class TSNEAnalysisFailedEventArgs : EventArgs
@@ -46,18 +46,18 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
     public sealed class TSNEChart : IDisposable
     {
         private readonly WinFormsControl parent;
-        private readonly PcaScatterSeriesBuilder seriesBuilder;
+        private readonly TSNEScatterSeriesBuilder seriesBuilder;
         private LightningScatter scatterChart;
-        private PcaScatterOptions options;
-        private PcaAnalysisResult analysisResult;
+        private TSNEScatterOptions options;
+        private TSNEAnalysisResult analysisResult;
         private DataTable rawData;
         private bool disposed;
 
-        private TSNEChart(WinFormsControl parent, PcaScatterOptions options)
+        private TSNEChart(WinFormsControl parent, TSNEScatterOptions options)
         {
             this.parent = parent;
-            this.options = options == null ? PcaScatterOptions.CreateDefault() : options.Clone();
-            seriesBuilder = new PcaScatterSeriesBuilder();
+            this.options = options == null ? TSNEScatterOptions.CreateDefault() : options.Clone();
+            seriesBuilder = new TSNEScatterSeriesBuilder();
             scatterChart = LightningScatter.Create(parent, Enumerable.Empty<LightningScatterSeries>(), this.options.ToScatterOptions(null));
             scatterChart.PointClicked += ScatterChart_PointClicked;
             scatterChart.Clear();
@@ -72,12 +72,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             get { return scatterChart; }
         }
 
-        public PcaScatterOptions Options
+        public TSNEScatterOptions Options
         {
             get { return options.Clone(); }
         }
 
-        public PcaAnalysisResult AnalysisResult
+        public TSNEAnalysisResult AnalysisResult
         {
             get { return analysisResult; }
         }
@@ -99,42 +99,42 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
         public static TSNEChart Create(WinFormsControl parent)
         {
-            return Create(parent, PcaScatterOptions.CreateDefault());
+            return Create(parent, TSNEScatterOptions.CreateDefault());
         }
 
-        public static TSNEChart Create(WinFormsControl parent, PcaScatterOptions options)
+        public static TSNEChart Create(WinFormsControl parent, TSNEScatterOptions options)
         {
             return new TSNEChart(parent, options);
         }
 
-        public static TSNEChart Create(WinFormsControl parent, PcaScatterDataSource dataSource)
+        public static TSNEChart Create(WinFormsControl parent, TSNEScatterDataSource dataSource)
         {
-            return Create(parent, dataSource, PcaScatterOptions.CreateDefault());
+            return Create(parent, dataSource, TSNEScatterOptions.CreateDefault());
         }
 
-        public static TSNEChart Create(WinFormsControl parent, PcaScatterDataSource dataSource, PcaScatterOptions options)
+        public static TSNEChart Create(WinFormsControl parent, TSNEScatterDataSource dataSource, TSNEScatterOptions options)
         {
             TSNEChart chart = Create(parent, options);
             chart.Bind(dataSource, options);
             return chart;
         }
 
-        public void Bind(PcaScatterDataSource dataSource)
+        public void Bind(TSNEScatterDataSource dataSource)
         {
             Bind(dataSource, options);
         }
 
-        public void Bind(PcaScatterDataSource dataSource, PcaScatterOptions newOptions)
+        public void Bind(TSNEScatterDataSource dataSource, TSNEScatterOptions newOptions)
         {
             if (dataSource == null)
             {
                 throw new ArgumentNullException("dataSource");
             }
 
-            PcaScatterOptions nextOptions = newOptions == null ? PcaScatterOptions.CreateDefault() : newOptions.Clone();
+            TSNEScatterOptions nextOptions = newOptions == null ? TSNEScatterOptions.CreateDefault() : newOptions.Clone();
             try
             {
-                PcaAnalysisResult result = dataSource.Analyze(nextOptions.Analysis);
+                TSNEAnalysisResult result = dataSource.Analyze(nextOptions.Analysis);
                 Bind(result, nextOptions);
             }
             catch (Exception ex)
@@ -144,19 +144,19 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             }
         }
 
-        public void Bind(PcaAnalysisResult result)
+        public void Bind(TSNEAnalysisResult result)
         {
             Bind(result, options);
         }
 
-        public void Bind(PcaAnalysisResult result, PcaScatterOptions newOptions)
+        public void Bind(TSNEAnalysisResult result, TSNEScatterOptions newOptions)
         {
             if (result == null)
             {
                 throw new ArgumentNullException("result");
             }
 
-            options = newOptions == null ? PcaScatterOptions.CreateDefault() : newOptions.Clone();
+            options = newOptions == null ? TSNEScatterOptions.CreateDefault() : newOptions.Clone();
             analysisResult = result;
             rawData = null;
             IEnumerable<LightningScatterSeries> series = seriesBuilder.Build(analysisResult, options.Series);
@@ -164,7 +164,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             OnAnalysisCompleted(new TSNEAnalysisCompletedEventArgs(analysisResult));
         }
 
-        public void Bind(PcaExadataAnalysisResult result, PcaScatterOptions newOptions)
+        public void Bind(TSNEExadataAnalysisResult result, TSNEScatterOptions newOptions)
         {
             if (result == null)
             {
@@ -175,32 +175,32 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             rawData = result.CreateRawDataTable();
         }
 
-        public void BindFromDatabase(PcaScatterDatabaseOptions databaseOptions)
+        public void BindFromDatabase(TSNEScatterDatabaseOptions databaseOptions)
         {
             BindFromDatabase(databaseOptions, options);
         }
 
         public void BindFromDatabase(DataTable sourceTable)
         {
-            BindFromDatabase(sourceTable, PcaScatterDatabaseOptions.CreateDefault(), options);
+            BindFromDatabase(sourceTable, TSNEScatterDatabaseOptions.CreateDefault(), options);
         }
 
-        public void BindFromDatabase(DataTable sourceTable, PcaScatterDatabaseOptions databaseOptions)
+        public void BindFromDatabase(DataTable sourceTable, TSNEScatterDatabaseOptions databaseOptions)
         {
             BindFromDatabase(sourceTable, databaseOptions, options);
         }
 
-        public void BindFromDatabase(DataTable sourceTable, PcaScatterDatabaseOptions databaseOptions, PcaScatterOptions newOptions)
+        public void BindFromDatabase(DataTable sourceTable, TSNEScatterDatabaseOptions databaseOptions, TSNEScatterOptions newOptions)
         {
-            PcaScatterDatabaseOptions effectiveDatabaseOptions = databaseOptions ?? PcaScatterDatabaseOptions.CreateDefault();
+            TSNEScatterDatabaseOptions effectiveDatabaseOptions = databaseOptions ?? TSNEScatterDatabaseOptions.CreateDefault();
             effectiveDatabaseOptions.SourceTable = sourceTable;
             BindFromDatabase(effectiveDatabaseOptions, newOptions);
         }
 
-        public void BindFromDatabase(PcaScatterDatabaseOptions databaseOptions, PcaScatterOptions newOptions)
+        public void BindFromDatabase(TSNEScatterDatabaseOptions databaseOptions, TSNEScatterOptions newOptions)
         {
-            PcaScatterDatabaseOptions effectiveDatabaseOptions = databaseOptions ?? PcaScatterDatabaseOptions.CreateDefault();
-            PcaScatterOptions nextOptions = newOptions == null ? PcaScatterOptions.CreateDefault() : newOptions.Clone();
+            TSNEScatterDatabaseOptions effectiveDatabaseOptions = databaseOptions ?? TSNEScatterDatabaseOptions.CreateDefault();
+            TSNEScatterOptions nextOptions = newOptions == null ? TSNEScatterOptions.CreateDefault() : newOptions.Clone();
 
             try
             {
@@ -212,7 +212,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
                 ActDataRepository repository = new ActDataRepository(effectiveDatabaseOptions.SourceTable, effectiveDatabaseOptions.ToActDataQueryOptions());
                 IList<string> actDataDocuments = repository.LoadActData();
-                PcaAnalysisResult result = PcaScatterDataSource
+                TSNEAnalysisResult result = TSNEScatterDataSource
                     .FromActDataJson(actDataDocuments)
                     .Analyze(nextOptions.Analysis);
                 Bind(result, nextOptions);
@@ -224,32 +224,32 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             }
         }
 
-        public void BindFromExadata(PcaScatterExadataOptions exadataOptions)
+        public void BindFromExadata(TSNEScatterExadataOptions exadataOptions)
         {
             BindFromExadata(exadataOptions, options);
         }
 
         public void BindFromExadata(DataTable sourceTable)
         {
-            BindFromExadata(sourceTable, PcaScatterExadataOptions.CreateDefault(), options);
+            BindFromExadata(sourceTable, TSNEScatterExadataOptions.CreateDefault(), options);
         }
 
-        public void BindFromExadata(DataTable sourceTable, PcaScatterExadataOptions exadataOptions)
+        public void BindFromExadata(DataTable sourceTable, TSNEScatterExadataOptions exadataOptions)
         {
             BindFromExadata(sourceTable, exadataOptions, options);
         }
 
-        public void BindFromExadata(DataTable sourceTable, PcaScatterExadataOptions exadataOptions, PcaScatterOptions newOptions)
+        public void BindFromExadata(DataTable sourceTable, TSNEScatterExadataOptions exadataOptions, TSNEScatterOptions newOptions)
         {
-            PcaScatterExadataOptions effectiveOptions = exadataOptions ?? PcaScatterExadataOptions.CreateDefault();
+            TSNEScatterExadataOptions effectiveOptions = exadataOptions ?? TSNEScatterExadataOptions.CreateDefault();
             effectiveOptions.SourceTable = sourceTable;
             BindFromExadata(effectiveOptions, newOptions);
         }
 
-        public void BindFromExadata(PcaScatterExadataOptions exadataOptions, PcaScatterOptions newOptions)
+        public void BindFromExadata(TSNEScatterExadataOptions exadataOptions, TSNEScatterOptions newOptions)
         {
-            PcaScatterExadataOptions effectiveOptions = exadataOptions ?? PcaScatterExadataOptions.CreateDefault();
-            PcaScatterOptions nextOptions = newOptions == null ? PcaScatterOptions.CreateDefault() : newOptions.Clone();
+            TSNEScatterExadataOptions effectiveOptions = exadataOptions ?? TSNEScatterExadataOptions.CreateDefault();
+            TSNEScatterOptions nextOptions = newOptions == null ? TSNEScatterOptions.CreateDefault() : newOptions.Clone();
 
             try
             {
@@ -260,10 +260,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 }
 
                 var repository = new ConvExperimentRepository(effectiveOptions.SourceTable, effectiveOptions.ToQueryOptions());
-                IList<PcaExadataSourceRow> rows = repository.LoadAll();
-                var snapshot = new PcaExadataSnapshot(rows, DateTime.UtcNow);
-                var service = new PcaExadataService(repository);
-                PcaExadataAnalysisResult result = service.AnalyzeSnapshot(snapshot, effectiveOptions.ParameterType, nextOptions.Analysis);
+                IList<TSNEExadataSourceRow> rows = repository.LoadAll();
+                var snapshot = new TSNEExadataSnapshot(rows, DateTime.UtcNow);
+                var service = new TSNEExadataService(repository);
+                TSNEExadataAnalysisResult result = service.AnalyzeSnapshot(snapshot, effectiveOptions.ParameterType, nextOptions.Analysis);
                 Bind(result, nextOptions);
             }
             catch (Exception ex)
@@ -295,10 +295,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 return;
             }
 
-            PcaScatterOptions nextOptions = options == null ? PcaScatterOptions.CreateDefault() : options.Clone();
+            TSNEScatterOptions nextOptions = options == null ? TSNEScatterOptions.CreateDefault() : options.Clone();
             if (nextOptions.Series == null)
             {
-                nextOptions.Series = new PcaScatterSeriesOptions();
+                nextOptions.Series = new TSNEScatterSeriesOptions();
             }
 
             nextOptions.Series.SelectedDraftNo = string.IsNullOrWhiteSpace(draftNo) ? string.Empty : draftNo.Trim();
@@ -312,10 +312,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 return;
             }
 
-            PcaScatterOptions nextOptions = options == null ? PcaScatterOptions.CreateDefault() : options.Clone();
+            TSNEScatterOptions nextOptions = options == null ? TSNEScatterOptions.CreateDefault() : options.Clone();
             if (nextOptions.Series == null)
             {
-                nextOptions.Series = new PcaScatterSeriesOptions();
+                nextOptions.Series = new TSNEScatterSeriesOptions();
             }
 
             nextOptions.Series.HighlightDraftNo = string.IsNullOrWhiteSpace(draftNo) ? string.Empty : draftNo.Trim();
@@ -378,9 +378,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             OnSampleClicked(new TSNESampleClickedEventArgs(sample, neighbors, e));
         }
 
-        private void RefreshSeries(PcaScatterOptions nextOptions)
+        private void RefreshSeries(TSNEScatterOptions nextOptions)
         {
-            options = nextOptions == null ? PcaScatterOptions.CreateDefault() : nextOptions.Clone();
+            options = nextOptions == null ? TSNEScatterOptions.CreateDefault() : nextOptions.Clone();
             IEnumerable<LightningScatterSeries> series = seriesBuilder.Build(analysisResult, options.Series);
             scatterChart.UpdateData(series, options.ToScatterOptions(analysisResult), true);
         }
@@ -435,6 +435,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 }
+
+
 
 
 

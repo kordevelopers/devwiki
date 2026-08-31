@@ -9,8 +9,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
     public enum DimensionalityReductionMethod
     {
-        Pca,
-        Tsne
+        TSNE
     }
 
     #region Analysis Result Models
@@ -23,9 +22,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         BallTree
     }
 
-    public sealed class PcaAnalysisOptions
+    public sealed class TSNEAnalysisOptions
     {
-        public PcaAnalysisOptions()
+        public TSNEAnalysisOptions()
         {
             ConstantVarianceThreshold = 1e-10d;
             MinimumNumericFeatureCoverageRatio = 0.90d;
@@ -35,11 +34,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             ConvergenceTolerance = 1e-10d;
             NeighborCount = 3;
             KnnSearchAlgorithm = KnnSearchAlgorithm.Auto;
-            ProjectionMethod = DimensionalityReductionMethod.Tsne;
-            TsnePerplexity = 30d;
-            TsneIterations = 750;
-            TsneLearningRate = 200d;
-            TsneRandomSeed = 20260831;
+            ProjectionMethod = DimensionalityReductionMethod.TSNE;
+            TSNEPerplexity = 30d;
+            TSNEIterations = 750;
+            TSNELearningRate = 200d;
+            TSNERandomSeed = 20260831;
         }
 
         public double ConstantVarianceThreshold { get; set; }
@@ -51,10 +50,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public int NeighborCount { get; set; }
         public KnnSearchAlgorithm KnnSearchAlgorithm { get; set; }
         public DimensionalityReductionMethod ProjectionMethod { get; set; }
-        public double TsnePerplexity { get; set; }
-        public int TsneIterations { get; set; }
-        public double TsneLearningRate { get; set; }
-        public int TsneRandomSeed { get; set; }
+        public double TSNEPerplexity { get; set; }
+        public int TSNEIterations { get; set; }
+        public double TSNELearningRate { get; set; }
+        public int TSNERandomSeed { get; set; }
     }
 
     public sealed class KnnNeighbor
@@ -65,7 +64,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public double Distance { get; set; }
     }
 
-    public sealed class PcaVerificationReport
+    public sealed class TSNEVerificationReport
     {
         public bool IsValid { get; set; }
         public double MaximumAbsoluteStandardizedMean { get; set; }
@@ -78,9 +77,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public string Message { get; set; }
     }
 
-    public sealed class PcaAnalysisDiagnosticReport
+    public sealed class TSNEAnalysisDiagnosticReport
     {
-        private PcaAnalysisDiagnosticReport()
+        private TSNEAnalysisDiagnosticReport()
         {
         }
 
@@ -96,7 +95,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public string KnnAlgorithmReason { get; private set; }
         public string CompactText { get; private set; }
 
-        public static PcaAnalysisDiagnosticReport Create(PcaAnalysisResult analysisResult, int rowCount, int missingExperimentCount)
+        public static TSNEAnalysisDiagnosticReport Create(TSNEAnalysisResult analysisResult, int rowCount, int missingExperimentCount)
         {
             int featureCount = analysisResult == null || analysisResult.FeatureNames == null
                 ? 0
@@ -110,12 +109,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             string knnReason = analysisResult == null || analysisResult.Knn == null
                 ? string.Empty
                 : analysisResult.Knn.SelectionReason;
-            bool isTsne = analysisResult != null
-                && analysisResult.ProjectionMethod == DimensionalityReductionMethod.Tsne;
-            string shapeCode = isTsne
-                ? ResolveTsneShapeCode(rowCount, featureCount)
+            bool isTSNE = analysisResult != null
+                && analysisResult.ProjectionMethod == DimensionalityReductionMethod.TSNE;
+            string shapeCode = isTSNE
+                ? ResolveTSNEShapeCode(rowCount, featureCount)
                 : ResolveShapeCode(rowCount, featureCount, pc1, pc2);
-            string compactText = isTsne
+            string compactText = isTSNE
                 ? string.Format(
                     CultureInfo.InvariantCulture,
                     "DIAG R={0} F={1} X={2} M={3} TSNE PERP={4:0.##} ENGINE=ACCORD SHAPE={5} KNN={6}",
@@ -123,7 +122,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     featureCount,
                     excludedCount,
                     missingExperimentCount,
-                    analysisResult.TsneModel == null ? 0d : analysisResult.TsneModel.EffectivePerplexity,
+                    analysisResult.TSNEModel == null ? 0d : analysisResult.TSNEModel.EffectivePerplexity,
                     shapeCode,
                     knnAlgorithm)
                 : string.Format(
@@ -139,7 +138,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     shapeCode,
                     knnAlgorithm);
 
-            return new PcaAnalysisDiagnosticReport
+            return new TSNEAnalysisDiagnosticReport
             {
                 RowCount = rowCount,
                 FeatureCount = featureCount,
@@ -155,7 +154,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             };
         }
 
-        private static int ResolveExcludedFeatureCount(PcaAnalysisResult analysisResult)
+        private static int ResolveExcludedFeatureCount(TSNEAnalysisResult analysisResult)
         {
             if (analysisResult == null)
             {
@@ -172,23 +171,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 : analysisResult.ExcludedFeatureNames.Length;
         }
 
-        private static double GetExplainedVariancePercent(PcaAnalysisResult analysisResult, int index)
+        private static double GetExplainedVariancePercent(TSNEAnalysisResult analysisResult, int index)
         {
-            if (analysisResult == null
-                || analysisResult.PcaModel == null
-                || analysisResult.PcaModel.ExplainedVarianceRatios == null
-                || analysisResult.PcaModel.ExplainedVarianceRatios.Length <= index)
-            {
-                return 0d;
-            }
-
-            double ratio = analysisResult.PcaModel.ExplainedVarianceRatios[index];
-            if (double.IsNaN(ratio) || double.IsInfinity(ratio))
-            {
-                return 0d;
-            }
-
-            return ratio * 100d;
+            // t-SNE does not expose PCA explained-variance ratios.
+            return 0d;
         }
 
         private static string ResolveShapeCode(int rowCount, int featureCount, double pc1Percent, double pc2Percent)
@@ -225,13 +211,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
             if (pc1Percent + pc2Percent < 50d)
             {
-                return "PCA2_LOW";
+                return "TSNE2_LOW";
             }
 
             return "OK";
         }
 
-        private static string ResolveTsneShapeCode(int rowCount, int featureCount)
+        private static string ResolveTSNEShapeCode(int rowCount, int featureCount)
         {
             if (rowCount < 3)
             {
@@ -247,7 +233,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 
-    public enum PcaFeatureSelectionReason
+    public enum TSNEFeatureSelectionReason
     {
         Included,
         Metadata,
@@ -256,15 +242,15 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         ConstantOrLowVariance
     }
 
-    public sealed class PcaFeatureSelectionDetail
+    public sealed class TSNEFeatureSelectionDetail
     {
-        internal PcaFeatureSelectionDetail()
+        internal TSNEFeatureSelectionDetail()
         {
         }
 
         public string FeatureName { get; internal set; }
         public bool Included { get; internal set; }
-        public PcaFeatureSelectionReason Reason { get; internal set; }
+        public TSNEFeatureSelectionReason Reason { get; internal set; }
         public int RowCount { get; internal set; }
         public int PresentCount { get; internal set; }
         public int NumericCount { get; internal set; }
@@ -284,7 +270,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 
-    public sealed class PcaFeatureSelectionReport
+    public sealed class TSNEFeatureSelectionReport
     {
         private static readonly string[] KnownMetadataNames =
         {
@@ -299,15 +285,15 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             "_VERSION_NM"
         };
 
-        private readonly ReadOnlyCollection<PcaFeatureSelectionDetail> details;
+        private readonly ReadOnlyCollection<TSNEFeatureSelectionDetail> details;
         private readonly ReadOnlyCollection<string> includedFeatureNames;
         private readonly ReadOnlyCollection<string> excludedFeatureNames;
 
-        private PcaFeatureSelectionReport(int rowCount, IEnumerable<PcaFeatureSelectionDetail> detailItems)
+        private TSNEFeatureSelectionReport(int rowCount, IEnumerable<TSNEFeatureSelectionDetail> detailItems)
         {
             RowCount = rowCount;
-            details = new ReadOnlyCollection<PcaFeatureSelectionDetail>(
-                (detailItems ?? Enumerable.Empty<PcaFeatureSelectionDetail>()).ToList());
+            details = new ReadOnlyCollection<TSNEFeatureSelectionDetail>(
+                (detailItems ?? Enumerable.Empty<TSNEFeatureSelectionDetail>()).ToList());
             includedFeatureNames = new ReadOnlyCollection<string>(
                 details.Where(item => item.Included).Select(item => item.FeatureName).ToList());
             excludedFeatureNames = new ReadOnlyCollection<string>(
@@ -315,7 +301,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
 
         public int RowCount { get; private set; }
-        public IList<PcaFeatureSelectionDetail> Details
+        public IList<TSNEFeatureSelectionDetail> Details
         {
             get { return details; }
         }
@@ -340,9 +326,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             get { return excludedFeatureNames.Count; }
         }
 
-        public static PcaFeatureSelectionReport Empty()
+        public static TSNEFeatureSelectionReport Empty()
         {
-            return new PcaFeatureSelectionReport(0, new PcaFeatureSelectionDetail[0]);
+            return new TSNEFeatureSelectionReport(0, new TSNEFeatureSelectionDetail[0]);
         }
 
         public string ToSummaryText()
@@ -371,7 +357,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
         public DataTable ToDataTable()
         {
-            DataTable table = new DataTable("PCA_FEATURE_SELECTION");
+            DataTable table = new DataTable("TSNE_FEATURE_SELECTION");
             table.Columns.Add("FeatureName", typeof(string));
             table.Columns.Add("Included", typeof(bool));
             table.Columns.Add("Reason", typeof(string));
@@ -387,7 +373,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             table.Columns.Add("Max", typeof(double));
             table.Columns.Add("SampleDraftNo", typeof(string));
 
-            foreach (PcaFeatureSelectionDetail detail in details)
+            foreach (TSNEFeatureSelectionDetail detail in details)
             {
                 DataRow row = table.NewRow();
                 row["FeatureName"] = detail.FeatureName;
@@ -422,9 +408,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return table;
         }
 
-        internal static PcaFeatureSelectionReport CreateFromSourceRows(IList<PcaSourceRow> rows, IEnumerable<string> includedFeatureNames, double varianceThreshold)
+        internal static TSNEFeatureSelectionReport CreateFromSourceRows(IList<TSNESourceRow> rows, IEnumerable<string> includedFeatureNames, double varianceThreshold)
         {
-            IEnumerable<FeatureSelectionAuditRow> auditRows = (rows ?? new List<PcaSourceRow>())
+            IEnumerable<FeatureSelectionAuditRow> auditRows = (rows ?? new List<TSNESourceRow>())
                 .Select(row => new FeatureSelectionAuditRow
                 {
                     DraftNo = row.DraftNo,
@@ -434,13 +420,13 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return CreateFromAuditRows(auditRows, includedFeatureNames, varianceThreshold);
         }
 
-        internal static PcaFeatureSelectionReport CreateFromParsedExperiments(
-            IList<ParsedPcaExperiment> experiments,
+        internal static TSNEFeatureSelectionReport CreateFromParsedExperiments(
+            IList<ParsedTSNEExperiment> experiments,
             IEnumerable<string> includedFeatureNames,
             double varianceThreshold)
         {
             IEnumerable<FeatureSelectionAuditRow> auditRows =
-                (experiments ?? new List<ParsedPcaExperiment>())
+                (experiments ?? new List<ParsedTSNEExperiment>())
                     .Select(item => new FeatureSelectionAuditRow
                     {
                         DraftNo = item.Source == null ? string.Empty : item.Source.DraftNo,
@@ -470,7 +456,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 string.Equals(name, leafName, StringComparison.OrdinalIgnoreCase));
         }
 
-        private static PcaFeatureSelectionReport CreateFromAuditRows(
+        private static TSNEFeatureSelectionReport CreateFromAuditRows(
             IEnumerable<FeatureSelectionAuditRow> sourceRows,
             IEnumerable<string> includedFeatureNames,
             double varianceThreshold)
@@ -490,16 +476,16 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
-            var details = new List<PcaFeatureSelectionDetail>(allFeatureNames.Length);
+            var details = new List<TSNEFeatureSelectionDetail>(allFeatureNames.Length);
             foreach (string featureName in allFeatureNames)
             {
                 details.Add(CreateDetail(rows, featureName, includedSet, varianceThreshold));
             }
 
-            return new PcaFeatureSelectionReport(rows.Count, details);
+            return new TSNEFeatureSelectionReport(rows.Count, details);
         }
 
-        private static PcaFeatureSelectionDetail CreateDetail(IList<FeatureSelectionAuditRow> rows, string featureName, ISet<string> includedFeatureNames, double varianceThreshold)
+        private static TSNEFeatureSelectionDetail CreateDetail(IList<FeatureSelectionAuditRow> rows, string featureName, ISet<string> includedFeatureNames, double varianceThreshold)
         {
             int rowCount = rows.Count;
             int presentCount = 0;
@@ -530,7 +516,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             }
 
             bool included = includedFeatureNames != null && includedFeatureNames.Contains(featureName);
-            PcaFeatureSelectionReason reason = ResolveReason(
+            TSNEFeatureSelectionReason reason = ResolveReason(
                 featureName,
                 included,
                 rowCount,
@@ -539,7 +525,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 numericValues,
                 varianceThreshold);
 
-            var detail = new PcaFeatureSelectionDetail
+            var detail = new TSNEFeatureSelectionDetail
             {
                 FeatureName = featureName,
                 Included = included,
@@ -555,7 +541,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             return detail;
         }
 
-        private static PcaFeatureSelectionReason ResolveReason(
+        private static TSNEFeatureSelectionReason ResolveReason(
             string featureName,
             bool included,
             int rowCount,
@@ -566,30 +552,30 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         {
             if (included)
             {
-                return PcaFeatureSelectionReason.Included;
+                return TSNEFeatureSelectionReason.Included;
             }
 
             if (IsKnownMetadataFeature(featureName))
             {
-                return PcaFeatureSelectionReason.Metadata;
+                return TSNEFeatureSelectionReason.Metadata;
             }
 
             if (presentCount < rowCount || numericCount < rowCount)
             {
                 return presentCount < rowCount
-                    ? PcaFeatureSelectionReason.MissingInRows
-                    : PcaFeatureSelectionReason.NonNumeric;
+                    ? TSNEFeatureSelectionReason.MissingInRows
+                    : TSNEFeatureSelectionReason.NonNumeric;
             }
 
             if (numericValues == null || numericValues.Count == 0)
             {
-                return PcaFeatureSelectionReason.NonNumeric;
+                return TSNEFeatureSelectionReason.NonNumeric;
             }
 
-            return PcaFeatureSelectionReason.ConstantOrLowVariance;
+            return TSNEFeatureSelectionReason.ConstantOrLowVariance;
         }
 
-        private static void ApplyStatistics(PcaFeatureSelectionDetail detail, IList<double> numericValues)
+        private static void ApplyStatistics(TSNEFeatureSelectionDetail detail, IList<double> numericValues)
         {
             if (numericValues == null || numericValues.Count == 0)
             {
@@ -619,15 +605,15 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 
-    public sealed class PcaAnalysisResult
+    public sealed class TSNEAnalysisResult
     {
-        internal PcaAnalysisResult()
+        internal TSNEAnalysisResult()
         {
             ScatterData = new List<ScatterSampleData>();
             FeatureNames = new string[0];
             ExcludedFeatureNames = new string[0];
             StandardizedMatrix = new double[0][];
-            FeatureSelectionReport = PcaFeatureSelectionReport.Empty();
+            FeatureSelectionReport = TSNEFeatureSelectionReport.Empty();
         }
 
         public IList<ScatterSampleData> ScatterData { get; internal set; }
@@ -635,13 +621,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public string[] ExcludedFeatureNames { get; internal set; }
         public double[][] StandardizedMatrix { get; internal set; }
         public StandardScalerModel Scaler { get; internal set; }
-        public PcaProjectionModel PcaModel { get; internal set; }
-        public TsneProjectionModel TsneModel { get; internal set; }
+        public TSNEProjectionModel TSNEModel { get; internal set; }
         public DimensionalityReductionMethod ProjectionMethod { get; internal set; }
         public KnnSimilarityService Knn { get; internal set; }
-        public PcaVerificationReport Verification { get; internal set; }
-        public PcaAnalysisDiagnosticReport Diagnostic { get; internal set; }
-        public PcaFeatureSelectionReport FeatureSelectionReport { get; internal set; }
+        public TSNEVerificationReport Verification { get; internal set; }
+        public TSNEAnalysisDiagnosticReport Diagnostic { get; internal set; }
+        public TSNEFeatureSelectionReport FeatureSelectionReport { get; internal set; }
 
         public IList<KnnNeighbor> FindNearest(string draftNo, int count)
         {
@@ -649,7 +634,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 
-    internal sealed class PcaSourceRow
+    internal sealed class TSNESourceRow
     {
         public string DraftNo { get; set; }
         public string AiResultValue { get; set; }
@@ -662,7 +647,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public string[] FeatureNames { get; set; }
         public string[] ExcludedFeatureNames { get; set; }
         public double[][] Matrix { get; set; }
-        public PcaFeatureSelectionReport FeatureSelectionReport { get; set; }
+        public TSNEFeatureSelectionReport FeatureSelectionReport { get; set; }
     }
 
     #endregion
@@ -670,9 +655,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
     #region JSON Parsing and Numeric Feature Selection
 
     /// <summary>
-    /// JSON 실험 데이터에서 메타데이터와 수치 feature를 분리하고 PCA 분석 행렬을 만든다.
+    /// JSON 실험 데이터에서 메타데이터와 수치 feature를 분리하고 TSNE 분석 행렬을 만든다.
     /// </summary>
-    public sealed class PcaAnalysisPipeline
+    public sealed class TSNEAnalysisPipeline
     {
         private static readonly string[] DraftNoAliases = { "Draft_NO", "Draft_No", "draft_No" };
         private static readonly string[] AiResultAliases = { "AI_RSLT_Val", "AI_RSLT_VAL", "ENGR_RSLT_VAL", "AiResultValue" };
@@ -680,23 +665,23 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             DraftNoAliases.Concat(AiResultAliases),
             StringComparer.OrdinalIgnoreCase);
 
-        private readonly PcaAnalysisOptions options;
+        private readonly TSNEAnalysisOptions options;
 
-        public PcaAnalysisPipeline()
-            : this(new PcaAnalysisOptions())
+        public TSNEAnalysisPipeline()
+            : this(new TSNEAnalysisOptions())
         {
         }
 
-        public PcaAnalysisPipeline(PcaAnalysisOptions options)
+        public TSNEAnalysisPipeline(TSNEAnalysisOptions options)
         {
-            this.options = options ?? new PcaAnalysisOptions();
+            this.options = options ?? new TSNEAnalysisOptions();
         }
 
         /// <summary>
         /// DB ACT_DATA 컬럼에서 읽은 JSON 문서를 Dict/List 구조로 파싱하고,
         /// 내부 실험 객체를 개별 JSON 행으로 펼친 뒤 전체 분석을 수행한다.
         /// </summary>
-        public PcaAnalysisResult AnalyzeActDataDocuments(IEnumerable<string> actDataDocuments)
+        public TSNEAnalysisResult AnalyzeActDataDocuments(IEnumerable<string> actDataDocuments)
         {
             var parser = new ActDataJsonParser();
             IList<string> experimentRows = parser.ExpandDocuments(actDataDocuments);
@@ -705,9 +690,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
         /// <summary>
         /// Service DataTable의 CONV_EXPER_CTN JSON 배열을 개별 실험 행으로 펼쳐 분석한다.
-        /// 전체 데이터가 하나의 모집단으로 표준화되며 PCA와 KNN은 같은 결과를 공유한다.
+        /// 전체 데이터가 하나의 모집단으로 표준화되며 TSNE와 KNN은 같은 결과를 공유한다.
         /// </summary>
-        public PcaAnalysisResult AnalyzeConvExperimentDocuments(IEnumerable<string> convExperimentDocuments)
+        public TSNEAnalysisResult AnalyzeConvExperimentDocuments(IEnumerable<string> convExperimentDocuments)
         {
             var parser = new ActDataJsonParser();
             IList<string> experimentRows = parser.ExpandDocuments(convExperimentDocuments, "CONV_EXPER_CTN");
@@ -716,41 +701,27 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
         /// <summary>
         /// 전체 분석 순서를 한 곳에서 보장한다.
-        /// JSON 파싱 -> 수치 feature 행렬 생성 -> 정규화 -> PCA 2차원 좌표 생성 -> KNN 거리 인덱스 생성 -> 검증 순서다.
-        /// PCA와 KNN은 같은 StandardizedMatrix를 공유하므로 특징 좌표계가 달라지지 않는다.
+        /// JSON 파싱 -> 수치 feature 행렬 생성 -> 정규화 -> TSNE 2차원 좌표 생성 -> KNN 거리 인덱스 생성 -> 검증 순서다.
+        /// TSNE와 KNN은 같은 StandardizedMatrix를 공유하므로 특징 좌표계가 달라지지 않는다.
         /// </summary>
-        public PcaAnalysisResult Analyze(IEnumerable<string> jsonSamples)
+        public TSNEAnalysisResult Analyze(IEnumerable<string> jsonSamples)
         {
             // rows: Draft별 원본 JSON에서 식별자/라벨과 수치 후보를 분리한 중간 데이터다.
-            List<PcaSourceRow> rows = ParseRows(jsonSamples);
-            // features.Matrix: 행은 Draft, 열은 살아남은 수치 feature인 PCA 입력 수치행렬이다.
+            List<TSNESourceRow> rows = ParseRows(jsonSamples);
+            // features.Matrix: 행은 Draft, 열은 살아남은 수치 feature인 TSNE 입력 수치행렬이다.
             FeatureMatrixResult features = BuildFeatureMatrix(rows, options);
             StandardScalerModel scaler = StandardScalerModel.Fit(features.Matrix, features.FeatureNames);
             // standardized: 각 feature별 평균을 빼고 표준편차로 나눈 정규화 행렬이다.
             double[][] standardized = scaler.Transform(features.Matrix);
-            PcaProjectionModel pca = null;
-            TsneProjectionModel tsne = null;
+            TSNEProjectionModel tsne = null;
             double[][] scores;
-            if (options.ProjectionMethod == DimensionalityReductionMethod.Tsne)
-            {
-                tsne = TsneProjectionModel.FitTransform(
-                    standardized,
-                    options.TsnePerplexity,
-                    options.TsneIterations,
-                    options.TsneLearningRate,
-                    options.TsneRandomSeed);
-                scores = tsne.Coordinates;
-            }
-            else
-            {
-                pca = PcaProjectionModel.Fit(
-                    standardized,
-                    options.ComponentCount,
-                    options.MaxIterations,
-                    options.ConvergenceTolerance,
-                    scaler);
-                scores = pca.Transform(standardized);
-            }
+            tsne = TSNEProjectionModel.FitTransform(
+                standardized,
+                options.TSNEPerplexity,
+                options.TSNEIterations,
+                options.TSNELearningRate,
+                options.TSNERandomSeed);
+            scores = tsne.Coordinates;
 
             var scatterData = new List<ScatterSampleData>(rows.Count);
             for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
@@ -771,61 +742,52 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 standardized,
                 scaler,
                 options.KnnSearchAlgorithm);
-            PcaVerificationReport verification = options.ProjectionMethod == DimensionalityReductionMethod.Tsne
-                ? PcaAlgorithmVerifier.VerifyTsne(
-                    standardized,
-                    scores,
-                    scaler,
-                    knn,
-                    rows[0].DraftNo,
-                    options.NeighborCount)
-                : PcaAlgorithmVerifier.Verify(
-                    standardized,
-                    scaler,
-                    pca,
-                    knn,
-                    rows[0].DraftNo,
-                    options.NeighborCount);
+            TSNEVerificationReport verification = TSNEAlgorithmVerifier.VerifyTSNE(
+                standardized,
+                scores,
+                scaler,
+                knn,
+                rows[0].DraftNo,
+                options.NeighborCount);
 
             if (!verification.IsValid)
             {
                 throw new InvalidOperationException("Projection/KNN verification failed: " + verification.Message);
             }
 
-            var result = new PcaAnalysisResult
+            var result = new TSNEAnalysisResult
             {
                 ScatterData = scatterData,
                 FeatureNames = features.FeatureNames,
                 ExcludedFeatureNames = features.ExcludedFeatureNames,
                 StandardizedMatrix = standardized,
                 Scaler = scaler,
-                PcaModel = pca,
-                TsneModel = tsne,
+                TSNEModel = tsne,
                 ProjectionMethod = options.ProjectionMethod,
                 Knn = knn,
                 Verification = verification,
                 FeatureSelectionReport = features.FeatureSelectionReport
             };
-            result.Diagnostic = PcaAnalysisDiagnosticReport.Create(result, rows.Count, 0);
+            result.Diagnostic = TSNEAnalysisDiagnosticReport.Create(result, rows.Count, 0);
             return result;
         }
 
-        private static List<PcaSourceRow> ParseRows(IEnumerable<string> jsonSamples)
+        private static List<TSNESourceRow> ParseRows(IEnumerable<string> jsonSamples)
         {
             string[] source = jsonSamples == null
                 ? new string[0]
                 : jsonSamples.Where(json => !string.IsNullOrWhiteSpace(json)).ToArray();
             if (source.Length < 3)
             {
-                throw new ArgumentException("PCA requires at least three JSON samples.", "jsonSamples");
+                throw new ArgumentException("TSNE requires at least three JSON samples.", "jsonSamples");
             }
 
-            var rows = new List<PcaSourceRow>(source.Length);
+            var rows = new List<TSNESourceRow>(source.Length);
             var draftNos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (int index = 0; index < source.Length; index++)
             {
-                object deserialized = PcaJsonUtility.DeserializeObject(source[index]);
+                object deserialized = TSNEJsonUtility.DeserializeObject(source[index]);
                 var dictionary = deserialized as IDictionary<string, object>;
                 if (dictionary == null)
                 {
@@ -843,7 +805,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 var fieldNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (KeyValuePair<string, object> pair in dictionary)
                 {
-                    // Draft_NO와 AI_RSLT_Val은 검색/라벨용 데이터라 PCA 계산 feature에서는 제외한다.
+                    // Draft_NO와 AI_RSLT_Val은 검색/라벨용 데이터라 TSNE 계산 feature에서는 제외한다.
                     if (MetadataNames.Contains(pair.Key))
                     {
                         continue;
@@ -857,7 +819,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     }
                 }
 
-                rows.Add(new PcaSourceRow
+                rows.Add(new TSNESourceRow
                 {
                     DraftNo = draftNo,
                     AiResultValue = aiResult,
@@ -939,12 +901,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
 
         /// <summary>
-        /// 모든 Draft에서 사용할 수 있는 수치 feature만 골라 PCA 입력 행렬을 만든다.
+        /// 모든 Draft에서 사용할 수 있는 수치 feature만 골라 TSNE 입력 행렬을 만든다.
         /// 누락이 있더라도 옵션 기준을 통과하면 feature 평균값으로 보정한다.
         /// </summary>
-        private static FeatureMatrixResult BuildFeatureMatrix(IList<PcaSourceRow> rows, PcaAnalysisOptions analysisOptions)
+        private static FeatureMatrixResult BuildFeatureMatrix(IList<TSNESourceRow> rows, TSNEAnalysisOptions analysisOptions)
         {
-            PcaAnalysisOptions effectiveOptions = analysisOptions ?? new PcaAnalysisOptions();
+            TSNEAnalysisOptions effectiveOptions = analysisOptions ?? new TSNEAnalysisOptions();
             double varianceThreshold = Math.Max(0d, effectiveOptions.ConstantVarianceThreshold);
             double minimumNumericCoverageRatio = NormalizeCoverageRatio(
                 effectiveOptions.MinimumNumericFeatureCoverageRatio);
@@ -1015,7 +977,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 FeatureNames = included.ToArray(),
                 ExcludedFeatureNames = excluded.ToArray(),
                 Matrix = matrix,
-                FeatureSelectionReport = PcaFeatureSelectionReport.CreateFromSourceRows(
+                FeatureSelectionReport = TSNEFeatureSelectionReport.CreateFromSourceRows(
                     rows,
                     included,
                     varianceThreshold)
@@ -1133,355 +1095,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
     #endregion
 
-    #region PCA - Covariance Matrix, Eigenvectors and Projection
-
-    public sealed class PcaProjectionModel
-    {
-        private PcaProjectionModel(double[][] components, double[] eigenValues, double[] ratios, int[] iterations, StandardScalerModel scaler)
-        {
-            Components = components;
-            EigenValues = eigenValues;
-            ExplainedVarianceRatios = ratios;
-            Iterations = iterations;
-            Scaler = scaler;
-        }
-
-        public double[][] Components { get; private set; }
-        public double[] EigenValues { get; private set; }
-        public double[] ExplainedVarianceRatios { get; private set; }
-        public int[] Iterations { get; private set; }
-        public StandardScalerModel Scaler { get; private set; }
-
-        // 외부에서 계산한 component를 기존 차트/진단 DTO에 담기 위한 어댑터다.
-        // 기본 수동 PCA 흐름에서는 Fit 메서드가 covariance/eigenvector를 직접 계산한다.
-        internal static PcaProjectionModel FromComponents(double[][] components, double[] eigenValues, double[] ratios, StandardScalerModel scaler)
-        {
-            if (components == null || components.Length == 0)
-            {
-                throw new ArgumentException("PCA components are required.", "components");
-            }
-
-            return new PcaProjectionModel(
-                components.Select(component => (double[])component.Clone()).ToArray(),
-                eigenValues == null ? new double[0] : (double[])eigenValues.Clone(),
-                ratios == null ? new double[0] : (double[])ratios.Clone(),
-                Enumerable.Repeat(0, components.Length).ToArray(),
-                scaler);
-        }
-
-        public static PcaProjectionModel Fit(double[][] standardizedMatrix, int componentCount, int maxIterations, double tolerance)
-        {
-            return Fit(
-                standardizedMatrix,
-                componentCount,
-                maxIterations,
-                tolerance,
-                null);
-        }
-
-        public static PcaProjectionModel Fit(double[][] standardizedMatrix, int componentCount, int maxIterations, double tolerance, StandardScalerModel scaler)
-        {
-            if (standardizedMatrix == null || standardizedMatrix.Length < 3)
-            {
-                throw new ArgumentException("PCA requires at least three rows.", "standardizedMatrix");
-            }
-
-            int featureCount = standardizedMatrix[0].Length;
-            int safeComponentCount = Math.Min(Math.Max(1, componentCount), Math.Min(featureCount, 2));
-            // 공분산 행렬은 정규화된 feature들이 함께 증가/감소하는 방향을 찾기 위한 입력이다.
-            double[,] covariance = BuildCovarianceMatrix(standardizedMatrix);
-            double totalVariance = Enumerable.Range(0, featureCount).Sum(index => covariance[index, index]);
-            if (featureCount == 2)
-            {
-                return FitTwoFeatureProjection(covariance, totalVariance, safeComponentCount, scaler);
-            }
-
-            var components = new List<double[]>();
-            var eigenValues = new List<double>();
-            var iterations = new List<int>();
-
-            for (int componentIndex = 0; componentIndex < safeComponentCount; componentIndex++)
-            {
-                // 가장 큰 분산 방향부터 차례로 찾는다. 첫 번째가 X1, 두 번째가 X2 축 방향이다.
-                EigenPair pair = FindDominantEigenPair(
-                    covariance,
-                    components,
-                    componentIndex,
-                    Math.Max(20, maxIterations),
-                    Math.Max(1e-14d, tolerance));
-                components.Add(pair.Vector);
-                eigenValues.Add(Math.Max(0d, pair.Value));
-                iterations.Add(pair.Iterations);
-            }
-
-            ReconcileFullComponentEigenValues(eigenValues, totalVariance, safeComponentCount, featureCount);
-            double[] ratios = eigenValues
-                .Select(value => totalVariance <= 0d ? 0d : value / totalVariance)
-                .ToArray();
-            return new PcaProjectionModel(
-                components.ToArray(),
-                eigenValues.ToArray(),
-                ratios,
-                iterations.ToArray(),
-                scaler);
-        }
-
-        private static PcaProjectionModel FitTwoFeatureProjection(double[,] covariance, double totalVariance, int componentCount, StandardScalerModel scaler)
-        {
-            double a = covariance[0, 0];
-            double b = covariance[0, 1];
-            double c = covariance[1, 1];
-            double trace = a + c;
-            double root = Math.Sqrt(((a - c) * (a - c)) + (4d * b * b));
-            double firstValue = Math.Max(0d, (trace + root) / 2d);
-            double secondValue = Math.Max(0d, (trace - root) / 2d);
-            double[] firstVector = ResolveTwoFeatureEigenVector(a, b, c, firstValue);
-            double[] secondVector = new[] { -firstVector[1], firstVector[0] };
-            CanonicalizeSign(firstVector);
-            CanonicalizeSign(secondVector);
-
-            var components = new List<double[]> { firstVector };
-            var eigenValues = new List<double> { firstValue };
-            if (componentCount > 1)
-            {
-                components.Add(secondVector);
-                eigenValues.Add(secondValue);
-            }
-
-            ReconcileFullComponentEigenValues(eigenValues, totalVariance, componentCount, 2);
-            double[] ratios = eigenValues
-                .Select(value => totalVariance <= 0d ? 0d : value / totalVariance)
-                .ToArray();
-            return new PcaProjectionModel(
-                components.ToArray(),
-                eigenValues.ToArray(),
-                ratios,
-                Enumerable.Repeat(0, components.Count).ToArray(),
-                scaler);
-        }
-
-        private static double[] ResolveTwoFeatureEigenVector(double a, double b, double c, double eigenValue)
-        {
-            double[] vector;
-            if (Math.Abs(b) > 1e-14d || Math.Abs(eigenValue - a) > 1e-14d)
-            {
-                vector = new[] { b, eigenValue - a };
-            }
-            else
-            {
-                vector = a >= c ? new[] { 1d, 0d } : new[] { 0d, 1d };
-            }
-
-            if (Math.Sqrt(Dot(vector, vector)) <= 1e-14d)
-            {
-                vector = new[] { eigenValue - c, b };
-            }
-
-            Normalize(vector);
-            return vector;
-        }
-
-        private static void ReconcileFullComponentEigenValues(IList<double> eigenValues, double totalVariance, int componentCount, int featureCount)
-        {
-            if (eigenValues == null || eigenValues.Count == 0 || totalVariance <= 0d || componentCount != featureCount)
-            {
-                return;
-            }
-
-            // 모든 feature를 component로 표시하는 경우 마지막 고유값은 전체 분산에서 앞선 고유값을 뺀 잔여 분산이다.
-            double previous = 0d;
-            for (int index = 0; index < eigenValues.Count - 1; index++)
-            {
-                previous += Math.Max(0d, eigenValues[index]);
-            }
-
-            eigenValues[eigenValues.Count - 1] = Math.Max(0d, totalVariance - previous);
-        }
-
-        public double[][] Transform(double[][] standardizedMatrix)
-        {
-            var scores = new double[standardizedMatrix.Length][];
-            for (int row = 0; row < standardizedMatrix.Length; row++)
-            {
-                scores[row] = new double[Components.Length];
-                for (int component = 0; component < Components.Length; component++)
-                {
-                    // 표준화 벡터와 PC 가중치 벡터를 내적한 값이 차트 좌표 X1/X2다.
-                    scores[row][component] = Dot(standardizedMatrix[row], Components[component]);
-                }
-            }
-
-            return scores;
-        }
-
-        private static double[,] BuildCovarianceMatrix(double[][] matrix)
-        {
-            int rowCount = matrix.Length;
-            int columnCount = matrix[0].Length;
-            var covariance = new double[columnCount, columnCount];
-            double denominator = Math.Max(1d, rowCount - 1d);
-
-            for (int left = 0; left < columnCount; left++)
-            {
-                for (int right = left; right < columnCount; right++)
-                {
-                    double sum = 0d;
-                    for (int row = 0; row < rowCount; row++)
-                    {
-                        sum += matrix[row][left] * matrix[row][right];
-                    }
-
-                    double value = sum / denominator;
-                    covariance[left, right] = value;
-                    covariance[right, left] = value;
-                }
-            }
-
-            return covariance;
-        }
-
-        private static EigenPair FindDominantEigenPair(double[,] matrix, IList<double[]> previousComponents, int componentIndex, int maxIterations, double tolerance)
-        {
-            int size = matrix.GetLength(0);
-            double[] vector = Enumerable.Range(0, size)
-                .Select(index => 1d + (((index + 1) * (componentIndex + 2)) % 11) * 0.01d)
-                .ToArray();
-            Orthogonalize(vector, previousComponents);
-            Normalize(vector);
-
-            int iteration;
-            for (iteration = 1; iteration <= maxIterations; iteration++)
-            {
-                double[] next = Multiply(matrix, vector);
-                // 두 번째 성분 이후는 이전 성분과 직교하도록 Gram-Schmidt 보정을 적용한다.
-                Orthogonalize(next, previousComponents);
-                Normalize(next);
-
-                // 고유벡터 부호는 임의이므로 이전 벡터와 같은 방향으로 맞춘 뒤 차이를 계산한다.
-                if (Dot(next, vector) < 0d)
-                {
-                    MultiplyInPlace(next, -1d);
-                }
-
-                double difference = EuclideanDistance(next, vector);
-                vector = next;
-                if (difference <= tolerance)
-                {
-                    break;
-                }
-            }
-
-            CanonicalizeSign(vector);
-            double[] projected = Multiply(matrix, vector);
-            return new EigenPair
-            {
-                Value = Dot(vector, projected),
-                Vector = vector,
-                Iterations = Math.Min(iteration, maxIterations)
-            };
-        }
-
-        private static void Orthogonalize(double[] vector, IEnumerable<double[]> basisVectors)
-        {
-            foreach (double[] basis in basisVectors)
-            {
-                double projection = Dot(vector, basis);
-                for (int index = 0; index < vector.Length; index++)
-                {
-                    vector[index] -= projection * basis[index];
-                }
-            }
-        }
-
-        private static void Normalize(double[] vector)
-        {
-            double norm = Math.Sqrt(Dot(vector, vector));
-            if (norm <= 1e-14d)
-            {
-                throw new InvalidOperationException("PCA eigenvector normalization failed.");
-            }
-
-            MultiplyInPlace(vector, 1d / norm);
-        }
-
-        private static void CanonicalizeSign(double[] vector)
-        {
-            int largestIndex = 0;
-            for (int index = 1; index < vector.Length; index++)
-            {
-                if (Math.Abs(vector[index]) > Math.Abs(vector[largestIndex]))
-                {
-                    largestIndex = index;
-                }
-            }
-
-            if (vector[largestIndex] < 0d)
-            {
-                MultiplyInPlace(vector, -1d);
-            }
-        }
-
-        private static double[] Multiply(double[,] matrix, double[] vector)
-        {
-            int size = vector.Length;
-            var result = new double[size];
-            for (int row = 0; row < size; row++)
-            {
-                double sum = 0d;
-                for (int column = 0; column < size; column++)
-                {
-                    sum += matrix[row, column] * vector[column];
-                }
-
-                result[row] = sum;
-            }
-
-            return result;
-        }
-
-        private static void MultiplyInPlace(double[] vector, double scalar)
-        {
-            for (int index = 0; index < vector.Length; index++)
-            {
-                vector[index] *= scalar;
-            }
-        }
-
-        internal static double Dot(double[] left, double[] right)
-        {
-            double sum = 0d;
-            for (int index = 0; index < left.Length; index++)
-            {
-                sum += left[index] * right[index];
-            }
-
-            return sum;
-        }
-
-        private static double EuclideanDistance(double[] left, double[] right)
-        {
-            double sum = 0d;
-            for (int index = 0; index < left.Length; index++)
-            {
-                double difference = left[index] - right[index];
-                sum += difference * difference;
-            }
-
-            return Math.Sqrt(sum);
-        }
-
-        private sealed class EigenPair
-        {
-            public double Value { get; set; }
-            public double[] Vector { get; set; }
-            public int Iterations { get; set; }
-        }
-    }
-
-    #endregion
-
-    #region KNN - Euclidean Distance in Standardized Feature Space
-
     public sealed class KnnSimilarityService
     {
         private readonly string[] draftNos;
@@ -1538,7 +1151,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             int targetIndex;
             if (string.IsNullOrWhiteSpace(draftNo) || !indexByDraftNo.TryGetValue(draftNo.Trim(), out targetIndex))
             {
-                throw new KeyNotFoundException("Draft_NO was not found: " + (draftNo ?? string.Empty));
+                throw new KeyNotFoundException("존재하지 않는 Draft_NO입니다. " + (draftNo ?? string.Empty));
             }
 
             int safeCount = Math.Max(0, count);
@@ -2033,13 +1646,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 
-    #endregion
-
     #region Algorithm Self Verification
 
-    internal static class PcaAlgorithmVerifier
+
+    internal static class TSNEAlgorithmVerifier
     {
-        public static PcaVerificationReport VerifyTsne(
+        public static TSNEVerificationReport VerifyTSNE(
             double[][] standardized,
             double[][] coordinates,
             StandardScalerModel scaler,
@@ -2078,7 +1690,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 && scaler.FeatureNames.Length == columnCount;
             bool valid = finiteCoordinates && sharedScaler;
 
-            return new PcaVerificationReport
+            return new TSNEVerificationReport
             {
                 IsValid = valid,
                 MaximumAbsoluteStandardizedMean = maxMean,
@@ -2101,78 +1713,18 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             };
         }
 
-        public static PcaVerificationReport Verify(
-            double[][] standardized,
-            StandardScalerModel scaler,
-            PcaProjectionModel pca,
-            KnnSimilarityService knn,
-            string firstDraftNo,
-            int neighborCount)
-        {
-            int rowCount = standardized.Length;
-            int columnCount = standardized[0].Length;
-            double maxMean = 0d;
-            double maxStandardDeviationError = 0d;
-
-            for (int column = 0; column < columnCount; column++)
-            {
-                double mean = standardized.Average(row => row[column]);
-                double variance = standardized.Average(row =>
-                {
-                    double difference = row[column] - mean;
-                    return difference * difference;
-                });
-                maxMean = Math.Max(maxMean, Math.Abs(mean));
-                maxStandardDeviationError = Math.Max(
-                    maxStandardDeviationError,
-                    Math.Abs(Math.Sqrt(variance) - 1d));
-            }
-
-            double componentDot = pca.Components.Length < 2
-                ? 0d
-                : Math.Abs(PcaProjectionModel.Dot(pca.Components[0], pca.Components[1]));
-            bool eigenValuesDescending = pca.EigenValues.Length < 2
-                || pca.EigenValues[0] + 1e-9d >= pca.EigenValues[1];
-            double[][] scores = pca.Transform(standardized);
-            bool allScoresFinite = scores.SelectMany(row => row)
-                .All(value => !double.IsNaN(value) && !double.IsInfinity(value));
-            IList<KnnNeighbor> neighbors = knn.FindNearest(firstDraftNo, neighborCount);
-            bool knnValid = neighbors.Count == Math.Min(Math.Max(0, neighborCount), rowCount - 1)
-                && neighbors.All(item => !string.Equals(item.DraftNo, firstDraftNo, StringComparison.OrdinalIgnoreCase))
-                && neighbors.Select(item => item.Distance).SequenceEqual(
-                    neighbors.Select(item => item.Distance).OrderBy(value => value));
-            bool sharedScaler = scaler != null
-                && object.ReferenceEquals(scaler, pca.Scaler)
-                && object.ReferenceEquals(scaler, knn.Scaler)
-                && scaler.FeatureNames != null
-                && scaler.FeatureNames.Length == columnCount;
-
-            bool valid = maxMean <= 1e-8d
-                && maxStandardDeviationError <= 1e-8d
-                && componentDot <= 1e-6d
-                && eigenValuesDescending
-                && allScoresFinite
-                && knnValid
-                && sharedScaler;
-            return new PcaVerificationReport
-            {
-                IsValid = valid,
-                MaximumAbsoluteStandardizedMean = maxMean,
-                MaximumStandardDeviationError = maxStandardDeviationError,
-                ComponentDotProduct = componentDot,
-                EigenValuesDescending = eigenValuesDescending,
-                AllScoresFinite = allScoresFinite,
-                KnnResultValid = knnValid,
-                SharedScalerInstance = sharedScaler,
-                Message = valid
-                    ? "Shared StandardScaler, PCA orthogonality, finite scores and KNN ordering verified."
-                    : "One or more StandardScaler/PCA/KNN invariants failed, including shared scaler verification."
-            };
-        }
     }
 
     #endregion
 }
+
+
+
+
+
+
+
+
 
 
 

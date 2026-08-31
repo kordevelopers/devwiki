@@ -1,10 +1,10 @@
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
-    #region PCA Scatter Output Contract
+    #region TSNE Scatter Output Contract
 
     /// <summary>
-    /// PCA 결과 한 건을 LightningChart와 KNN 결과 그리드에 전달하는 화면 데이터 계약이다.
-    /// X1/X2는 임의 좌표가 아니라 PcaAnalysisPipeline에서 계산한 PC1/PC2 점수다.
+    /// TSNE 결과 한 건을 LightningChart와 KNN 결과 그리드에 전달하는 화면 데이터 계약이다.
+    /// X1/X2는 임의 좌표가 아니라 TSNEAnalysisPipeline에서 계산한 PC1/PC2 점수다.
     /// </summary>
     public sealed class ScatterSampleData
     {
@@ -28,6 +28,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
     #endregion
 }
+
+
 
 
 

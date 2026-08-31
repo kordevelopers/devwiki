@@ -8,9 +8,9 @@ namespace SKhynix.TAS.UI.Report.Pccb
         {
             if (disposing)
             {
-                if (pcaChart != null)
+                if (tsneChart != null)
                 {
-                    pcaChart.Dispose();
+                    tsneChart.Dispose();
                 }
 
                 if (components != null)
@@ -102,7 +102,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             this.titleLabel.Name = "titleLabel";
             this.titleLabel.Size = new System.Drawing.Size(120, 30);
             this.titleLabel.TabIndex = 0;
-            this.titleLabel.Text = "PCA Scatter";
+            this.titleLabel.Text = "TSNE Scatter";
             this.titleLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // summaryLabel
@@ -303,7 +303,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             this.MinimumSize = new System.Drawing.Size(900, 650);
             this.Name = "TSNEChartForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Manual PCA Scatter";
+            this.Text = "Manual TSNE Scatter";
             this.rootLayout.ResumeLayout(false);
             this.toolbarLayout.ResumeLayout(false);
             this.commandPanel.ResumeLayout(false);
@@ -335,5 +335,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         private System.Windows.Forms.DataGridView nearestNeighborGrid;
     }
 }
+
+
 
 

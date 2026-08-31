@@ -17,16 +17,16 @@ namespace SKhynix.TAS.UI.Report.Pccb
 {
     public partial class TSNEChartForm : Form
     {
-        private readonly TSNEChart pcaChart;
-        private readonly PcaExadataService exadataService;
+        private readonly TSNEChart tsneChart;
+        private readonly TSNEExadataService exadataService;
         private readonly ConvExperimentRepository exadataRepository;
-        private readonly IPcaScatterPopupDataProvider popupDataProvider;
+        private readonly ITSNEScatterPopupDataProvider popupDataProvider;
 
-        private PcaAnalysisResult analysisResult;
-        private PcaExadataAnalysisResult exadataAnalysis;
+        private TSNEAnalysisResult analysisResult;
+        private TSNEExadataAnalysisResult exadataAnalysis;
         private DataTable pendingSourceTable;
         private IList<ScatterSampleData> currentSamples;
-        private IList<PcaExperimentRecord> currentRecords;
+        private IList<TSNEExperimentRecord> currentRecords;
         private bool parameterChangeEnabled;
         private bool nearestNeighborGridBinding;
         private string lastFeatureAuditLogPath;
@@ -43,7 +43,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         {
         }
 
-        public TSNEChartForm(IPcaScatterPopupDataProvider popupDataProvider)
+        public TSNEChartForm(ITSNEScatterPopupDataProvider popupDataProvider)
         {
             InitializeComponent();
 
@@ -52,32 +52,32 @@ namespace SKhynix.TAS.UI.Report.Pccb
             SeriesPointSize = 7f;
             HighlightPointSize = 0f;
             SelectedPointSize = 0f;
-            TsnePerplexity = 30d;
-            TsneIterations = 750;
-            TsneLearningRate = 200d;
-            TsneRandomSeed = 20260831;
+            TSNEPerplexity = 30d;
+            TSNEIterations = 750;
+            TSNELearningRate = 200d;
+            TSNERandomSeed = 20260831;
             currentSamples = new List<ScatterSampleData>();
-            currentRecords = new List<PcaExperimentRecord>();
+            currentRecords = new List<TSNEExperimentRecord>();
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
             {
                 exadataRepository = null;
                 exadataService = null;
-                pcaChart = null;
+                tsneChart = null;
                 return;
             }
 
             exadataRepository = new ConvExperimentRepository(
-                PcaScatterExadataOptions.CreateDefault().ToQueryOptions());
-            exadataService = new PcaExadataService(exadataRepository);
+                TSNEScatterExadataOptions.CreateDefault().ToQueryOptions());
+            exadataService = new TSNEExadataService(exadataRepository);
 
             ConfigureNearestNeighborGrid();
             BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
-            pcaChart = TSNEChart.Create(chartHost, CreateChartOptions());
-            pcaChart.SampleClicked += PcaChart_SampleClicked;
-            pcaChart.AnalysisCompleted += PcaChart_AnalysisCompleted;
-            pcaChart.AnalysisFailed += PcaChart_AnalysisFailed;
-            pcaChart.Clear();
-            projectionMethod = DimensionalityReductionMethod.Tsne;
+            tsneChart = TSNEChart.Create(chartHost, CreateChartOptions());
+            tsneChart.SampleClicked += TSNEChart_SampleClicked;
+            tsneChart.AnalysisCompleted += TSNEChart_AnalysisCompleted;
+            tsneChart.AnalysisFailed += TSNEChart_AnalysisFailed;
+            tsneChart.Clear();
+            projectionMethod = DimensionalityReductionMethod.TSNE;
             lastFeatureAuditLogPath = GetFeatureSelectionAuditLogPath();
             summaryLabel.Text = "Operation message.";
             ApplyOptionalUiVisibility();
@@ -107,7 +107,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         public float SelectedPointSize { get; set; }
 
         /// <summary>
-        /// 차트에 사용할 2차원 축소 방식이다. 기본값은 기존 호환을 위한 PCA다.
+        /// 차트에 사용할 2차원 축소 방식이다. 기본값은 기존 호환을 위한 TSNE다.
         /// </summary>
         public DimensionalityReductionMethod ProjectionMethod
         {
@@ -119,10 +119,10 @@ namespace SKhynix.TAS.UI.Report.Pccb
             }
         }
 
-        public double TsnePerplexity { get; set; }
-        public int TsneIterations { get; set; }
-        public double TsneLearningRate { get; set; }
-        public int TsneRandomSeed { get; set; }
+        public double TSNEPerplexity { get; set; }
+        public int TSNEIterations { get; set; }
+        public double TSNELearningRate { get; set; }
+        public int TSNERandomSeed { get; set; }
 
         /// <summary>
         /// 상단 분석 상태 텍스트 표시 여부다. 기본값은 숨김이다.
@@ -151,7 +151,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         }
 
         /// <summary>
-        /// PCA 분석 로그 열기 버튼 표시 여부다. 기본값은 숨김이다.
+        /// TSNE 분석 로그 열기 버튼 표시 여부다. 기본값은 숨김이다.
         /// </summary>
         public bool ShowAnalysisLogButton
         {
@@ -177,7 +177,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         }
 
         /// <summary>
-        /// 차트 렌더링 후 개발자용 PCA 로그 메시지박스를 표시할지 결정한다. 기본값은 비활성이다.
+        /// 차트 렌더링 후 개발자용 TSNE 로그 메시지박스를 표시할지 결정한다. 기본값은 비활성이다.
         /// </summary>
         public bool ShowFeatureAuditMessageBox
         {
@@ -256,8 +256,8 @@ namespace SKhynix.TAS.UI.Report.Pccb
             analysisResult = null;
             exadataAnalysis = null;
             currentSamples = new List<ScatterSampleData>();
-            currentRecords = new List<PcaExperimentRecord>();
-            pcaChart.Clear();
+            currentRecords = new List<TSNEExperimentRecord>();
+            tsneChart.Clear();
             BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
             preferMemoryCheckBox.Checked = true;
             summaryLabel.Text = string.Format(
@@ -281,7 +281,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             ShowBusyOverlay("Operation message." + GetProjectionDisplayName() + "Operation message.");
             try
             {
-                PcaExadataSnapshot snapshot = await LoadCurrentSourceSnapshotAsync();
+                TSNEExadataSnapshot snapshot = await LoadCurrentSourceSnapshotAsync();
                 preferMemoryCheckBox.Checked = true;
                 UpdateBusyMessage("Operation message." + GetProjectionDisplayName() + "Operation message.");
                 await AnalyzeCurrentSnapshotAsync(snapshot, false);
@@ -339,7 +339,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 return;
             }
 
-            PcaExadataSnapshot snapshot = exadataService.CurrentSnapshot;
+            TSNEExadataSnapshot snapshot = exadataService.CurrentSnapshot;
             if (snapshot == null)
             {
                 return;
@@ -370,13 +370,13 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 return;
             }
 
-            PcaParameterType parameterType = GetSelectedParameterType();
-            PcaExadataRefreshMode refreshMode = preferMemoryCheckBox.Checked
-                ? PcaExadataRefreshMode.PreferMemorySnapshot
-                : PcaExadataRefreshMode.AlwaysReload;
+            TSNEParameterType parameterType = GetSelectedParameterType();
+            TSNEExadataRefreshMode refreshMode = preferMemoryCheckBox.Checked
+                ? TSNEExadataRefreshMode.PreferMemorySnapshot
+                : TSNEExadataRefreshMode.AlwaysReload;
             summaryLabel.Text = string.Format(
                 "Operation message: {0}",
-                PcaParameterTypeParser.ToDatabaseValue(parameterType),
+                TSNEParameterTypeParser.ToDatabaseValue(parameterType),
                 draftNo);
 
             try
@@ -395,21 +395,21 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 if (exadataService.CurrentSnapshot != null)
                 {
                     preferMemoryCheckBox.Checked = true;
-                    refreshMode = PcaExadataRefreshMode.PreferMemorySnapshot;
+                    refreshMode = TSNEExadataRefreshMode.PreferMemorySnapshot;
                 }
 
-                PcaScatterOptions chartOptions = CreateChartOptions();
-                PcaExperimentRecord currentTarget;
+                TSNEScatterOptions chartOptions = CreateChartOptions();
+                TSNEExperimentRecord currentTarget;
                 IList<KnnNeighbor> currentNeighbors;
                 if (TryQueryDraftFromCurrentAnalysis(draftNo, parameterType, chartOptions, out currentTarget, out currentNeighbors))
                 {
-                    pcaChart.HighlightDraft(currentTarget.DraftNo);
+                    tsneChart.HighlightDraft(currentTarget.DraftNo);
                     BindNearestNeighborTable(CreateNearestNeighborTable(currentTarget, currentNeighbors));
                     UpdateSummary(exadataAnalysis, "Operation message.");
                     return;
                 }
 
-                PcaDraftQueryResult result = await exadataService.QueryDraftAsync(
+                TSNEDraftQueryResult result = await exadataService.QueryDraftAsync(
                     draftNo,
                     parameterType,
                     refreshMode,
@@ -428,11 +428,11 @@ namespace SKhynix.TAS.UI.Report.Pccb
             }
         }
 
-        private async Task<PcaExadataSnapshot> LoadPopupDatabaseSnapshotAsync()
+        private async Task<TSNEExadataSnapshot> LoadPopupDatabaseSnapshotAsync()
         {
             if (popupDataProvider == null)
             {
-                throw new InvalidOperationException("PCA popup data provider is not configured.");
+                throw new InvalidOperationException("TSNE popup data provider is not configured.");
             }
 
             summaryLabel.Text = popupDataProvider.SourceDescription + "Operation message.";
@@ -440,18 +440,18 @@ namespace SKhynix.TAS.UI.Report.Pccb
             DataTable sourceTable = await popupDataProvider.LoadAllAsync();
             UpdateBusyMessage("Operation message.");
             exadataRepository.SetSourceTable(sourceTable);
-            PcaExadataSnapshot snapshot = await exadataService.LoadFromDataTableAsync(sourceTable);
+            TSNEExadataSnapshot snapshot = await exadataService.LoadFromDataTableAsync(sourceTable);
             preferMemoryCheckBox.Checked = true;
             return snapshot;
         }
 
-        private async Task<PcaExadataSnapshot> LoadCurrentSourceSnapshotAsync()
+        private async Task<TSNEExadataSnapshot> LoadCurrentSourceSnapshotAsync()
         {
             if (pendingSourceTable != null)
             {
                 UpdateBusyMessage("Operation message.");
                 exadataRepository.SetSourceTable(pendingSourceTable);
-                PcaExadataSnapshot snapshot = await exadataService.LoadFromDataTableAsync(pendingSourceTable);
+                TSNEExadataSnapshot snapshot = await exadataService.LoadFromDataTableAsync(pendingSourceTable);
                 preferMemoryCheckBox.Checked = true;
                 return snapshot;
             }
@@ -468,7 +468,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 await Task.Delay(50);
                 DataTable sampleTable = await Task.Run(delegate
                 {
-                    return new PcaExadataSampleDataFactory(20260629).CreateDefaultDataTable();
+                    return new TSNEExadataSampleDataFactory(20260629).CreateDefaultDataTable();
                 });
 
                 await LoadConvExperimentDataTableAsync(sampleTable);
@@ -487,14 +487,14 @@ namespace SKhynix.TAS.UI.Report.Pccb
         {
             SetToolbarEnabled(false);
             ShowBusyOverlay("Operation message." + GetProjectionDisplayName() + "Operation message.");
-            PcaParameterType parameterType = GetSelectedParameterType();
+            TSNEParameterType parameterType = GetSelectedParameterType();
             summaryLabel.Text = "Operation message." + GetProjectionDisplayName() + "Operation message.";
 
             try
             {
-                PcaExadataSnapshot snapshot = await LoadCurrentSourceSnapshotAsync();
-                PcaScatterOptions chartOptions = CreateChartOptions();
-                PcaExadataAnalysisResult result = await Task.Run(delegate
+                TSNEExadataSnapshot snapshot = await LoadCurrentSourceSnapshotAsync();
+                TSNEScatterOptions chartOptions = CreateChartOptions();
+                TSNEExadataAnalysisResult result = await Task.Run(delegate
                 {
                     return exadataService.AnalyzeSnapshot(
                         snapshot,
@@ -515,12 +515,12 @@ namespace SKhynix.TAS.UI.Report.Pccb
             }
         }
 
-        private async Task AnalyzeCurrentSnapshotAsync(PcaExadataSnapshot snapshot)
+        private async Task AnalyzeCurrentSnapshotAsync(TSNEExadataSnapshot snapshot)
         {
             await AnalyzeCurrentSnapshotAsync(snapshot, true);
         }
 
-        private async Task AnalyzeCurrentSnapshotAsync(PcaExadataSnapshot snapshot, bool manageToolbar)
+        private async Task AnalyzeCurrentSnapshotAsync(TSNEExadataSnapshot snapshot, bool manageToolbar)
         {
             if (manageToolbar)
             {
@@ -528,13 +528,13 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 ShowBusyOverlay("Operation message." + GetProjectionDisplayName() + "Operation message.");
             }
 
-            PcaParameterType parameterType = GetSelectedParameterType();
-            summaryLabel.Text = PcaParameterTypeParser.ToDatabaseValue(parameterType)
+            TSNEParameterType parameterType = GetSelectedParameterType();
+            summaryLabel.Text = TSNEParameterTypeParser.ToDatabaseValue(parameterType)
                 + "Operation message." + GetProjectionDisplayName() + "Operation message.";
             try
             {
-                PcaScatterOptions chartOptions = CreateChartOptions();
-                PcaExadataAnalysisResult result = await Task.Run(delegate
+                TSNEScatterOptions chartOptions = CreateChartOptions();
+                TSNEExadataAnalysisResult result = await Task.Run(delegate
                 {
                     return exadataService.AnalyzeSnapshot(snapshot, parameterType, chartOptions.Analysis);
                 });
@@ -555,7 +555,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             }
         }
 
-        private void ApplyAnalysis(PcaExadataAnalysisResult result, PcaScatterOptions chartOptions)
+        private void ApplyAnalysis(TSNEExadataAnalysisResult result, TSNEScatterOptions chartOptions)
         {
             if (result == null || result.AnalysisResult == null)
             {
@@ -564,12 +564,12 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
             exadataAnalysis = result;
             currentRecords = result.Records.ToList();
-            pcaChart.Bind(result, chartOptions);
+            tsneChart.Bind(result, chartOptions);
             // 차트를 새로 그린 직후 같은 로그 파일을 덮어써서, 화면과 로그가 항상 같은 분석 결과를 가리키게 한다.
             WriteFeatureSelectionAuditLog(result, chartOptions);
         }
 
-        private void WriteFeatureSelectionAuditLog(PcaExadataAnalysisResult result, PcaScatterOptions chartOptions)
+        private void WriteFeatureSelectionAuditLog(TSNEExadataAnalysisResult result, TSNEScatterOptions chartOptions)
         {
             if (result == null || result.FeatureSelectionReport == null)
             {
@@ -579,7 +579,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             string detailedLog = BuildFeatureSelectionAuditText(result, chartOptions, true);
             lastFeatureAuditLogPath = SaveFeatureSelectionAuditLog(result, detailedLog);
             UpdateAnalysisLogButtonState();
-            Debug.WriteLine("PCA Feature Audit Log: " + lastFeatureAuditLogPath);
+            Debug.WriteLine("TSNE Feature Audit Log: " + lastFeatureAuditLogPath);
 
 #if DEBUG
             if (ShowFeatureAuditMessageBox)
@@ -596,21 +596,21 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 MessageBox.Show(
                     this,
                     popupLog,
-                    "PCA Feature Audit (Developer)",
+                    "TSNE Feature Audit (Developer)",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
             }
 #endif
         }
 
-        private string BuildFeatureSelectionAuditText(PcaExadataAnalysisResult result, PcaScatterOptions chartOptions, bool includeFullDetails)
+        private string BuildFeatureSelectionAuditText(TSNEExadataAnalysisResult result, TSNEScatterOptions chartOptions, bool includeFullDetails)
         {
-            PcaFeatureSelectionReport report = result.FeatureSelectionReport;
+            TSNEFeatureSelectionReport report = result.FeatureSelectionReport;
             DataTable survivingPopulation = result.CreateSurvivingPopulationDataTable();
             var builder = new StringBuilder();
             builder.AppendLine(GetProjectionDisplayName() + " Feature Selection Audit");
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "CreatedAt: {0:yyyy-MM-dd HH:mm:ss.fff}", DateTime.Now));
-            builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "ParameterType: {0}", PcaParameterTypeParser.ToDatabaseValue(result.ParameterType)));
+            builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "ParameterType: {0}", TSNEParameterTypeParser.ToDatabaseValue(result.ParameterType)));
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "LogMode: {0}", includeFullDetails ? "Detailed" : "Summary"));
             builder.AppendLine();
             if (result.Diagnostic != null)
@@ -650,9 +650,9 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
             if (includeFullDetails)
             {
-                AppendPcaProcessingOverview(builder, result, chartOptions);
+                AppendTSNEProcessingOverview(builder, result, chartOptions);
                 AppendPreprocessingAndScalingExplanation(builder, result, chartOptions, true);
-                AppendPcaProjectionExplanation(builder, result, chartOptions, true);
+                AppendTSNEProjectionExplanation(builder, result, chartOptions, true);
                 AppendAxisRangeExplanation(builder, result, chartOptions);
                 AppendDistanceExplanation(builder, result, chartOptions, true);
             }
@@ -670,27 +670,27 @@ namespace SKhynix.TAS.UI.Report.Pccb
             return builder.ToString();
         }
 
-        private static string SaveFeatureSelectionAuditLog(PcaExadataAnalysisResult result, string logText)
+        private static string SaveFeatureSelectionAuditLog(TSNEExadataAnalysisResult result, string logText)
         {
             try
             {
-                bool isTsne = result != null
+                bool isTSNE = result != null
                     && result.AnalysisResult != null
-                    && result.AnalysisResult.ProjectionMethod == DimensionalityReductionMethod.Tsne;
+                    && result.AnalysisResult.ProjectionMethod == DimensionalityReductionMethod.TSNE;
                 string root = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "SKhynix",
                     "TAS",
-                    isTsne ? "TsneScatter" : "PcaScatter",
+                    isTSNE ? "TSNEScatter" : "TSNEScatter",
                     "AnalysisLogs");
                 Directory.CreateDirectory(root);
-                string path = Path.Combine(root, isTsne ? "manual_tsne_latest_analysis.log" : "manual_pca_latest_analysis.log");
+                string path = Path.Combine(root, isTSNE ? "manual_tsne_latest_analysis.log" : "manual_tsne_latest_analysis.log");
                 File.WriteAllText(path, logText ?? string.Empty, Encoding.UTF8);
                 return path;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("PCA Feature Audit log save failed: " + ex.Message);
+                Debug.WriteLine("TSNE Feature Audit log save failed: " + ex.Message);
                 return string.Empty;
             }
         }
@@ -701,14 +701,14 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "SKhynix",
                 "TAS",
-                "PcaScatter",
+                "TSNEScatter",
                 "AnalysisLogs",
-                "manual_pca_latest_analysis.log");
+                "manual_tsne_latest_analysis.log");
         }
 
-        private void AppendPcaProcessingOverview(StringBuilder builder, PcaExadataAnalysisResult result, PcaScatterOptions chartOptions)
+        private void AppendTSNEProcessingOverview(StringBuilder builder, TSNEExadataAnalysisResult result, TSNEScatterOptions chartOptions)
         {
-            builder.AppendLine("PCA processing overview:");
+            builder.AppendLine("TSNE processing overview:");
             builder.AppendLine("Operation message.");
             builder.AppendLine("Operation message.");
             builder.AppendLine("Operation message.");
@@ -722,7 +722,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             builder.AppendLine();
         }
 
-        private PcaExperimentRecord ResolveAuditTargetRecord(PcaExadataAnalysisResult result, PcaScatterOptions chartOptions)
+        private TSNEExperimentRecord ResolveAuditTargetRecord(TSNEExadataAnalysisResult result, TSNEScatterOptions chartOptions)
         {
             if (result == null || result.Records == null || result.Records.Count == 0)
             {
@@ -741,7 +741,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
             if (!string.IsNullOrWhiteSpace(draftNo))
             {
-                PcaExperimentRecord matched = result.Records.FirstOrDefault(record =>
+                TSNEExperimentRecord matched = result.Records.FirstOrDefault(record =>
                     record != null && string.Equals(record.DraftNo, draftNo, StringComparison.OrdinalIgnoreCase));
                 if (matched != null)
                 {
@@ -752,7 +752,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             return result.Records.FirstOrDefault();
         }
 
-        private static bool TryGetOriginalValue(PcaExperimentRecord record, string featureName, out double value)
+        private static bool TryGetOriginalValue(TSNEExperimentRecord record, string featureName, out double value)
         {
             value = 0d;
             return record != null
@@ -793,10 +793,10 @@ namespace SKhynix.TAS.UI.Report.Pccb
             return value.ToString("0.##########", CultureInfo.InvariantCulture);
         }
 
-        private void AppendPreprocessingAndScalingExplanation(StringBuilder builder, PcaExadataAnalysisResult result, PcaScatterOptions chartOptions, bool includeFullDetails)
+        private void AppendPreprocessingAndScalingExplanation(StringBuilder builder, TSNEExadataAnalysisResult result, TSNEScatterOptions chartOptions, bool includeFullDetails)
         {
-            PcaAnalysisResult analysis = result == null ? null : result.AnalysisResult;
-            PcaScatterAnalysisOptions analysisOptions = chartOptions == null ? null : chartOptions.Analysis;
+            TSNEAnalysisResult analysis = result == null ? null : result.AnalysisResult;
+            TSNEScatterAnalysisOptions analysisOptions = chartOptions == null ? null : chartOptions.Analysis;
             double coverageRatio = analysisOptions == null ? 1d : analysisOptions.MinimumNumericFeatureCoverageRatio;
             bool meanImputationEnabled = analysisOptions != null && analysisOptions.MeanImputationEnabled;
 
@@ -813,7 +813,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             builder.AppendLine("Operation message.");
             builder.AppendLine("Operation message.");
 
-            PcaExperimentRecord target = ResolveAuditTargetRecord(result, chartOptions);
+            TSNEExperimentRecord target = ResolveAuditTargetRecord(result, chartOptions);
             if (analysis == null || analysis.Scaler == null || analysis.FeatureNames == null)
             {
                 builder.AppendLine();
@@ -847,97 +847,27 @@ namespace SKhynix.TAS.UI.Report.Pccb
             builder.AppendLine();
         }
 
-        private void AppendPcaProjectionExplanation(StringBuilder builder, PcaExadataAnalysisResult result, PcaScatterOptions chartOptions, bool includeFullDetails)
+        private void AppendTSNEProjectionExplanation(StringBuilder builder, TSNEExadataAnalysisResult result, TSNEScatterOptions chartOptions, bool includeFullDetails)
         {
-            PcaAnalysisResult analysis = result == null ? null : result.AnalysisResult;
-            if (analysis == null || analysis.PcaModel == null || analysis.FeatureNames == null || analysis.PcaModel.Components == null)
+            TSNEAnalysisResult analysis = result == null ? null : result.AnalysisResult;
+            if (analysis == null || analysis.TSNEModel == null)
             {
                 return;
             }
-
-            PcaExperimentRecord target = ResolveAuditTargetRecord(result, chartOptions);
-            int componentCount = Math.Min(2, analysis.PcaModel.Components.Length);
-            int featureCount = analysis.FeatureNames.Length;
-            int maxRows = includeFullDetails ? 30 : 8;
-
-            builder.AppendLine("PCA X1/X2 projection explanation:");
-            builder.AppendLine("Operation message.");
-            builder.AppendLine("Operation message.");
-            builder.AppendLine("Operation message.");
-            builder.AppendLine("Operation message.");
-            if (target != null)
-            {
-                builder.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                    "- Target Draft_NO={0}, X1={1}, X2={2}",
-                    target.DraftNo,
-                    FormatNumber(target.X1),
-                    FormatNumber(target.X2)));
-            }
-
-            for (int componentIndex = 0; componentIndex < componentCount; componentIndex++)
-            {
-                double explained = analysis.PcaModel.ExplainedVarianceRatios != null && analysis.PcaModel.ExplainedVarianceRatios.Length > componentIndex
-                    ? analysis.PcaModel.ExplainedVarianceRatios[componentIndex] * 100d
-                    : 0d;
-                builder.AppendLine();
-                builder.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                    "PC{0} top contributing features by absolute PCA weight. Explained variance={1:0.###}%",
-                    componentIndex + 1,
-                    explained));
-                builder.AppendLine("Feature\tWeight\tTargetStandardized\tContributionToAxis\tTargetOriginal\tMean\tStdDev");
-
-                double[] component = analysis.PcaModel.Components[componentIndex];
-                int[] indexes = Enumerable.Range(0, Math.Min(featureCount, component.Length))
-                    .OrderByDescending(index => Math.Abs(component[index]))
-                    .Take(maxRows)
-                    .ToArray();
-                foreach (int featureIndex in indexes)
-                {
-                    string featureName = analysis.FeatureNames[featureIndex];
-                    double targetStandardized = target != null && featureIndex < target.StandardizedVector.Length
-                        ? target.StandardizedVector[featureIndex]
-                        : 0d;
-                    double contribution = targetStandardized * component[featureIndex];
-                    double originalValue = 0d;
-                    bool hasOriginalValue = target != null && TryGetOriginalValue(target, featureName, out originalValue);
-                    builder.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                        "{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}",
-                        featureName,
-                        FormatNumber(component[featureIndex]),
-                        target == null ? "(no target)" : FormatNumber(targetStandardized),
-                        target == null ? "(no target)" : FormatNumber(contribution),
-                        hasOriginalValue ? FormatNumber(originalValue) : "(mean imputed/no target)",
-                        analysis.Scaler == null ? string.Empty : FormatNumber(analysis.Scaler.Means[featureIndex]),
-                        analysis.Scaler == null ? string.Empty : FormatNumber(analysis.Scaler.StandardDeviations[featureIndex])));
-                }
-            }
-
-            if (target != null && analysis.PcaModel.Components.Length >= 2)
-            {
-                double recalculatedX1 = Dot(target.StandardizedVector, analysis.PcaModel.Components[0]);
-                double recalculatedX2 = Dot(target.StandardizedVector, analysis.PcaModel.Components[1]);
-                builder.AppendLine();
-                builder.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                    "Target axis check: X1 stored={0}, recalculated={1}; X2 stored={2}, recalculated={3}",
-                    FormatNumber(target.X1),
-                    FormatNumber(recalculatedX1),
-                    FormatNumber(target.X2),
-                    FormatNumber(recalculatedX2)));
-            }
-
+            builder.AppendLine("t-SNE projection uses Accord.NET Barnes-Hut optimization; PCA component weights and explained variance are not applicable.");
             builder.AppendLine();
         }
 
-        private void AppendAxisRangeExplanation(StringBuilder builder, PcaExadataAnalysisResult result, PcaScatterOptions chartOptions)
+        private void AppendAxisRangeExplanation(StringBuilder builder, TSNEExadataAnalysisResult result, TSNEScatterOptions chartOptions)
         {
-            PcaAnalysisResult analysis = result == null ? null : result.AnalysisResult;
+            TSNEAnalysisResult analysis = result == null ? null : result.AnalysisResult;
             if (analysis == null || analysis.ScatterData == null || analysis.ScatterData.Count == 0)
             {
                 return;
             }
 
-            PcaScatterDisplayOptions display = chartOptions == null || chartOptions.Display == null
-                ? new PcaScatterDisplayOptions()
+            TSNEScatterDisplayOptions display = chartOptions == null || chartOptions.Display == null
+                ? new TSNEScatterDisplayOptions()
                 : chartOptions.Display;
             AxisRangeAudit xRange = CalculateAxisRangeAudit(analysis.ScatterData, true, display);
             AxisRangeAudit yRange = CalculateAxisRangeAudit(analysis.ScatterData, false, display);
@@ -953,7 +883,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             builder.AppendLine();
         }
 
-        private static AxisRangeAudit CalculateAxisRangeAudit(IList<ScatterSampleData> samples, bool useX, PcaScatterDisplayOptions display)
+        private static AxisRangeAudit CalculateAxisRangeAudit(IList<ScatterSampleData> samples, bool useX, TSNEScatterDisplayOptions display)
         {
             List<ScatterSampleData> cleanSamples = (samples ?? new List<ScatterSampleData>())
                 .Where(sample =>
@@ -1006,10 +936,10 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 FormatNumber(range.FinalMax)));
         }
 
-        private void AppendDistanceExplanation(StringBuilder builder, PcaExadataAnalysisResult result, PcaScatterOptions chartOptions, bool includeFullDetails)
+        private void AppendDistanceExplanation(StringBuilder builder, TSNEExadataAnalysisResult result, TSNEScatterOptions chartOptions, bool includeFullDetails)
         {
-            PcaAnalysisResult analysis = result == null ? null : result.AnalysisResult;
-            PcaExperimentRecord target = ResolveAuditTargetRecord(result, chartOptions);
+            TSNEAnalysisResult analysis = result == null ? null : result.AnalysisResult;
+            TSNEExperimentRecord target = ResolveAuditTargetRecord(result, chartOptions);
             if (analysis == null || target == null || result == null || result.Records == null || result.Records.Count == 0)
             {
                 return;
@@ -1038,7 +968,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                     continue;
                 }
 
-                PcaExperimentRecord similar = result.Records[neighbor.SourceIndex];
+                TSNEExperimentRecord similar = result.Records[neighbor.SourceIndex];
                 double featureDistance = CalculateStandardizedFeatureDistance(target, similar);
                 double rms = featureCount <= 0 ? 0d : featureDistance / Math.Sqrt(featureCount);
                 builder.AppendLine(string.Format(CultureInfo.InvariantCulture,
@@ -1065,7 +995,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             builder.AppendLine();
         }
 
-        private static void AppendDistanceContributionTable(StringBuilder builder, PcaAnalysisResult analysis, PcaExperimentRecord target, PcaExperimentRecord similar, int maxRows)
+        private static void AppendDistanceContributionTable(StringBuilder builder, TSNEAnalysisResult analysis, TSNEExperimentRecord target, TSNEExperimentRecord similar, int maxRows)
         {
             if (analysis == null || analysis.FeatureNames == null || target == null || similar == null)
             {
@@ -1139,7 +1069,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             public ScatterSampleData MaxSample { get; private set; }
         }
 
-        private static void AppendExcludedReasonSummary(StringBuilder builder, PcaFeatureSelectionReport report)
+        private static void AppendExcludedReasonSummary(StringBuilder builder, TSNEFeatureSelectionReport report)
         {
             builder.AppendLine("Excluded reason summary:");
             var groups = report.Details
@@ -1153,7 +1083,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             }
             else
             {
-                foreach (IGrouping<PcaFeatureSelectionReason, PcaFeatureSelectionDetail> group in groups)
+                foreach (IGrouping<TSNEFeatureSelectionReason, TSNEFeatureSelectionDetail> group in groups)
                 {
                     builder.AppendLine(string.Format(
                         CultureInfo.InvariantCulture,
@@ -1188,13 +1118,13 @@ namespace SKhynix.TAS.UI.Report.Pccb
             builder.AppendLine();
         }
 
-        private static void AppendExcludedFeatureSamples(StringBuilder builder, PcaFeatureSelectionReport report, int maxCount)
+        private static void AppendExcludedFeatureSamples(StringBuilder builder, TSNEFeatureSelectionReport report, int maxCount)
         {
             int safeMaxCount = maxCount <= 0 ? int.MaxValue : maxCount;
             builder.AppendLine(safeMaxCount == int.MaxValue
                 ? "Excluded feature samples (all):"
                 : string.Format(CultureInfo.InvariantCulture, "Excluded feature samples (max {0}):", safeMaxCount));
-            PcaFeatureSelectionDetail[] details = report.Details
+            TSNEFeatureSelectionDetail[] details = report.Details
                 .Where(detail => !detail.Included)
                 .OrderByDescending(detail => detail.MissingCount)
                 .ThenByDescending(detail => detail.NonNumericCount)
@@ -1207,7 +1137,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 return;
             }
 
-            foreach (PcaFeatureSelectionDetail detail in details)
+            foreach (TSNEFeatureSelectionDetail detail in details)
             {
                 builder.AppendLine(string.Format(
                     CultureInfo.InvariantCulture,
@@ -1222,12 +1152,12 @@ namespace SKhynix.TAS.UI.Report.Pccb
             }
         }
 
-        private static void AppendFeatureDetailTable(StringBuilder builder, string title, IEnumerable<PcaFeatureSelectionDetail> details)
+        private static void AppendFeatureDetailTable(StringBuilder builder, string title, IEnumerable<TSNEFeatureSelectionDetail> details)
         {
             builder.AppendLine();
             builder.AppendLine(title + ":");
             builder.AppendLine("FeatureName\tIncluded\tReason\tPresent\tNumeric\tMissing\tNonNumeric\tMean\tStdDev\tVariance\tMin\tMax\tSampleDraftNo");
-            foreach (PcaFeatureSelectionDetail detail in (details ?? Enumerable.Empty<PcaFeatureSelectionDetail>())
+            foreach (TSNEFeatureSelectionDetail detail in (details ?? Enumerable.Empty<TSNEFeatureSelectionDetail>())
                 .OrderBy(detail => detail.FeatureName, StringComparer.OrdinalIgnoreCase))
             {
                 builder.AppendLine(string.Format(
@@ -1249,14 +1179,14 @@ namespace SKhynix.TAS.UI.Report.Pccb
             }
         }
 
-        private void PcaChart_SampleClicked(object sender, TSNESampleClickedEventArgs e)
+        private void TSNEChart_SampleClicked(object sender, TSNESampleClickedEventArgs e)
         {
             if (e.Sample == null)
             {
                 return;
             }
 
-            PcaExperimentRecord target = e.Sample.UserData as PcaExperimentRecord;
+            TSNEExperimentRecord target = e.Sample.UserData as TSNEExperimentRecord;
             if (target == null && e.Sample.SourceIndex >= 0 && e.Sample.SourceIndex < currentRecords.Count)
             {
                 target = currentRecords[e.Sample.SourceIndex];
@@ -1268,11 +1198,11 @@ namespace SKhynix.TAS.UI.Report.Pccb
             }
 
             draftNoTextBox.Text = target.DraftNo;
-            pcaChart.HighlightDraft(target.DraftNo);
+            tsneChart.HighlightDraft(target.DraftNo);
             BindNearestNeighborTable(CreateNearestNeighborTable(target, e.Neighbors));
         }
 
-        private void PcaChart_AnalysisCompleted(object sender, TSNEAnalysisCompletedEventArgs e)
+        private void TSNEChart_AnalysisCompleted(object sender, TSNEAnalysisCompletedEventArgs e)
         {
             analysisResult = e.AnalysisResult;
             currentSamples = analysisResult == null || analysisResult.ScatterData == null
@@ -1280,7 +1210,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 : analysisResult.ScatterData.ToList();
         }
 
-        private void PcaChart_AnalysisFailed(object sender, TSNEAnalysisFailedEventArgs e)
+        private void TSNEChart_AnalysisFailed(object sender, TSNEAnalysisFailedEventArgs e)
         {
             summaryLabel.Text = e.Exception == null
                 ? "Operation message."
@@ -1299,11 +1229,11 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
         private void UpdateSelectedNeighborHighlight()
         {
-            if (pcaChart == null || nearestNeighborGrid.SelectedRows.Count == 0)
+            if (tsneChart == null || nearestNeighborGrid.SelectedRows.Count == 0)
             {
-                if (pcaChart != null)
+                if (tsneChart != null)
                 {
-                    pcaChart.ClearSelectedDraftHighlight();
+                    tsneChart.ClearSelectedDraftHighlight();
                 }
 
                 return;
@@ -1312,11 +1242,11 @@ namespace SKhynix.TAS.UI.Report.Pccb
             string draftNo = ResolveSelectedNeighborDraftNo();
             if (string.IsNullOrWhiteSpace(draftNo))
             {
-                pcaChart.ClearSelectedDraftHighlight();
+                tsneChart.ClearSelectedDraftHighlight();
                 return;
             }
 
-            pcaChart.HighlightSelectedDraft(draftNo);
+            tsneChart.HighlightSelectedDraft(draftNo);
         }
 
         private string ResolveSelectedNeighborDraftNo()
@@ -1350,16 +1280,16 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 exception == null ? title : exception.Message,
                 title,
                 MessageBoxButtons.OK,
-                exception is KeyNotFoundException || exception is PcaExperimentDataMissingException
+                exception is KeyNotFoundException || exception is TSNEExperimentDataMissingException
                     ? MessageBoxIcon.Warning
                     : MessageBoxIcon.Error);
         }
 
-        private PcaParameterType GetSelectedParameterType()
+        private TSNEParameterType GetSelectedParameterType()
         {
             return defectRadioButton.Checked
-                ? PcaParameterType.Defect
-                : PcaParameterType.Response;
+                ? TSNEParameterType.Defect
+                : TSNEParameterType.Response;
         }
 
         private void SetToolbarEnabled(bool enabled)
@@ -1480,33 +1410,33 @@ namespace SKhynix.TAS.UI.Report.Pccb
             // Intentionally disabled.
         }
 
-        private PcaScatterOptions CreateChartOptions()
+        private TSNEScatterOptions CreateChartOptions()
         {
-            PcaScatterOptions options = PcaScatterOptions.CreateDefault600x400();
+            TSNEScatterOptions options = TSNEScatterOptions.CreateDefault600x400();
             options.Analysis.ProjectionMethod = projectionMethod;
-            options.Analysis.TsnePerplexity = TsnePerplexity;
-            options.Analysis.TsneIterations = TsneIterations;
-            options.Analysis.TsneLearningRate = TsneLearningRate;
-            options.Analysis.TsneRandomSeed = TsneRandomSeed;
+            options.Analysis.TSNEPerplexity = TSNEPerplexity;
+            options.Analysis.TSNEIterations = TSNEIterations;
+            options.Analysis.TSNELearningRate = TSNELearningRate;
+            options.Analysis.TSNERandomSeed = TSNERandomSeed;
             options.Analysis.MinimumNumericFeatureCoverageRatio =
                 ConvertCoveragePercentToRatio(MinimumNumericCoveragePercent);
-            options.Series.PassColor = projectionMethod == DimensionalityReductionMethod.Tsne
+            options.Series.PassColor = projectionMethod == DimensionalityReductionMethod.TSNE
                 ? Color.FromArgb(30, 64, 175)
                 : Color.Red;
-            options.Series.ReviewColor = projectionMethod == DimensionalityReductionMethod.Tsne
+            options.Series.ReviewColor = projectionMethod == DimensionalityReductionMethod.TSNE
                 ? Color.FromArgb(217, 119, 6)
                 : Color.Green;
             options.Series.UsePaletteColors = true;
             options.Series.ColorTransparencyPercent = 20f;
-            options.Series.ColorAlpha = PcaScatterSeriesOptions.ResolveAlphaFromTransparencyPercent(options.Series.ColorTransparencyPercent, options.Series.ColorAlpha);
+            options.Series.ColorAlpha = TSNEScatterSeriesOptions.ResolveAlphaFromTransparencyPercent(options.Series.ColorTransparencyPercent, options.Series.ColorAlpha);
             options.Series.ApplyBorderTransparency = false;
             options.Series.BorderTransparencyPercent = 0f;
             options.Series.NaSeriesName = string.Empty;
             options.Series.NaSeriesColor = Color.Empty;
             options.Series.SeriesOrder = new[] { "Pass", "Review", "FAIL" };
-            options.Series.PastelPalette = PcaScatterSeriesOptions.CreateCompanySeriesPalette();
-            options.Series.BorderPalette = PcaScatterSeriesOptions.CreateCompanySeriesBorderPalette();
-            if (projectionMethod == DimensionalityReductionMethod.Tsne)
+            options.Series.PastelPalette = TSNEScatterSeriesOptions.CreateCompanySeriesPalette();
+            options.Series.BorderPalette = TSNEScatterSeriesOptions.CreateCompanySeriesBorderPalette();
+            if (projectionMethod == DimensionalityReductionMethod.TSNE)
             {
                 options.Series.SeriesColors["Pass"] = Color.FromArgb(30, 64, 175);
                 options.Series.SeriesColors["Review"] = Color.FromArgb(217, 119, 6);
@@ -1523,15 +1453,15 @@ namespace SKhynix.TAS.UI.Report.Pccb
             options.Series.SelectedPointBorderWidth = 2.8f;
             options.Display.FontName = "Segoe UI";
             options.Display.ShowTitle = true;
-            options.Display.Title = projectionMethod == DimensionalityReductionMethod.Tsne
+            options.Display.Title = projectionMethod == DimensionalityReductionMethod.TSNE
                 ? "t-SNE Distribution Chart"
-                : "PCA Distribution Chart";
+                : "TSNE Distribution Chart";
             options.Display.TitleColor = Color.Black;
             options.Display.BackgroundColor = Color.White;
             options.Display.GraphBackgroundColor = Color.FromArgb(230, 230, 230);
             options.Display.ThemeMode = LightningScatterThemeMode.DarkGray;
-            options.Display.XAxisTitle = projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE 1" : string.Empty;
-            options.Display.YAxisTitle = projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE 2" : string.Empty;
+            options.Display.XAxisTitle = projectionMethod == DimensionalityReductionMethod.TSNE ? "t-SNE 1" : string.Empty;
+            options.Display.YAxisTitle = projectionMethod == DimensionalityReductionMethod.TSNE ? "t-SNE 2" : string.Empty;
             options.Display.MajorDivCount = 8;
             options.Display.AxisLabelFormat = "0.##";
             options.Display.GridLinesVisible = true;
@@ -1544,7 +1474,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             options.Legend.TransparentBackground = true;
             options.Tooltip.Enabled = true;
             options.Tooltip.HitPixelTolerance = 14;
-            options.Tooltip.Format = projectionMethod == DimensionalityReductionMethod.Tsne
+            options.Tooltip.Format = projectionMethod == DimensionalityReductionMethod.TSNE
                 ? "{5}\r\nt-SNE 1:{1:0.###}, t-SNE 2:{2:0.###}"
                 : "{5}\r\nX1:{1:0.###}, X2:{2:0.###}";
             options.NoData.Text = GetProjectionDisplayName() + "Operation message.";
@@ -1559,7 +1489,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
         private string GetProjectionDisplayName()
         {
-            return projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE" : "PCA";
+            return projectionMethod == DimensionalityReductionMethod.TSNE ? "t-SNE" : "TSNE";
         }
 
         private void ApplyProjectionUiText()
@@ -1569,9 +1499,9 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 titleLabel.Text = GetProjectionDisplayName() + " Scatter";
             }
 
-            Text = projectionMethod == DimensionalityReductionMethod.Tsne
+            Text = projectionMethod == DimensionalityReductionMethod.TSNE
                 ? "Manual t-SNE Scatter"
-                : "Manual PCA Scatter";
+                : "Manual TSNE Scatter";
         }
 
         private static float NormalizePointSize(float value, float defaultValue)
@@ -1623,7 +1553,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             return Math.Min(1d, Math.Max(0d, value));
         }
 
-        private void UpdateSummary(PcaExadataAnalysisResult result, string sourceDescription)
+        private void UpdateSummary(TSNEExadataAnalysisResult result, string sourceDescription)
         {
             if (result == null || result.AnalysisResult == null)
             {
@@ -1631,8 +1561,8 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 return;
             }
 
-            PcaAnalysisDiagnosticReport diagnostic = result.Diagnostic
-                ?? PcaAnalysisDiagnosticReport.Create(
+            TSNEAnalysisDiagnosticReport diagnostic = result.Diagnostic
+                ?? TSNEAnalysisDiagnosticReport.Create(
                     result.AnalysisResult,
                     result.Records == null ? 0 : result.Records.Count,
                     result.MissingExperimentCount);
@@ -1640,7 +1570,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 CultureInfo.InvariantCulture,
                 "{0} | TYPE={1} SRC={2}",
                 diagnostic.CompactText,
-                PcaParameterTypeParser.ToDatabaseValue(result.ParameterType),
+                TSNEParameterTypeParser.ToDatabaseValue(result.ParameterType),
                 sourceDescription);
         }
 
@@ -1663,14 +1593,14 @@ namespace SKhynix.TAS.UI.Report.Pccb
             UpdateSelectedNeighborHighlight();
         }
 
-        private DataTable CreateNearestNeighborTable(PcaExperimentRecord target, IEnumerable<KnnNeighbor> neighbors)
+        private DataTable CreateNearestNeighborTable(TSNEExperimentRecord target, IEnumerable<KnnNeighbor> neighbors)
         {
             DataTable table = new DataTable();
             table.Columns.Add("DRAFT_NO", typeof(string));
             table.Columns.Add("PARAM_TYP", typeof(string));
             table.Columns.Add("LABEL(Y)", typeof(string));
-            table.Columns.Add(projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE 1" : "X1", typeof(string));
-            table.Columns.Add(projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE 2" : "X2", typeof(string));
+            table.Columns.Add(projectionMethod == DimensionalityReductionMethod.TSNE ? "t-SNE 1" : "X1", typeof(string));
+            table.Columns.Add(projectionMethod == DimensionalityReductionMethod.TSNE ? "t-SNE 2" : "X2", typeof(string));
             table.Columns.Add("Rank", typeof(string));
             table.Columns.Add("Target_Draft", typeof(string));
             table.Columns.Add("Distance", typeof(string));
@@ -1690,7 +1620,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                     continue;
                 }
 
-                PcaExperimentRecord similar = currentRecords[neighbor.SourceIndex];
+                TSNEExperimentRecord similar = currentRecords[neighbor.SourceIndex];
                 AddNearestNeighborRow(table, similar, displayRank, target.DraftNo, neighbor.Distance);
                 displayRank++;
             }
@@ -1698,7 +1628,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             return table;
         }
 
-        private IEnumerable<KnnNeighbor> ResolveLabeledNearestNeighbors(PcaExperimentRecord target, IEnumerable<KnnNeighbor> neighbors, int desiredCount)
+        private IEnumerable<KnnNeighbor> ResolveLabeledNearestNeighbors(TSNEExperimentRecord target, IEnumerable<KnnNeighbor> neighbors, int desiredCount)
         {
             int safeDesiredCount = Math.Max(1, desiredCount);
             if (target != null && exadataAnalysis != null)
@@ -1751,9 +1681,9 @@ namespace SKhynix.TAS.UI.Report.Pccb
         {
             try
             {
-                return pcaChart == null || pcaChart.Options == null || pcaChart.Options.Analysis == null
+                return tsneChart == null || tsneChart.Options == null || tsneChart.Options.Analysis == null
                     ? 3
-                    : Math.Max(1, pcaChart.Options.Analysis.NeighborCount);
+                    : Math.Max(1, tsneChart.Options.Analysis.NeighborCount);
             }
             catch
             {
@@ -1761,14 +1691,14 @@ namespace SKhynix.TAS.UI.Report.Pccb
             }
         }
 
-        private void AddNearestNeighborRow(DataTable table, PcaExperimentRecord record, int rank, string targetDraftNo, double distance)
+        private void AddNearestNeighborRow(DataTable table, TSNEExperimentRecord record, int rank, string targetDraftNo, double distance)
         {
             DataRow row = table.NewRow();
             row["DRAFT_NO"] = record.DraftNo;
-            row["PARAM_TYP"] = PcaParameterTypeParser.ToDatabaseValue(record.ParameterType);
+            row["PARAM_TYP"] = TSNEParameterTypeParser.ToDatabaseValue(record.ParameterType);
             row["LABEL(Y)"] = FormatGridText(record.LabelY);
-            string xColumn = projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE 1" : "X1";
-            string yColumn = projectionMethod == DimensionalityReductionMethod.Tsne ? "t-SNE 2" : "X2";
+            string xColumn = projectionMethod == DimensionalityReductionMethod.TSNE ? "t-SNE 1" : "X1";
+            string yColumn = projectionMethod == DimensionalityReductionMethod.TSNE ? "t-SNE 2" : "X2";
             row[xColumn] = FormatGridNumber(record.X1);
             row[yColumn] = FormatGridNumber(record.X2);
             row["Rank"] = rank <= 0 ? "-" : rank.ToString(CultureInfo.InvariantCulture);
@@ -1779,9 +1709,9 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
         private bool TryQueryDraftFromCurrentAnalysis(
             string draftNo,
-            PcaParameterType parameterType,
-            PcaScatterOptions chartOptions,
-            out PcaExperimentRecord target,
+            TSNEParameterType parameterType,
+            TSNEScatterOptions chartOptions,
+            out TSNEExperimentRecord target,
             out IList<KnnNeighbor> neighbors)
         {
             target = null;
@@ -1790,7 +1720,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 || exadataAnalysis.AnalysisResult == null
                 || exadataAnalysis.ParameterType != parameterType
                 || currentRecords == null
-                || pcaChart == null)
+                || tsneChart == null)
             {
                 return false;
             }
@@ -1815,12 +1745,12 @@ namespace SKhynix.TAS.UI.Report.Pccb
             return string.IsNullOrWhiteSpace(value) ? "-" : value.Trim();
         }
 
-        private static bool HasEngineeringResultLabel(PcaExperimentRecord record)
+        private static bool HasEngineeringResultLabel(TSNEExperimentRecord record)
         {
             return record != null && !string.IsNullOrWhiteSpace(record.LabelY);
         }
 
-        private static double CalculateStandardizedFeatureDistance(PcaExperimentRecord left, PcaExperimentRecord right)
+        private static double CalculateStandardizedFeatureDistance(TSNEExperimentRecord left, TSNEExperimentRecord right)
         {
             if (left == null || right == null)
             {
@@ -1846,5 +1776,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         }
     }
 }
+
+
 
 

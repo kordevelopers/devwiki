@@ -7,7 +7,7 @@ using System.IO;
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
     /// <summary>
-    /// Converts caller-supplied CONV_EXPER_CTN service results into PCA source rows.
+    /// Converts caller-supplied CONV_EXPER_CTN service results into TSNE source rows.
     /// DB access is intentionally outside this class. The UI or service layer should
     /// call the company data service and pass the completed DataTable here.
     /// </summary>
@@ -34,12 +34,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 
-    public interface IPcaExadataRowRepository
+    public interface ITSNEExadataRowRepository
     {
-        IList<PcaExadataSourceRow> LoadAll();
+        IList<TSNEExadataSourceRow> LoadAll();
     }
 
-    public sealed class ConvExperimentRepository : IPcaExadataRowRepository
+    public sealed class ConvExperimentRepository : ITSNEExadataRowRepository
     {
         private readonly ConvExperimentQueryOptions options;
         private DataTable sourceTable;
@@ -70,17 +70,17 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             sourceTable = table;
         }
 
-        public IList<PcaExadataSourceRow> LoadAll()
+        public IList<TSNEExadataSourceRow> LoadAll()
         {
             return LoadFromDataTable(sourceTable, options);
         }
 
-        public static IList<PcaExadataSourceRow> LoadFromDataTable(DataTable table)
+        public static IList<TSNEExadataSourceRow> LoadFromDataTable(DataTable table)
         {
             return LoadFromDataTable(table, ConvExperimentQueryOptions.FromConfiguration());
         }
 
-        public static IList<PcaExadataSourceRow> LoadFromDataTable(DataTable table, ConvExperimentQueryOptions options)
+        public static IList<TSNEExadataSourceRow> LoadFromDataTable(DataTable table, ConvExperimentQueryOptions options)
         {
             if (table == null)
             {
@@ -105,7 +105,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 "AI_RSLT_VAL",
                 "AI_RSLT_Val");
 
-            var rows = new List<PcaExadataSourceRow>();
+            var rows = new List<TSNEExadataSourceRow>();
             for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
             {
                 DataRow dataRow = table.Rows[rowIndex];
@@ -124,8 +124,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     ? string.Empty
                     : ReadOptionalText(dataRow, aiResultColumn);
 
-                PcaParameterType parameterType;
-                if (!PcaParameterTypeParser.TryParse(parameterTypeText, out parameterType))
+                TSNEParameterType parameterType;
+                if (!TSNEParameterTypeParser.TryParse(parameterTypeText, out parameterType))
                 {
                     throw new InvalidOperationException(
                         string.Format(
@@ -135,7 +135,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                             parameterTypeText));
                 }
 
-                rows.Add(new PcaExadataSourceRow(
+                rows.Add(new TSNEExadataSourceRow(
                     rowIndex,
                     draftNo,
                     parameterType,
@@ -147,7 +147,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             if (rows.Count == 0)
             {
                 throw new InvalidOperationException(
-                    "The CONV_EXPER_CTN DataTable contains no rows for PCA analysis.");
+                    "The CONV_EXPER_CTN DataTable contains no rows for TSNE analysis.");
             }
 
             return rows;
@@ -290,6 +290,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 }
+
+
 
 
 

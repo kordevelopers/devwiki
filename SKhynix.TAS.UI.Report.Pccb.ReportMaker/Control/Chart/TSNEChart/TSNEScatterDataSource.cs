@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
-    public enum PcaScatterDataSourceKind
+    public enum TSNEScatterDataSourceKind
     {
         JsonSamples,
         ActDataJsonDocuments,
@@ -13,12 +13,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         AnalysisResult
     }
 
-    public sealed class PcaScatterDataSource
+    public sealed class TSNEScatterDataSource
     {
         private readonly IList<string> documents;
-        private readonly PcaAnalysisResult analysisResult;
+        private readonly TSNEAnalysisResult analysisResult;
 
-        private PcaScatterDataSource(PcaScatterDataSourceKind kind, IEnumerable<string> documents, PcaAnalysisResult analysisResult)
+        private TSNEScatterDataSource(TSNEScatterDataSourceKind kind, IEnumerable<string> documents, TSNEAnalysisResult analysisResult)
         {
             Kind = kind;
             this.documents = documents == null
@@ -27,58 +27,58 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             this.analysisResult = analysisResult;
         }
 
-        public PcaScatterDataSourceKind Kind { get; private set; }
+        public TSNEScatterDataSourceKind Kind { get; private set; }
 
-        public static PcaScatterDataSource FromJsonSamples(IEnumerable<string> jsonSamples)
+        public static TSNEScatterDataSource FromJsonSamples(IEnumerable<string> jsonSamples)
         {
-            return new PcaScatterDataSource(PcaScatterDataSourceKind.JsonSamples, jsonSamples, null);
+            return new TSNEScatterDataSource(TSNEScatterDataSourceKind.JsonSamples, jsonSamples, null);
         }
 
-        public static PcaScatterDataSource FromActDataJson(IEnumerable<string> actDataDocuments)
+        public static TSNEScatterDataSource FromActDataJson(IEnumerable<string> actDataDocuments)
         {
-            return new PcaScatterDataSource(PcaScatterDataSourceKind.ActDataJsonDocuments, actDataDocuments, null);
+            return new TSNEScatterDataSource(TSNEScatterDataSourceKind.ActDataJsonDocuments, actDataDocuments, null);
         }
 
-        public static PcaScatterDataSource FromActDataJson(string actDataDocument)
+        public static TSNEScatterDataSource FromActDataJson(string actDataDocument)
         {
             return FromActDataJson(new[] { actDataDocument });
         }
 
-        public static PcaScatterDataSource FromConvExperimentJson(IEnumerable<string> convExperimentDocuments)
+        public static TSNEScatterDataSource FromConvExperimentJson(IEnumerable<string> convExperimentDocuments)
         {
-            return new PcaScatterDataSource(
-                PcaScatterDataSourceKind.ConvExperimentJsonDocuments,
+            return new TSNEScatterDataSource(
+                TSNEScatterDataSourceKind.ConvExperimentJsonDocuments,
                 convExperimentDocuments,
                 null);
         }
 
-        public static PcaScatterDataSource FromAnalysisResult(PcaAnalysisResult analysisResult)
+        public static TSNEScatterDataSource FromAnalysisResult(TSNEAnalysisResult analysisResult)
         {
             if (analysisResult == null)
             {
                 throw new ArgumentNullException("analysisResult");
             }
 
-            return new PcaScatterDataSource(PcaScatterDataSourceKind.AnalysisResult, null, analysisResult);
+            return new TSNEScatterDataSource(TSNEScatterDataSourceKind.AnalysisResult, null, analysisResult);
         }
 
-        public PcaAnalysisResult Analyze(PcaScatterAnalysisOptions analysisOptions)
+        public TSNEAnalysisResult Analyze(TSNEScatterAnalysisOptions analysisOptions)
         {
-            if (Kind == PcaScatterDataSourceKind.AnalysisResult)
+            if (Kind == TSNEScatterDataSourceKind.AnalysisResult)
             {
                 return analysisResult;
             }
 
-            PcaAnalysisOptions pipelineOptions = (analysisOptions ?? new PcaScatterAnalysisOptions()).ToPipelineOptions();
-            // This assembly is intentionally t-SNE-only; callers cannot switch the projection back to PCA.
-            pipelineOptions.ProjectionMethod = DimensionalityReductionMethod.Tsne;
-            PcaAnalysisPipeline pipeline = new PcaAnalysisPipeline(pipelineOptions);
-            if (Kind == PcaScatterDataSourceKind.ActDataJsonDocuments)
+            TSNEAnalysisOptions pipelineOptions = (analysisOptions ?? new TSNEScatterAnalysisOptions()).ToPipelineOptions();
+            // This assembly is intentionally t-SNE-only; callers cannot switch the projection back to TSNE.
+            pipelineOptions.ProjectionMethod = DimensionalityReductionMethod.TSNE;
+            TSNEAnalysisPipeline pipeline = new TSNEAnalysisPipeline(pipelineOptions);
+            if (Kind == TSNEScatterDataSourceKind.ActDataJsonDocuments)
             {
                 return pipeline.AnalyzeActDataDocuments(documents);
             }
 
-            if (Kind == PcaScatterDataSourceKind.ConvExperimentJsonDocuments)
+            if (Kind == TSNEScatterDataSourceKind.ConvExperimentJsonDocuments)
             {
                 return pipeline.AnalyzeConvExperimentDocuments(documents);
             }
@@ -87,16 +87,16 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 
-    public sealed class PcaScatterExadataOptions
+    public sealed class TSNEScatterExadataOptions
     {
-        public PcaScatterExadataOptions()
+        public TSNEScatterExadataOptions()
         {
             JsonColumnName = "CONV_EXPER_CTN";
             DraftNoColumnName = "DRAFT_NO";
             ParameterTypeColumnName = "PARAM_TYP";
             AiResultColumnName = "AI_RSLT_VAL";
             LabelColumnName = "ENGR_RSLT_VAL";
-            ParameterType = PcaParameterType.Response;
+            ParameterType = TSNEParameterType.Response;
         }
 
         public DataTable SourceTable { get; set; }
@@ -105,25 +105,25 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public string ParameterTypeColumnName { get; set; }
         public string AiResultColumnName { get; set; }
         public string LabelColumnName { get; set; }
-        public PcaParameterType ParameterType { get; set; }
+        public TSNEParameterType ParameterType { get; set; }
 
-        public static PcaScatterExadataOptions CreateDefault()
+        public static TSNEScatterExadataOptions CreateDefault()
         {
             ConvExperimentQueryOptions configured = ConvExperimentQueryOptions.FromConfiguration();
-            return new PcaScatterExadataOptions
+            return new TSNEScatterExadataOptions
             {
                 JsonColumnName = configured.JsonColumnName,
                 DraftNoColumnName = configured.DraftNoColumnName,
                 ParameterTypeColumnName = configured.ParameterTypeColumnName,
                 AiResultColumnName = configured.AiResultColumnName,
                 LabelColumnName = configured.LabelColumnName,
-                ParameterType = PcaParameterType.Response
+                ParameterType = TSNEParameterType.Response
             };
         }
 
-        public static PcaScatterExadataOptions FromDataTable(DataTable sourceTable)
+        public static TSNEScatterExadataOptions FromDataTable(DataTable sourceTable)
         {
-            return new PcaScatterExadataOptions
+            return new TSNEScatterExadataOptions
             {
                 SourceTable = sourceTable
             };
@@ -152,9 +152,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 
-    public sealed class PcaScatterDatabaseOptions
+    public sealed class TSNEScatterDatabaseOptions
     {
-        public PcaScatterDatabaseOptions()
+        public TSNEScatterDatabaseOptions()
         {
             ActDataColumnName = "ACT_DATA";
         }
@@ -162,14 +162,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public DataTable SourceTable { get; set; }
         public string ActDataColumnName { get; set; }
 
-        public static PcaScatterDatabaseOptions CreateDefault()
+        public static TSNEScatterDatabaseOptions CreateDefault()
         {
-            return new PcaScatterDatabaseOptions();
+            return new TSNEScatterDatabaseOptions();
         }
 
-        public static PcaScatterDatabaseOptions FromDataTable(DataTable sourceTable)
+        public static TSNEScatterDatabaseOptions FromDataTable(DataTable sourceTable)
         {
-            return new PcaScatterDatabaseOptions
+            return new TSNEScatterDatabaseOptions
             {
                 SourceTable = sourceTable
             };
@@ -186,6 +186,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 }
+
+
 
 
 
