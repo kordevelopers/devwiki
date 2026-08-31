@@ -314,18 +314,6 @@ namespace SKhynix.TAS.UI.Report.Pccb
             await RefreshAllAsync();
         }
 
-        private async void SampleDataButton_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                await LoadSampleDataAsync();
-            }
-            catch (Exception ex)
-            {
-                ShowOperationError(ex, "Operation message.");
-            }
-        }
-
         private void AnalysisLogButton_Click(object sender, EventArgs e)
         {
             OpenLatestAnalysisLog();
@@ -457,30 +445,6 @@ namespace SKhynix.TAS.UI.Report.Pccb
             }
 
             return await LoadPopupDatabaseSnapshotAsync();
-        }
-
-        private async Task LoadSampleDataAsync()
-        {
-            SetToolbarEnabled(false);
-            ShowBusyOverlay("Operation message.");
-            try
-            {
-                await Task.Delay(50);
-                DataTable sampleTable = await Task.Run(delegate
-                {
-                    return new TSNEExadataSampleDataFactory(20260629).CreateDefaultDataTable();
-                });
-
-                await LoadConvExperimentDataTableAsync(sampleTable);
-                responseRadioButton.Checked = true;
-                draftNoTextBox.Text = "SAMPLE-R-001";
-                preferMemoryCheckBox.Checked = true;
-                await DrawLoadedDataAsync();
-            }
-            finally
-            {
-                SetToolbarEnabled(true);
-            }
         }
 
         private async Task RefreshAllAsync()
@@ -1301,7 +1265,6 @@ namespace SKhynix.TAS.UI.Report.Pccb
             searchButton.Enabled = enabled;
             drawChartButton.Enabled = enabled && HasRenderableDataSource();
             refreshAllButton.Enabled = enabled && showRefreshAllButton;
-            sampleDataButton.Enabled = enabled;
             preferMemoryCheckBox.Enabled = enabled && showPreferMemoryOption;
             summaryLabel.Enabled = enabled && showAnalysisSummaryText;
             nearestNeighborGrid.Enabled = enabled;

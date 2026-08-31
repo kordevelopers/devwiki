@@ -45,7 +45,6 @@ namespace SKhynix.TAS.UI.Report.Pccb
             this.searchButton = new System.Windows.Forms.Button();
             this.drawChartButton = new System.Windows.Forms.Button();
             this.refreshAllButton = new System.Windows.Forms.Button();
-            this.sampleDataButton = new System.Windows.Forms.Button();
             this.analysisLogButton = new System.Windows.Forms.Button();
             this.preferMemoryCheckBox = new System.Windows.Forms.CheckBox();
             this.chartHost = new System.Windows.Forms.Panel();
@@ -129,7 +128,6 @@ namespace SKhynix.TAS.UI.Report.Pccb
             this.commandPanel.Controls.Add(this.searchButton);
             this.commandPanel.Controls.Add(this.drawChartButton);
             this.commandPanel.Controls.Add(this.refreshAllButton);
-            this.commandPanel.Controls.Add(this.sampleDataButton);
             this.commandPanel.Controls.Add(this.analysisLogButton);
             this.commandPanel.Controls.Add(this.preferMemoryCheckBox);
             this.commandPanel.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -228,17 +226,6 @@ namespace SKhynix.TAS.UI.Report.Pccb
             this.refreshAllButton.UseVisualStyleBackColor = true;
             this.refreshAllButton.Click += new System.EventHandler(this.RefreshAllButton_Click);
             // 
-            // sampleDataButton
-            // 
-            this.sampleDataButton.Location = new System.Drawing.Point(828, 1);
-            this.sampleDataButton.Margin = new System.Windows.Forms.Padding(0, 1, 8, 1);
-            this.sampleDataButton.Name = "sampleDataButton";
-            this.sampleDataButton.Size = new System.Drawing.Size(104, 28);
-            this.sampleDataButton.TabIndex = 8;
-            this.sampleDataButton.Text = "Operation message.";
-            this.sampleDataButton.UseVisualStyleBackColor = true;
-            this.sampleDataButton.Click += new System.EventHandler(this.SampleDataButton_Click);
-            // 
             // analysisLogButton
             // 
             this.analysisLogButton.Location = new System.Drawing.Point(940, 1);
@@ -328,7 +315,6 @@ namespace SKhynix.TAS.UI.Report.Pccb
         private System.Windows.Forms.Button searchButton;
         private System.Windows.Forms.Button drawChartButton;
         private System.Windows.Forms.Button refreshAllButton;
-        private System.Windows.Forms.Button sampleDataButton;
         private System.Windows.Forms.Button analysisLogButton;
         private System.Windows.Forms.CheckBox preferMemoryCheckBox;
         private System.Windows.Forms.Panel chartHost;
