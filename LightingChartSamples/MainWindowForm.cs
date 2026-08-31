@@ -4,7 +4,6 @@ using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
 using LightingChartSamples.Scatter;
-using LightingChartSamples.Scatter.ManualPcaScatter;
 
 namespace LightingChartSamples
 {
@@ -19,7 +18,6 @@ namespace LightingChartSamples
             AddBarChartImageExportSampleButton();
             AddLightningScatterSampleButton();
             AddPcaScatterSampleButton();
-            AddScatterMainButton();
         }
 
         private void btnTextDocument_Click(object sender, EventArgs e)
@@ -102,14 +100,6 @@ namespace LightingChartSamples
         private void btnPcaScatterSample_Click(object sender, EventArgs e)
         {
             using (var form = new PcaScatterSampleForm())
-            {
-                form.ShowDialog(this);
-            }
-        }
-
-        private void btnScatterMain_Click(object sender, EventArgs e)
-        {
-            using (var form = new ManualPcaScatterMain())
             {
                 form.ShowDialog(this);
             }
@@ -257,30 +247,6 @@ namespace LightingChartSamples
             btnClose.Location = new Point(392, 655);
             btnClose.TabIndex = 11;
             ClientSize = new Size(520, 704);
-        }
-
-        private void AddScatterMainButton()
-        {
-            var button = new Button
-            {
-                BackColor = Color.FromArgb(70, 142, 154),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("맑은 고딕", 10F, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = new Point(32, 654),
-                Name = "btnScatterMain",
-                Size = new Size(456, 46),
-                TabIndex = 11,
-                Text = "Manual PCA Scatter 열기",
-                UseVisualStyleBackColor = false
-            };
-
-            button.Click += btnScatterMain_Click;
-            pnlContainer.Controls.Add(button);
-
-            btnClose.Location = new Point(392, 713);
-            btnClose.TabIndex = 12;
-            ClientSize = new Size(520, 762);
         }
 
     }

@@ -134,29 +134,6 @@
     <Compile Include="Scatter\Samples\PcaScatterSampleForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Scatter\ManualPcaScatter\ActDataJsonParser.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\ActDataRepository.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\ConvExperimentRepository.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\PcaExadataService.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\PcaScatterPopupDataProvider.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\PcaAnalysisPipeline.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\PcaExadataSampleDataFactory.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\PcaJsonUtility.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\PcaScatterChart.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\PcaScatterDataSource.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\PcaScatterOptions.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\PcaScatterSeriesBuilder.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\TsneProjectionModel.cs" />
-    <Compile Include="Scatter\ManualPcaScatter\ManualPcaScatterMain.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Scatter\ManualPcaScatter\ManualTsneScatterMain.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Scatter\ManualPcaScatter\ManualPcaScatterMain.Designer.cs">
-      <DependentUpon>ManualPcaScatterMain.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Scatter\ManualPcaScatter\ScatterSampleData.cs" />
     <Compile Include="TabbedLayoutSampleForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -197,9 +174,6 @@
     <EmbeddedResource Include="LightningRadarSample.resx">
       <DependentUpon>LightningRadarSample.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Scatter\ManualPcaScatter\ManualPcaScatterMain.resx">
-      <DependentUpon>ManualPcaScatterMain.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -213,7 +187,6 @@
       <DependentUpon>TextDocument.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="packages.config" />
-    <None Include="Scatter\ManualPcaScatter\README_ManualTsneScatter.md" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
