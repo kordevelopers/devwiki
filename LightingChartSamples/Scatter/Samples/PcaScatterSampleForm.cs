@@ -82,10 +82,10 @@ namespace LightingChartSamples.Scatter
             scatterChart.PointClicked += ScatterChart_PointClicked;
         }
 
-        #region Legacy Demo PCA - Not Used by ManualPcaScatterMain
+        #region Legacy Demo PCA - Not Used by the current application host
 
         // 중요: 이 영역은 기존 2변수 데모 전용 구현이다.
-        // 현재 시작 Form인 ManualPcaScatterMain에서는 호출하지 않는다.
+        // This legacy sample is not invoked by the current application host.
         // 약 80개 특징, StandardScaler, 상수 컬럼 제거, KNN 요구사항을 충족하지 않으므로
         // 운영용 PCA 알고리즘으로 재사용하면 안 된다.
 

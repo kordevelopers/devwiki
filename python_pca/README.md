@@ -25,7 +25,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup_python.ps1
 ```
 
 실행하면 `outputs/pca_points.csv`, `outputs/knn_neighbors.csv`, `outputs/pca_scatter.png`가 저장되고 PCA 차트 창이 표시됩니다.
-또한 기존 C# `ManualPcaScatter` 흐름과 맞춰 feature 선별 감사, 생존 population, 진단 JSON도 함께 저장합니다.
+또한 Pccb t-SNE 화면에서 사용하는 feature 선별 감사, 생존 population, 진단 JSON 형식과 맞춰 함께 저장합니다.
 차트 창 없이 파일만 저장하려면 `--no-show-chart`를 추가합니다.
 
 ```powershell
@@ -64,9 +64,9 @@ EXE는 실행 파일 옆의 `.env`와 `queries\*.sql`을 읽습니다.
 - 선택된 `DRAFT_NO`는 별표로 강조합니다.
 - 차트 창에서 포인트를 클릭하면 표준화 feature 공간의 유클리드 거리 기준 최근접 3개 포인트가 노란색으로 강조됩니다.
 
-## ManualPcaScatter 호환 출력
+## Pccb 호환 출력
 
-Python 실행 결과는 C# `ManualPcaScatter`의 핵심 데이터 흐름을 따릅니다.
+Python 실행 결과는 Pccb 화면의 핵심 데이터 흐름을 따릅니다.
 
 - `outputs/pca_points.csv`: `DRAFT_NO`, `PARAM_TYP`, `LABEL_Y`, `RSLT_CD`, `X1`, `X2`
 - `outputs/knn_neighbors.csv`: 선택 Draft 기준 최근접 Draft 3건

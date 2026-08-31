@@ -96,5 +96,5 @@ The `Virtual Data` button is only a sample data path.
 
 ## Manual PCA Location
 
-The manual PCA implementation is separated under `Scatter/ManualPcaScatter`.
+The current t-SNE implementation is separated into the `SKhynix.TAS.UI.Report.Pccb` and `SKhynix.TAS.UI.Report.Pccb.ReportMaker` projects.
 It is not required when copying the Accord.NET-only module.
