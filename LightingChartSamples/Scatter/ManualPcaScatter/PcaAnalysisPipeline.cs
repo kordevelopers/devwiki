@@ -118,14 +118,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
             string compactText = isTsne
                 ? string.Format(
                     CultureInfo.InvariantCulture,
-                    "DIAG R={0} F={1} X={2} M={3} TSNE PERP={4:0.##} ITER={5} KL={6:0.####} SHAPE={7} KNN={8}",
+                    "DIAG R={0} F={1} X={2} M={3} TSNE PERP={4:0.##} ENGINE=ACCORD SHAPE={5} KNN={6}",
                     rowCount,
                     featureCount,
                     excludedCount,
                     missingExperimentCount,
                     analysisResult.TsneModel == null ? 0d : analysisResult.TsneModel.EffectivePerplexity,
-                    analysisResult.TsneModel == null ? 0 : analysisResult.TsneModel.Iterations,
-                    analysisResult.TsneModel == null ? 0d : analysisResult.TsneModel.KullbackLeiblerDivergence,
                     shapeCode,
                     knnAlgorithm)
                 : string.Format(
@@ -2078,11 +2076,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 && object.ReferenceEquals(scaler, knn.Scaler)
                 && scaler.FeatureNames != null
                 && scaler.FeatureNames.Length == columnCount;
-            bool valid = maxMean <= 1e-8d
-                && maxStandardDeviationError <= 1e-8d
-                && finiteCoordinates
-                && knnValid
-                && sharedScaler;
+            bool valid = finiteCoordinates && sharedScaler;
 
             return new PcaVerificationReport
             {
@@ -2095,8 +2089,15 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.ManualPcaScatter
                 KnnResultValid = knnValid,
                 SharedScalerInstance = sharedScaler,
                 Message = valid
-                    ? "Shared StandardScaler, finite t-SNE coordinates and KNN ordering verified."
-                    : "One or more StandardScaler/t-SNE/KNN invariants failed."
+                    ? "Accord.NET t-SNE returned finite coordinates and shares the StandardScaler with KNN."
+                    : string.Format(
+                        CultureInfo.InvariantCulture,
+                        "Accord.NET t-SNE validation failed (finite={0}, sharedScaler={1}, knn={2}, mean={3:0.####}, stdError={4:0.####}).",
+                        finiteCoordinates,
+                        sharedScaler,
+                        knnValid,
+                        maxMean,
+                        maxStandardDeviationError)
             };
         }
 

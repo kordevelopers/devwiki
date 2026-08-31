@@ -26,12 +26,12 @@ using (var form = new ManualTsneScatterMain())
 
 ## 구현 기준
 
-- Accord.NET을 포함한 외부 차원축소 라이브러리를 사용하지 않습니다.
+- Accord.NET 3.8 `Accord.MachineLearning.Clustering.TSNE`의 Barnes-Hut 구현을 사용합니다.
 - 고차원 입력은 기존과 동일하게 feature 선별과 `StandardScaler` 처리를 거칩니다.
-- t-SNE는 perplexity 기반 고차원 Gaussian 유사도와 2차원 Student-t 유사도를 사용합니다.
-- 기본값은 perplexity `30`, 반복 `750`, learning rate `200`, seed `20260831`입니다.
+- t-SNE의 perplexity와 Barnes-Hut theta를 Accord.NET 모델에 전달합니다(perplexity 기본값 `30`, theta `0.5`).
+- 반복 횟수·learning rate·seed는 Accord.NET 3.8 구현의 내부 기본값을 따릅니다.
 - 데이터가 적으면 perplexity를 `(rowCount - 1) / 3` 이하로 자동 보정합니다.
-- 초기 seed가 고정되어 동일 입력과 동일 옵션은 동일 좌표를 생성합니다.
+- 초기화 seed는 Accord.NET 3.8 내부 동작을 따르므로 실행마다 좌표 방향·스케일이 달라질 수 있습니다.
 - 전체 표준화 feature 공간을 사용하는 기존 KNN 엔진과 scaler 공유 구조를 그대로 유지합니다.
 - 화면의 Draft 조회·최근접 표시 방식도 기존 `ManualPcaScatterMain` 동작을 그대로 따릅니다.
 
