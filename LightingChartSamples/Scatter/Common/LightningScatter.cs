@@ -6,7 +6,6 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using WinFormsControl = global::System.Windows.Forms.Control;
 using Arction.WinForms.Charting;
 using Arction.WinForms.Charting.Annotations;
 using Arction.WinForms.Charting.Axes;
@@ -713,7 +712,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             get { return GetLastSavedImage(); }
         }
 
-        public static LightningScatter Create(WinFormsControl parent, IEnumerable<LightningScatterSeries> newSeries, LightningScatterOptions scatterOptions)
+        public static LightningScatter Create(Control parent, IEnumerable<LightningScatterSeries> newSeries, LightningScatterOptions scatterOptions)
         {
             LightningScatter scatter = new LightningScatter();
             if (scatterOptions != null)
@@ -732,7 +731,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             return scatter;
         }
 
-        public static LightningScatter Create(WinFormsControl parent, IEnumerable<LightningScatterPoint> points, LightningScatterOptions scatterOptions)
+        public static LightningScatter Create(Control parent, IEnumerable<LightningScatterPoint> points, LightningScatterOptions scatterOptions)
         {
             return Create(parent, new[]
             {
@@ -1323,7 +1322,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             CenterLegendItems();
         }
 
-        private WinFormsControl CreateLegendItem(
+        private Control CreateLegendItem(
             LightningScatterSeries sourceSeries,
             int seriesIndex,
             string legendLabel,
@@ -1382,7 +1381,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
             return itemPanel;
         }
 
-        private void AttachLegendItemClick(WinFormsControl control, LightningScatterSeries sourceSeries, int seriesIndex, string legendLabel)
+        private void AttachLegendItemClick(Control control, LightningScatterSeries sourceSeries, int seriesIndex, string legendLabel)
         {
             control.Click += delegate
             {
@@ -1394,7 +1393,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Chart.PCAChart.Common
         {
             while (legendItemsPanel.Controls.Count > 0)
             {
-                WinFormsControl control = legendItemsPanel.Controls[0];
+                Control control = legendItemsPanel.Controls[0];
                 legendItemsPanel.Controls.RemoveAt(0);
                 control.Dispose();
             }
