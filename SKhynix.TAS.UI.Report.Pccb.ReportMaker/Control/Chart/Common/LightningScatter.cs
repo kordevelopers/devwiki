@@ -6,7 +6,7 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using WinFormsControl = System.Windows.Forms.Control;
+using WinFormsControl = global::System.Windows.Forms.Control;
 using Arction.WinForms.Charting;
 using Arction.WinForms.Charting.Annotations;
 using Arction.WinForms.Charting.Axes;

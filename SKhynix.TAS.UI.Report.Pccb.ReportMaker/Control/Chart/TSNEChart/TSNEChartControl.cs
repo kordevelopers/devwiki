@@ -9,7 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using WinFormsControl = System.Windows.Forms.Control;
+using WinFormsControl = global::System.Windows.Forms.Control;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.Common;
