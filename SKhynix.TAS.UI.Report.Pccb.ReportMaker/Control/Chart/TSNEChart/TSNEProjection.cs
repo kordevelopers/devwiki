@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Accord.MachineLearning.Clustering;
+using Accord.Math.Random;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.Common;
@@ -119,19 +120,32 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
     /// <summary>Accord.NET 3.8 Barnes-Hut t-SNE adapter.</summary>
     public sealed class TSNEProjectionModel
     {
+        private const double SklearnPerplexityCap = 30d;
+        private const double SklearnPerplexityMinimum = 5d;
+        private const int AccordDefaultIterations = 1000;
+        private const double AccordDefaultLearningRate = 200d;
+
+        // Accord.NET keeps its random generator in process-wide state. Serialize
+        // seeded runs so two concurrent chart refreshes cannot change each other.
+        private static readonly object AccordRandomSync = new object();
         private readonly double[][] coordinates;
 
-        private TSNEProjectionModel(double[][] coordinates, double effectivePerplexity)
+        private TSNEProjectionModel(double[][] coordinates, double effectivePerplexity, int randomSeed)
         {
             this.coordinates = CloneMatrix(coordinates);
             EffectivePerplexity = effectivePerplexity;
+            // Accord.NET 3.8 does not expose these as configurable TSNE properties.
+            // These values describe the effective engine settings, not unused caller hints.
+            Iterations = AccordDefaultIterations;
+            LearningRate = AccordDefaultLearningRate;
+            RandomSeed = randomSeed;
         }
 
         public double[][] Coordinates { get { return CloneMatrix(coordinates); } }
         public double EffectivePerplexity { get; private set; }
-        public int Iterations { get { return 0; } }
-        public double LearningRate { get { return 0d; } }
-        public int RandomSeed { get { return 0; } }
+        public int Iterations { get; private set; }
+        public double LearningRate { get; private set; }
+        public int RandomSeed { get; private set; }
         public double KullbackLeiblerDivergence { get { return double.NaN; } }
         public string EngineName { get { return "Accord.NET TSNE (Barnes-Hut)"; } }
 
@@ -139,15 +153,65 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         {
             ValidateMatrix(standardizedMatrix);
             int rowCount = standardizedMatrix.Length;
-            double effectivePerplexity = Math.Max(1d, Math.Min(perplexity, Math.Max(1d, (rowCount - 1d) / 3d - 1e-6d)));
+            double effectivePerplexity = ResolveEffectivePerplexity(rowCount, perplexity);
             var model = new TSNE
             {
                 Perplexity = effectivePerplexity,
                 Theta = 0.5d,
                 NumberOfOutputs = 2
             };
-            double[][] transformed = model.Transform(standardizedMatrix, CreateMatrix(rowCount, 2));
-            return new TSNEProjectionModel(transformed, effectivePerplexity);
+
+            double[][] transformed;
+            lock (AccordRandomSync)
+            {
+                int? previousSeed = Generator.Seed;
+                int? previousThreadSeed = Generator.ThreadSeed;
+                try
+                {
+                    if (randomSeed >= 0)
+                    {
+                        // Apply the requested random_state seed to the Accord engine.
+                        Generator.Seed = randomSeed;
+                        Generator.ThreadSeed = randomSeed;
+                    }
+
+                    // Accord.NET 3.8 internally uses max_iter=1000 and eta=200. It
+                    // initializes the low-dimensional map randomly; its public API
+                    // has no init='pca' or learning_rate='auto' hook. The engine
+                    // normalizes its input in place, so pass a copy and keep the
+                    // original StandardScaler output unchanged for Euclidean KNN.
+                    transformed = model.Transform(CloneMatrix(standardizedMatrix), CreateMatrix(rowCount, 2));
+                }
+                finally
+                {
+                    if (randomSeed >= 0)
+                    {
+                        Generator.ThreadSeed = previousThreadSeed;
+                        Generator.Seed = previousSeed;
+                    }
+                }
+            }
+
+            return new TSNEProjectionModel(transformed, effectivePerplexity, randomSeed);
+        }
+
+        private static double ResolveEffectivePerplexity(int rowCount, double requestedPerplexity)
+        {
+            // Match the Python reference expression:
+            // min(30, max(5, n_samples - 1) // 3).
+            // Math.Floor is the integer (//) operation used by Python.
+            double sampleBound = Math.Floor(Math.Max(SklearnPerplexityMinimum, rowCount - 1d) / 3d);
+            double accordBound = Math.Floor((rowCount - 1d) / 3d);
+            double maximum = Math.Min(SklearnPerplexityCap, Math.Min(sampleBound, accordBound));
+            if (maximum < 1d)
+            {
+                throw new ArgumentException("Accord.NET t-SNE requires at least four samples for the configured perplexity rule.", "standardizedMatrix");
+            }
+
+            double requested = double.IsNaN(requestedPerplexity) || double.IsInfinity(requestedPerplexity)
+                ? SklearnPerplexityCap
+                : requestedPerplexity;
+            return Math.Max(1d, Math.Min(requested, maximum));
         }
 
         private static double[][] CreateMatrix(int rowCount, int columnCount)

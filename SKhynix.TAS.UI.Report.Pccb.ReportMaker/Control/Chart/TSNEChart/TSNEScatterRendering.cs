@@ -242,15 +242,20 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             MinimumNumericFeatureCoverageRatio = 0.90d;
             MeanImputationEnabled = true;
             ComponentCount = 2;
-            MaxIterations = 2000;
+            MaxIterations = 1000;
             ConvergenceTolerance = 1e-10d;
-            NeighborCount = 3;
+            // Keep the nearest-neighbor query aligned with the sklearn reference implementation.
+            NeighborCount = 15;
             KnnSearchAlgorithm = KnnSearchAlgorithm.Auto;
             ProjectionMethod = DimensionalityReductionMethod.TSNE;
+            // This is the sklearn perplexity cap. The effective value is resolved
+            // per input size using min(30, max(5, n_samples - 1) // 3).
             TSNEPerplexity = 30d;
-            TSNEIterations = 750;
+            TSNEIterations = 1000;
+            // Accord.NET 3.8 uses its built-in eta=200; the public API has no
+            // learning_rate='auto' property.
             TSNELearningRate = 200d;
-            TSNERandomSeed = 20260831;
+            TSNERandomSeed = 42;
         }
 
         public double ConstantVarianceThreshold { get; set; }

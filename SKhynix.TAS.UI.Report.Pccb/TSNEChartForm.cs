@@ -52,10 +52,12 @@ namespace SKhynix.TAS.UI.Report.Pccb
             SeriesPointSize = 7f;
             HighlightPointSize = 0f;
             SelectedPointSize = 0f;
+            // The effective perplexity is resolved from the input row count.
             TSNEPerplexity = 30d;
-            TSNEIterations = 750;
+            TSNEIterations = 1000;
+            // Accord.NET 3.8 uses its built-in learning rate (eta=200).
             TSNELearningRate = 200d;
-            TSNERandomSeed = 20260831;
+            TSNERandomSeed = 42;
             currentSamples = new List<TSNEPointData>();
             currentRecords = new List<TSNEExperimentRecord>();
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
