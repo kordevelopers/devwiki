@@ -7,10 +7,12 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Accord.MachineLearning.Clustering;
-using Accord.Math.Random;
+using Accord.Statistics.Analysis;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.Common;
@@ -120,14 +122,18 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
     /// <summary>Accord.NET 3.8 Barnes-Hut t-SNE adapter.</summary>
     public sealed class TSNEProjectionModel
     {
+        private const int OutputDimensionCount = 2;
+        private const double BarnesHutTheta = 0.5d;
+        private const float SklearnPcaInitialScale = 1e-4f;
         private const double SklearnPerplexityCap = 30d;
         private const double SklearnPerplexityMinimum = 5d;
         private const int AccordDefaultIterations = 1000;
         private const double AccordDefaultLearningRate = 200d;
 
-        // Accord.NET keeps its random generator in process-wide state. Serialize
-        // seeded runs so two concurrent chart refreshes cannot change each other.
-        private static readonly object AccordRandomSync = new object();
+        // Accord.NET 3.8 exposes random initialization through Transform only.
+        // This version-pinned internal overload keeps Accord's optimizer while
+        // preserving the PCA coordinates supplied by this adapter.
+        private static readonly MethodInfo AccordPcaInitializedRunMethod = ResolveAccordPcaInitializedRunMethod();
         private readonly double[][] coordinates;
 
         private TSNEProjectionModel(double[][] coordinates, double effectivePerplexity, int randomSeed)
@@ -154,48 +160,226 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             ValidateMatrix(standardizedMatrix);
             int rowCount = standardizedMatrix.Length;
             double effectivePerplexity = ResolveEffectivePerplexity(rowCount, perplexity);
-            var model = new TSNE
-            {
-                Perplexity = effectivePerplexity,
-                Theta = 0.5d,
-                NumberOfOutputs = 2
-            };
+            ValidateFixedAccordSettings(iterations, learningRate);
 
-            double[][] transformed;
-            lock (AccordRandomSync)
-            {
-                int? previousSeed = Generator.Seed;
-                int? previousThreadSeed = Generator.ThreadSeed;
-                try
-                {
-                    if (randomSeed >= 0)
-                    {
-                        // Apply the requested random_state seed to the Accord engine.
-                        Generator.Seed = randomSeed;
-                        Generator.ThreadSeed = randomSeed;
-                    }
+            // sklearn init='pca' uses two PCA scores, fixes each component sign
+            // from its loadings, casts to float32, and scales both columns so the
+            // population standard deviation of PC1 is 1e-4.
+            double[][] pcaInitialization = CreateSklearnPcaInitialization(standardizedMatrix);
+            double[][] orientationReference = CloneMatrix(pcaInitialization);
 
-                    // Accord.NET 3.8 internally uses max_iter=1000 and eta=200. It
-                    // initializes the low-dimensional map randomly; its public API
-                    // has no init='pca' or learning_rate='auto' hook. The engine
-                    // normalizes its input in place, so pass a copy and keep the
-                    // original StandardScaler output unchanged for Euclidean KNN.
-                    transformed = model.Transform(CloneMatrix(standardizedMatrix), CreateMatrix(rowCount, 2));
-                    // Align the horizontal orientation with the Python reference
-                    // chart. Reflection does not change t-SNE distances or clusters.
-                    ReflectXAxis(transformed);
-                }
-                finally
+            // Accord normalizes X in place and writes the optimized embedding into
+            // Y. Pass an X copy so the StandardScaler output used by KNN is intact.
+            RunAccordWithPcaInitialization(
+                CloneMatrix(standardizedMatrix),
+                pcaInitialization,
+                effectivePerplexity);
+
+            // t-SNE distances are invariant under reflection. Resolve that free
+            // sign per data set against the canonical PCA initialization instead
+            // of applying a hard-coded X-axis reflection.
+            AlignAxisSignsToPca(pcaInitialization, orientationReference);
+
+            return new TSNEProjectionModel(pcaInitialization, effectivePerplexity, randomSeed);
+        }
+
+        private static double[][] CreateSklearnPcaInitialization(double[][] standardizedMatrix)
+        {
+            var pca = new PrincipalComponentAnalysis(
+                PrincipalComponentMethod.Center,
+                false,
+                OutputDimensionCount);
+
+            double[][] pcaInput = CloneMatrix(standardizedMatrix);
+            pca.Learn(pcaInput, null);
+            double[][] scores = pca.Transform(
+                standardizedMatrix,
+                CreateMatrix(standardizedMatrix.Length, OutputDimensionCount));
+
+            ApplySklearnComponentSigns(scores, pca.ComponentVectors);
+            QuantizeToSinglePrecision(scores);
+
+            float firstComponentDeviation = (float)GetPopulationStandardDeviation(scores, 0);
+            if (firstComponentDeviation <= 0f
+                || float.IsNaN(firstComponentDeviation)
+                || float.IsInfinity(firstComponentDeviation))
+            {
+                throw new InvalidOperationException("PCA initialization requires a non-zero first component variance.");
+            }
+
+            float scale = SklearnPcaInitialScale / firstComponentDeviation;
+            for (int row = 0; row < scores.Length; row++)
+            {
+                for (int component = 0; component < OutputDimensionCount; component++)
                 {
-                    if (randomSeed >= 0)
-                    {
-                        Generator.ThreadSeed = previousThreadSeed;
-                        Generator.Seed = previousSeed;
-                    }
+                    scores[row][component] = (double)((float)scores[row][component] * scale);
                 }
             }
 
-            return new TSNEProjectionModel(transformed, effectivePerplexity, randomSeed);
+            return scores;
+        }
+
+        private static void ApplySklearnComponentSigns(double[][] scores, double[][] componentVectors)
+        {
+            if (componentVectors == null || componentVectors.Length < OutputDimensionCount)
+            {
+                throw new InvalidOperationException("Accord.NET PCA did not return the two component vectors required by t-SNE.");
+            }
+
+            for (int component = 0; component < OutputDimensionCount; component++)
+            {
+                double[] loadings = componentVectors[component];
+                if (loadings == null || loadings.Length == 0)
+                {
+                    throw new InvalidOperationException("Accord.NET PCA returned an empty component vector.");
+                }
+
+                int maximumIndex = 0;
+                double maximumMagnitude = Math.Abs(loadings[0]);
+                for (int feature = 1; feature < loadings.Length; feature++)
+                {
+                    double magnitude = Math.Abs(loadings[feature]);
+                    if (magnitude > maximumMagnitude)
+                    {
+                        maximumMagnitude = magnitude;
+                        maximumIndex = feature;
+                    }
+                }
+
+                if (loadings[maximumIndex] < 0d)
+                {
+                    for (int row = 0; row < scores.Length; row++)
+                    {
+                        scores[row][component] = -scores[row][component];
+                    }
+                }
+            }
+        }
+
+        private static void QuantizeToSinglePrecision(double[][] matrix)
+        {
+            for (int row = 0; row < matrix.Length; row++)
+            {
+                for (int column = 0; column < matrix[row].Length; column++)
+                {
+                    matrix[row][column] = (double)(float)matrix[row][column];
+                }
+            }
+        }
+
+        private static double GetPopulationStandardDeviation(double[][] matrix, int column)
+        {
+            double mean = 0d;
+            for (int row = 0; row < matrix.Length; row++)
+            {
+                mean += matrix[row][column];
+            }
+
+            mean /= matrix.Length;
+            double squaredDeviation = 0d;
+            for (int row = 0; row < matrix.Length; row++)
+            {
+                double difference = matrix[row][column] - mean;
+                squaredDeviation += difference * difference;
+            }
+
+            return Math.Sqrt(squaredDeviation / matrix.Length);
+        }
+
+        private static void RunAccordWithPcaInitialization(
+            double[][] input,
+            double[][] initializedCoordinates,
+            double perplexity)
+        {
+            if (AccordPcaInitializedRunMethod == null)
+            {
+                throw new NotSupportedException(
+                    "The installed Accord.NET version does not provide the PCA-initialized t-SNE execution path required by this component.");
+            }
+
+            try
+            {
+                AccordPcaInitializedRunMethod.Invoke(
+                    null,
+                    new object[] { input, initializedCoordinates, perplexity, BarnesHutTheta, true });
+            }
+            catch (TargetInvocationException ex)
+            {
+                if (ex.InnerException != null)
+                {
+                    ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                }
+
+                throw;
+            }
+        }
+
+        private static MethodInfo ResolveAccordPcaInitializedRunMethod()
+        {
+            return typeof(TSNE).GetMethod(
+                "run",
+                BindingFlags.Static | BindingFlags.NonPublic,
+                null,
+                new[]
+                {
+                    typeof(double[][]),
+                    typeof(double[][]),
+                    typeof(double),
+                    typeof(double),
+                    typeof(bool)
+                },
+                null);
+        }
+
+        private static void AlignAxisSignsToPca(double[][] coordinates, double[][] pcaReference)
+        {
+            for (int component = 0; component < OutputDimensionCount; component++)
+            {
+                double coordinateMean = 0d;
+                double referenceMean = 0d;
+                for (int row = 0; row < coordinates.Length; row++)
+                {
+                    coordinateMean += coordinates[row][component];
+                    referenceMean += pcaReference[row][component];
+                }
+
+                coordinateMean /= coordinates.Length;
+                referenceMean /= pcaReference.Length;
+
+                double covariance = 0d;
+                for (int row = 0; row < coordinates.Length; row++)
+                {
+                    covariance += (coordinates[row][component] - coordinateMean)
+                        * (pcaReference[row][component] - referenceMean);
+                }
+
+                if (covariance < 0d)
+                {
+                    for (int row = 0; row < coordinates.Length; row++)
+                    {
+                        coordinates[row][component] = -coordinates[row][component];
+                    }
+                }
+            }
+        }
+
+        private static void ValidateFixedAccordSettings(int iterations, double learningRate)
+        {
+            if (iterations != AccordDefaultIterations)
+            {
+                throw new ArgumentOutOfRangeException(
+                    "iterations",
+                    "Accord.NET 3.8 fixes the t-SNE maximum iteration count at 1000.");
+            }
+
+            if (double.IsNaN(learningRate)
+                || double.IsInfinity(learningRate)
+                || Math.Abs(learningRate - AccordDefaultLearningRate) > 1e-12d)
+            {
+                throw new ArgumentOutOfRangeException(
+                    "learningRate",
+                    "Accord.NET 3.8 fixes the Barnes-Hut learning rate at 200.");
+            }
         }
 
         private static double ResolveEffectivePerplexity(int rowCount, double requestedPerplexity)
@@ -204,33 +388,20 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             // min(30, max(5, n_samples - 1) // 3).
             // Math.Floor is the integer (//) operation used by Python.
             double sampleBound = Math.Floor(Math.Max(SklearnPerplexityMinimum, rowCount - 1d) / 3d);
-            double accordBound = Math.Floor((rowCount - 1d) / 3d);
+            // Accord's neighbor lookup fails when 3 * perplexity is exactly
+            // n_samples - 1, so keep its effective value infinitesimally below
+            // that boundary while retaining the Python value for normal sizes.
+            double accordBound = (rowCount - 1d) / 3d - 1e-6d;
             double maximum = Math.Min(SklearnPerplexityCap, Math.Min(sampleBound, accordBound));
-            if (maximum < 1d)
+            if (maximum <= 0d)
             {
-                throw new ArgumentException("Accord.NET t-SNE requires at least four samples for the configured perplexity rule.", "standardizedMatrix");
+                throw new ArgumentException("Accord.NET t-SNE could not resolve a positive perplexity for the input size.", "standardizedMatrix");
             }
 
             double requested = double.IsNaN(requestedPerplexity) || double.IsInfinity(requestedPerplexity)
                 ? SklearnPerplexityCap
                 : requestedPerplexity;
-            return Math.Max(1d, Math.Min(requested, maximum));
-        }
-
-        private static void ReflectXAxis(double[][] coordinates)
-        {
-            if (coordinates == null)
-            {
-                return;
-            }
-
-            for (int row = 0; row < coordinates.Length; row++)
-            {
-                if (coordinates[row] != null && coordinates[row].Length > 0)
-                {
-                    coordinates[row][0] = -coordinates[row][0];
-                }
-            }
+            return Math.Max(Math.Min(1d, maximum), Math.Min(requested, maximum));
         }
 
         private static double[][] CreateMatrix(int rowCount, int columnCount)
