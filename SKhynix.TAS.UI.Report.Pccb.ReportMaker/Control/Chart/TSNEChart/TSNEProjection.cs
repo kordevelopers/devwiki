@@ -190,6 +190,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             // all use the same visual orientation.
             ReflectHorizontalAxis(pcaInitialization);
             ReflectVerticalAxis(pcaInitialization);
+            // Apply the requested additional horizontal reflection to the final
+            // orientation. This second X reflection cancels the first one.
+            ReflectHorizontalAxis(pcaInitialization);
 
             return new TSNEProjectionModel(pcaInitialization, effectivePerplexity, randomSeed);
         }
