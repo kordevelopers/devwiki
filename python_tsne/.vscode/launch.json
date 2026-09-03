@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run t-SNE from .env",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tsne_runner",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "preLaunchTask": "Setup Python t-SNE",
+      "args": []
+    },
+    {
+      "name": "Run t-SNE from PCCB CSV",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tsne_runner",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "preLaunchTask": "Setup Python t-SNE",
+      "args": ["--source-csv", "C:\\temp\\pccb_export.csv"]
+    }
+  ]
+}

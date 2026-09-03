@@ -1,0 +1,29 @@
+[project]
+name = "hynix-tas-python-tsne"
+version = "0.1.0"
+description = "Oracle/ODBC t-SNE and KNN analysis runner for Hynix TAS."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "matplotlib==3.11.0",
+    "numpy==2.5.0",
+    "oracledb==4.0.1",
+    "pandas==3.0.3",
+    "pyodbc==5.3.0",
+    "python-dotenv==1.2.2",
+    "scikit-learn==1.9.0",
+    "scipy==1.18.0",
+    "SQLAlchemy==2.0.51",
+]
+
+[project.optional-dependencies]
+build = ["pyinstaller==6.21.0"]
+
+[tool.black]
+line-length = 100
+
+[build-system]
+requires = ["setuptools>=70", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

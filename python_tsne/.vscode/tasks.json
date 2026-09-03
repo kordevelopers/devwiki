@@ -1,0 +1,50 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Setup Python t-SNE",
+      "type": "shell",
+      "command": "powershell -ExecutionPolicy Bypass -File .\\scripts\\setup_python.ps1",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run t-SNE from .env",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m tsne_runner",
+      "group": "test",
+      "dependsOn": "Setup Python t-SNE",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test Oracle t-SNE connection",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe .\\scripts\\test_oracle_connection.py --mode oracledb",
+      "dependsOn": "Setup Python t-SNE",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test ODBC t-SNE connection",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe .\\scripts\\test_oracle_connection.py --mode odbc",
+      "dependsOn": "Setup Python t-SNE",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test t-SNE runner",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m unittest discover -s tests -v",
+      "dependsOn": "Setup Python t-SNE",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Build t-SNE EXE",
+      "type": "shell",
+      "command": "powershell -ExecutionPolicy Bypass -File .\\scripts\\build_exe.ps1 -Clean",
+      "dependsOn": "Setup Python t-SNE",
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}
