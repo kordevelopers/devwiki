@@ -184,7 +184,21 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             // of applying a hard-coded X-axis reflection.
             AlignAxisSignsToPca(pcaInitialization, orientationReference);
 
+            // Python's reference chart uses the opposite horizontal orientation
+            // for this otherwise equivalent t-SNE embedding. Apply the reflection
+            // to the shared coordinates so the chart, overlays, and exported model
+            // all use the same visual orientation.
+            ReflectHorizontalAxis(pcaInitialization);
+
             return new TSNEProjectionModel(pcaInitialization, effectivePerplexity, randomSeed);
+        }
+
+        private static void ReflectHorizontalAxis(double[][] coordinates)
+        {
+            for (int row = 0; row < coordinates.Length; row++)
+            {
+                coordinates[row][0] = -coordinates[row][0];
+            }
         }
 
         private static double[][] CreateSklearnPcaInitialization(double[][] standardizedMatrix)
