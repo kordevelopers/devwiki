@@ -189,6 +189,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             // to the shared coordinates so the chart, overlays, and exported model
             // all use the same visual orientation.
             ReflectHorizontalAxis(pcaInitialization);
+            ReflectVerticalAxis(pcaInitialization);
 
             return new TSNEProjectionModel(pcaInitialization, effectivePerplexity, randomSeed);
         }
@@ -198,6 +199,14 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             for (int row = 0; row < coordinates.Length; row++)
             {
                 coordinates[row][0] = -coordinates[row][0];
+            }
+        }
+
+        private static void ReflectVerticalAxis(double[][] coordinates)
+        {
+            for (int row = 0; row < coordinates.Length; row++)
+            {
+                coordinates[row][1] = -coordinates[row][1];
             }
         }
 
