@@ -17,6 +17,18 @@
       "problemMatcher": []
     },
     {
+      "label": "Run t-SNE from PCA database",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m pca_runner.tsne_main --output-dir outputs/tsne",
+      "options": {
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}\\src"
+        }
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
       "label": "Check ODBC drivers",
       "type": "shell",
       "command": "powershell -ExecutionPolicy Bypass -File .\\scripts\\check_odbc_drivers.ps1",

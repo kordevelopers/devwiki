@@ -20,6 +20,44 @@
       "console": "integratedTerminal",
       "preLaunchTask": "Setup Python and packages",
       "args": []
+    },
+    {
+      "name": "Run t-SNE from PCA database",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "module": "pca_runner.tsne_main",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\src"
+      },
+      "args": ["--output-dir", "outputs/tsne"]
+    },
+    {
+      "name": "Run t-SNE from PCCB CSV",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "module": "pca_runner.tsne_main",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}\\src"
+      },
+      "args": [
+        "--source-csv",
+        "${input:pccbTsneCsv}",
+        "--output-dir",
+        "outputs/tsne"
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "pccbTsneCsv",
+      "type": "promptString",
+      "description": "Absolute path to a real PCCB query CSV"
     }
   ]
 }

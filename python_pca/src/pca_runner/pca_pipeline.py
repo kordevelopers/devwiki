@@ -18,6 +18,17 @@ class NeighborRow:
 
 
 @dataclass(frozen=True)
+class PreparedFeatureData:
+    features: list[str]
+    excluded_features: list[str]
+    feature_audit: pd.DataFrame
+    imputed_frame: pd.DataFrame
+    imputed_value_count: int
+    standardized_matrix: np.ndarray
+    scaler: StandardScaler
+
+
+@dataclass(frozen=True)
 class PcaResult:
     points: pd.DataFrame
     features: list[str]
@@ -31,7 +42,11 @@ class PcaResult:
     nearest_neighbors: NearestNeighbors
 
 
-def run_pca(feature_frame: pd.DataFrame, variance_threshold: float = 1e-10) -> PcaResult:
+def prepare_features(
+    feature_frame: pd.DataFrame,
+    variance_threshold: float = 1e-10,
+    analysis_name: str = "PCA",
+) -> PreparedFeatureData:
     metadata_columns = {"DRAFT_NO", "PARAM_TYP", "LABEL_Y", "RSLT_CD"}
     candidates = [column for column in feature_frame.columns if column not in metadata_columns]
     numeric = feature_frame[candidates].apply(pd.to_numeric, errors="coerce")
@@ -39,15 +54,30 @@ def run_pca(feature_frame: pd.DataFrame, variance_threshold: float = 1e-10) -> P
     included_features = audit.loc[audit["Included"], "FeatureName"].astype(str).tolist()
     excluded = audit.loc[~audit["Included"], "FeatureName"].astype(str).tolist()
     numeric = numeric[included_features]
+    imputed_value_count = int(numeric.isna().sum().sum())
 
     imputer = SimpleImputer(strategy="mean")
     imputed = pd.DataFrame(imputer.fit_transform(numeric), columns=numeric.columns)
 
     if imputed.shape[1] < 2:
-        raise ValueError("PCA requires at least 2 numeric features after filtering.")
+        raise ValueError(f"{analysis_name} requires at least 2 numeric features after filtering.")
 
     scaler = StandardScaler()
     standardized = scaler.fit_transform(imputed)
+    return PreparedFeatureData(
+        features=included_features,
+        excluded_features=excluded,
+        feature_audit=audit,
+        imputed_frame=imputed,
+        imputed_value_count=imputed_value_count,
+        standardized_matrix=standardized,
+        scaler=scaler,
+    )
+
+
+def run_pca(feature_frame: pd.DataFrame, variance_threshold: float = 1e-10) -> PcaResult:
+    prepared = prepare_features(feature_frame, variance_threshold)
+    standardized = prepared.standardized_matrix
     pca = PCA(n_components=2, random_state=20260622)
     coordinates = pca.fit_transform(standardized)
 
@@ -74,26 +104,29 @@ def run_pca(feature_frame: pd.DataFrame, variance_threshold: float = 1e-10) -> P
         }
     )
     surviving_population = pd.concat(
-        [points[["DRAFT_NO", "PARAM_TYP", "LABEL_Y", "RSLT_CD", "X1", "X2"]], imputed],
+        [
+            points[["DRAFT_NO", "PARAM_TYP", "LABEL_Y", "RSLT_CD", "X1", "X2"]],
+            prepared.imputed_frame,
+        ],
         axis=1,
     )
     diagnostic = _build_diagnostic(
         row_count=len(feature_frame),
-        included_count=len(included_features),
-        excluded_count=len(excluded),
+        included_count=len(prepared.features),
+        excluded_count=len(prepared.excluded_features),
         pca=pca,
         standardized=standardized,
         neighbor_algorithm=knn_algorithm,
     )
     return PcaResult(
         points=points,
-        features=included_features,
-        excluded_features=excluded,
-        feature_audit=audit,
+        features=prepared.features,
+        excluded_features=prepared.excluded_features,
+        feature_audit=prepared.feature_audit,
         surviving_population=surviving_population,
         diagnostic=diagnostic,
         standardized_matrix=standardized,
-        scaler=scaler,
+        scaler=prepared.scaler,
         pca=pca,
         nearest_neighbors=nn,
     )

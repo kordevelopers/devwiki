@@ -38,7 +38,11 @@ class AppConfig:
     oracle_dsn: str
 
 
-def load_config(mode_override: str | None = None, target_override: str | None = None) -> AppConfig:
+def load_config(
+    mode_override: str | None = None,
+    target_override: str | None = None,
+    resolve_sql: bool = True,
+) -> AppConfig:
     _load_dotenv_files()
     mode = mode_override or os.getenv("PCA_DB_MODE", "sample")
     normalized_mode = mode.strip().lower()
@@ -48,7 +52,11 @@ def load_config(mode_override: str | None = None, target_override: str | None = 
         mode=normalized_mode,
         param_type=os.getenv("PCA_PARAM_TYP", "RESPONSE").strip().upper(),
         target_draft_no=target.strip(),
-        sql=DEFAULT_SQL if normalized_mode == "sample" else _load_sql(sql_file, os.getenv("PCA_SQL", DEFAULT_SQL)),
+        sql=(
+            DEFAULT_SQL
+            if normalized_mode == "sample" or not resolve_sql
+            else _load_sql(sql_file, os.getenv("PCA_SQL", DEFAULT_SQL))
+        ),
         sql_file=sql_file,
         oracle_host=os.getenv("PCA_ORACLE_HOST", "").strip(),
         oracle_port=os.getenv("PCA_ORACLE_PORT", "1521").strip(),

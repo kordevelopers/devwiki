@@ -23,6 +23,8 @@ def save_scatter(
     show_chart: bool = True,
     standardized_matrix: np.ndarray | None = None,
     neighbor_count: int = 3,
+    chart_title: str = "PCA Scatter",
+    projection_name: str = "PCA",
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig, axis = plt.subplots(figsize=(11, 7))
@@ -54,7 +56,7 @@ def save_scatter(
 
     axis.axhline(0, color="#7a7f87", linewidth=0.8, linestyle="--")
     axis.axvline(0, color="#7a7f87", linewidth=0.8, linestyle="--")
-    axis.set_title("PCA Scatter")
+    axis.set_title(chart_title)
     _apply_axis_range_ticks(axis, points)
     axis.grid(True, color="#d8dee9", linewidth=0.7, alpha=0.75)
     axis.legend(loc="best")
@@ -70,7 +72,7 @@ def save_scatter(
     fig.tight_layout()
     fig.savefig(output_path, dpi=150)
     if show_chart:
-        print(f"Opening PCA chart with matplotlib backend: {plt.get_backend()}")
+        print(f"Opening {projection_name} chart with matplotlib backend: {plt.get_backend()}")
         plt.show(block=True)
     else:
         plt.close(fig)

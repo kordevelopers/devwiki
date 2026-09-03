@@ -1,6 +1,6 @@
-# Python PCA Runner
+# Python PCA and t-SNE Runner
 
-VS Code에서 `python_pca` 폴더를 열고 실행하면 PCA/KNN 분석을 수행한 뒤 matplotlib 차트 창을 바로 표시합니다.
+VS Code에서 `python_pca` 폴더를 열면 같은 Python 환경과 PCCB 데이터 조회 기능으로 PCA 또는 t-SNE/KNN 분석을 실행할 수 있습니다.
 
 ## VS Code에서 바로 실행
 
@@ -15,6 +15,31 @@ VS Code에서 `python_pca` 폴더를 열고 실행하면 PCA/KNN 분석을 수�
 - `.venv` 생성
 - `requirements.txt` 패키지 설치
 - 현재 프로젝트를 editable 모드로 설치
+
+## VS Code에서 t-SNE 실행
+
+t-SNE는 별도 프로젝트나 별도 `.venv`를 사용하지 않고 PCA의 실행 환경을 그대로 사용합니다.
+
+1. VS Code에서 `python_pca` 폴더를 엽니다.
+2. PCA가 이미 실행된다면 추가 설치 없이 `Run and Debug > Run t-SNE from PCA database`를 선택합니다.
+3. `F5`를 누르면 기존 `.env`의 `PCA_*` DB 설정과 `queries/exadata_pca.sql`을 사용합니다.
+
+t-SNE 실행 구성은 실행할 때마다 설치 스크립트를 다시 호출하지 않습니다. `.venv`가 아직 없다면 `Terminal > Run Task > Setup Python and packages`를 최초 한 번만 실행합니다.
+
+t-SNE는 운영 실행에서 PCA의 생성 샘플 데이터를 사용하지 않습니다. `.env`의 `PCA_DB_MODE`는 `odbc` 또는 `oracledb`여야 합니다.
+
+```env
+PCA_DB_MODE=oracledb
+PCA_ORACLE_HOST=10.0.0.10
+PCA_ORACLE_PORT=1521
+PCA_ORACLE_SERVICE_NAME=EXADATA_SERVICE
+PCA_ORACLE_USER=your_user
+PCA_ORACLE_PASSWORD=your_password
+PCA_SQL_FILE=queries/exadata_pca.sql
+PCA_PARAM_TYP=RESPONSE
+```
+
+실제 PCCB 조회 결과를 CSV로 내보낸 파일을 사용하려면 `Run t-SNE from PCCB CSV`를 선택하고 표시되는 입력창에 절대 경로를 입력합니다.
 
 ## 터미널 실행
 
@@ -32,7 +57,42 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup_python.ps1
 .\.venv\Scripts\python.exe -m pca_runner --mode sample --no-show-chart
 ```
 
-## EXE 빌드
+t-SNE를 같은 환경에서 직접 실행하려면 다음 명령을 사용합니다.
+
+```powershell
+.\.venv\Scripts\python.exe -m pca_runner.tsne_main `
+  --mode oracledb `
+  --output-dir outputs/tsne
+```
+
+실제 PCCB CSV를 사용하는 경우:
+
+```powershell
+.\.venv\Scripts\python.exe -m pca_runner.tsne_main `
+  --source-csv C:\data\pccb_export.csv `
+  --param-type RESPONSE `
+  --target DRAFT-001 `
+  --output-dir outputs/tsne
+```
+
+t-SNE 결과는 PCA 결과와 섞이지 않도록 `outputs/tsne`에 저장됩니다.
+
+- `tsne_points.csv`
+- `knn_neighbors.csv`
+- `tsne_scatter.png`
+- `feature_selection_audit.csv`
+- `surviving_population.csv`
+- `diagnostic.json`
+
+t-SNE 설정은 `n_components=2`, 동적 perplexity, `max_iter=1000`, `random_state=42`, `init="pca"`, `learning_rate="auto"`를 사용합니다. Feature 선별·결측 처리·표준화는 PCA와 동일한 공용 전처리 함수를 사용하고, 투영 단계만 t-SNE로 변경합니다. KNN은 전체 표준화 feature 공간에서 최대 15개 이웃을 Euclidean 거리로 계산하며, 차트에는 최근접 3개를 표시합니다.
+
+통합 테스트는 다음 명령으로 실행합니다.
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+## PCA EXE 빌드
 
 다른 사람에게 Python 설치 없이 전달하려면 PyInstaller로 one-dir EXE 배포 폴더를 만듭니다.
 
@@ -53,6 +113,7 @@ notepad .env
 ```
 
 EXE는 실행 파일 옆의 `.env`와 `queries\*.sql`을 읽습니다.
+현재 `build_exe.ps1`은 기존 PCA 실행 파일을 빌드합니다. 통합 t-SNE는 VS Code 실행 구성 또는 `python -m pca_runner.tsne_main` 명령으로 실행합니다.
 
 ## 차트 표시
 
@@ -176,7 +237,7 @@ WHERE M.CHG_TM > SYSDATE - 10
   AND M.CONV_EXPER_CTN IS NOT NULL
 ```
 
-`CONV_EXPER_CTN`은 JSON 객체 또는 객체 1개를 담은 JSON 배열이어야 합니다. 중첩 객체/배열은 `A.B`, `A[0]` 형태로 펼친 뒤 숫자 feature만 PCA에 사용합니다.
+`CONV_EXPER_CTN`은 JSON 객체 또는 객체 1개를 담은 JSON 배열이어야 합니다. 중첩 객체/배열은 `A.B`, `A[0]` 형태로 펼친 뒤 숫자 feature만 PCA와 t-SNE에 사용합니다.
 
 ## sklearn t-SNE와 Accord 결과 비교
 
