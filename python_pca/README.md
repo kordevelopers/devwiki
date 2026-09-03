@@ -177,3 +177,30 @@ WHERE M.CHG_TM > SYSDATE - 10
 ```
 
 `CONV_EXPER_CTN`은 JSON 객체 또는 객체 1개를 담은 JSON 배열이어야 합니다. 중첩 객체/배열은 `A.B`, `A[0]` 형태로 펼친 뒤 숫자 feature만 PCA에 사용합니다.
+
+## sklearn t-SNE와 Accord 결과 비교
+
+`scripts/compare_tsne.py`는 샘플 데이터를 생성하지 않으며, 실제 전처리 완료 feature CSV를 입력으로 받습니다. Python 기준 계산은 다음 설정으로 고정됩니다.
+
+- `n_components=2`
+- `perplexity=min(30, max(5, n_samples - 1) // 3)`
+- `max_iter=1000`
+- `random_state=42`
+- `init="pca"`
+- `learning_rate="auto"`
+- `NearestNeighbors(n_neighbors=15, metric="euclidean")`
+
+Accord 좌표 CSV를 함께 전달하면 Python 원본, Accord 원본, 정규화·회전 정렬 후 중첩 결과를 하나의 PNG로 저장합니다. 입력 CSV에는 `DRAFT_NO`와 수치 feature가 필요하며, Accord 좌표 CSV에는 `DRAFT_NO`, `X1`, `X2`가 필요합니다.
+
+```powershell
+.\.venv\Scripts\python.exe .\scripts\compare_tsne.py `
+  --input C:\temp\tsne_surviving_population.csv `
+  --accord-points C:\temp\accord_tsne_points.csv `
+  --output C:\temp\tsne_python_vs_accord.png `
+  --python-points C:\temp\python_tsne_points.csv `
+  --metrics C:\temp\tsne_comparison_metrics.json `
+  --dataset-label "PCCB production export"
+```
+
+비교 PNG와 CSV/JSON은 검증 산출물이므로 `outputs` 폴더에 저장할 수 있으며 Git에는 포함되지 않습니다.
+저장소의 [비교 캡처](../docs/TSNE_Python_Accord_Comparison.png)와 [측정값](../docs/TSNE_Python_Accord_Comparison.json)은 실제 PCCB 데이터가 아닌 기존 40×80 synthetic 검증 데이터를 사용한 결과입니다.

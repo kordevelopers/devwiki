@@ -1,0 +1,19 @@
+{
+  "row_count": 40,
+  "feature_count": 80,
+  "python_perplexity": 13.0,
+  "accord_perplexity": 12.999999,
+  "python_barnes_hut_neighbors": 39,
+  "accord_barnes_hut_neighbors": 38,
+  "sklearn_version": "1.9.0",
+  "python_effective_learning_rate": 50.0,
+  "python_iterations": 949,
+  "python_kl_divergence": 0.13364620506763458,
+  "knn_neighbor_count": 15,
+  "knn_metric": "euclidean",
+  "procrustes_rmse": 0.017932641675590666,
+  "pairwise_distance_correlation": 0.9602987926211106,
+  "neighbor_overlap_15": 0.9466666666666669,
+  "reflection_needed": false,
+  "rotation_degrees": -130.009044585346
+}
