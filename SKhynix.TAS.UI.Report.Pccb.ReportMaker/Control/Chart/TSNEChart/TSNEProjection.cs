@@ -181,6 +181,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     // normalizes its input in place, so pass a copy and keep the
                     // original StandardScaler output unchanged for Euclidean KNN.
                     transformed = model.Transform(CloneMatrix(standardizedMatrix), CreateMatrix(rowCount, 2));
+                    // Align the horizontal orientation with the Python reference
+                    // chart. Reflection does not change t-SNE distances or clusters.
+                    ReflectXAxis(transformed);
                 }
                 finally
                 {
@@ -212,6 +215,22 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 ? SklearnPerplexityCap
                 : requestedPerplexity;
             return Math.Max(1d, Math.Min(requested, maximum));
+        }
+
+        private static void ReflectXAxis(double[][] coordinates)
+        {
+            if (coordinates == null)
+            {
+                return;
+            }
+
+            for (int row = 0; row < coordinates.Length; row++)
+            {
+                if (coordinates[row] != null && coordinates[row].Length > 0)
+                {
+                    coordinates[row][0] = -coordinates[row][0];
+                }
+            }
         }
 
         private static double[][] CreateMatrix(int rowCount, int columnCount)
