@@ -160,7 +160,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             ValidateMatrix(standardizedMatrix);
             int rowCount = standardizedMatrix.Length;
             double effectivePerplexity = ResolveEffectivePerplexity(rowCount, perplexity);
-            ValidateFixedAccordSettings(iterations, learningRate);
+
+            // Keep iterations and learningRate in the public contract for callers
+            // that share chart settings. Accord.NET 3.8 owns the effective values
+            // internally (1000 and 200), so differing caller values must not stop
+            // an otherwise valid analysis.
 
             // sklearn init='pca' uses two PCA scores, fixes each component sign
             // from its loadings, casts to float32, and scales both columns so the
@@ -360,25 +364,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                         coordinates[row][component] = -coordinates[row][component];
                     }
                 }
-            }
-        }
-
-        private static void ValidateFixedAccordSettings(int iterations, double learningRate)
-        {
-            if (iterations != AccordDefaultIterations)
-            {
-                throw new ArgumentOutOfRangeException(
-                    "iterations",
-                    "Accord.NET 3.8 fixes the t-SNE maximum iteration count at 1000.");
-            }
-
-            if (double.IsNaN(learningRate)
-                || double.IsInfinity(learningRate)
-                || Math.Abs(learningRate - AccordDefaultLearningRate) > 1e-12d)
-            {
-                throw new ArgumentOutOfRangeException(
-                    "learningRate",
-                    "Accord.NET 3.8 fixes the Barnes-Hut learning rate at 200.");
             }
         }
 
