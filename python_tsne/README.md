@@ -57,9 +57,12 @@ NearestNeighbors(
 
 ## VS Code에서 실행
 
-1. VS Code에서 `python_tsne` 폴더를 엽니다.
-2. `.env.example`을 `.env`로 복사하고 Oracle 접속 정보를 입력합니다.
-3. `Run and Debug > Run t-SNE from .env`를 실행합니다.
+1. 저장소 루트를 VS Code로 엽니다.
+2. `.env.example`을 `python_tsne/.env`로 복사하고 Oracle 접속 정보를 입력합니다.
+3. 최초 1회 `Terminal > Run Task > Setup Python t-SNE (run once)`를 실행합니다.
+4. `Run and Debug`에서 `Python t-SNE (DB)`를 선택하고 실행합니다. 중단점은 Python 코드에 바로 설정할 수 있습니다.
+
+차트 없이 디버깅하려면 `Python t-SNE (no chart)`를 선택합니다. 디버깅 구성은 실행 때 패키지를 설치하지 않습니다.
 
 처음 실행하면 `Setup Python t-SNE` 작업이 Python 3.12 가상환경과 고정 버전 패키지를 설치합니다. 실행 중 표시되는 프로그램 메시지는 모두 영어입니다.
 

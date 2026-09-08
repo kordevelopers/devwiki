@@ -1,0 +1,28 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python t-SNE (DB)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "tsne_runner",
+            "python": "${workspaceFolder}/python_tsne/.venv/Scripts/python.exe",
+            "cwd": "${workspaceFolder}/python_tsne",
+            "envFile": "${workspaceFolder}/python_tsne/.env",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python t-SNE (no chart)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "tsne_runner",
+            "python": "${workspaceFolder}/python_tsne/.venv/Scripts/python.exe",
+            "cwd": "${workspaceFolder}/python_tsne",
+            "envFile": "${workspaceFolder}/python_tsne/.env",
+            "args": ["--no-show-chart"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
