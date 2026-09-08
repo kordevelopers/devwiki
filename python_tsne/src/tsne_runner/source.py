@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from contextlib import closing
 import json
 import math
 from pathlib import Path
@@ -49,7 +50,7 @@ def normalize_source_columns(frame: pd.DataFrame) -> pd.DataFrame:
 
     selected_columns = ["DRAFT_NO", "PARAM_TYP", "LABEL_Y", "CONV_EXPER_CTN"]
     selected_columns.extend(column for column in OPTIONAL_COLUMNS if column in result.columns)
-    result = result[selected_columns].copy()
+    result = result.loc[:, selected_columns].copy()
     result["DRAFT_NO"] = result["DRAFT_NO"].fillna("").astype(str).str.strip()
     result["PARAM_TYP"] = result["PARAM_TYP"].fillna("").astype(str).str.strip().str.upper()
     result["LABEL_Y"] = result["LABEL_Y"].fillna("").astype(str).str.strip()
@@ -66,7 +67,9 @@ def normalize_source_columns(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_feature_frame(source: pd.DataFrame, param_type: str) -> pd.DataFrame:
-    filtered = source[source["PARAM_TYP"].str.upper() == param_type.upper()].copy()
+    filtered: pd.DataFrame = source.loc[
+        source["PARAM_TYP"].str.upper().eq(param_type.upper()), :
+    ].copy()
     if filtered.empty:
         raise ValueError(f"No rows found for PARAM_TYP '{param_type}'.")
     normalized_draft_numbers = filtered["DRAFT_NO"].astype(str).str.casefold()
@@ -77,7 +80,7 @@ def build_feature_frame(source: pd.DataFrame, param_type: str) -> pd.DataFrame:
 
     records: list[dict[str, Any]] = []
     canonical_feature_names: dict[str, str] = {}
-    for source_index, row in filtered.reset_index(drop=True).iterrows():
+    for source_index, row in enumerate(filtered.to_dict(orient="records")):
         raw_json = row["CONV_EXPER_CTN"]
         if not raw_json:
             continue
@@ -110,7 +113,7 @@ def build_feature_frame(source: pd.DataFrame, param_type: str) -> pd.DataFrame:
         feature_values["DRAFT_NO"] = row["DRAFT_NO"]
         feature_values["PARAM_TYP"] = row["PARAM_TYP"]
         feature_values["LABEL_Y"] = row["LABEL_Y"]
-        if "RSLT_CD" in row.index:
+        if "RSLT_CD" in row:
             feature_values["RSLT_CD"] = row["RSLT_CD"]
         records.append(feature_values)
 
@@ -131,11 +134,18 @@ def _load_with_odbc(config: AppConfig) -> pd.DataFrame:
     import pyodbc
 
     connection_string = _build_odbc_connection_string(config)
-    with pyodbc.connect(connection_string) as connection:
-        cursor = connection.cursor()
-        cursor.execute(config.sql)
-        columns = [description[0] for description in cursor.description]
-        return pd.DataFrame.from_records((tuple(row) for row in cursor.fetchall()), columns=columns)
+    # pyodbc's connection context manages transactions, not connection lifetime.
+    with closing(pyodbc.connect(connection_string)) as connection:
+        with closing(connection.cursor()) as cursor:
+            cursor.execute(config.sql)
+            if cursor.description is None:
+                raise ValueError("The source SQL must return a result set with column names.")
+            columns = [description[0] for description in cursor.description]
+            frame = pd.DataFrame.from_records(
+                (tuple(row) for row in cursor.fetchall()), columns=columns
+            )
+            # Read any LOB values while the connection is still open, as in Oracle mode.
+            return _materialize_lob_values(frame)
 
 
 def _load_with_oracledb(config: AppConfig) -> pd.DataFrame:
@@ -204,8 +214,9 @@ def _build_host_descriptor(config: AppConfig) -> str:
 def _to_json_text(value: object) -> str:
     if _is_scalar_missing(value):
         return ""
-    if hasattr(value, "read") and callable(value.read):
-        value = value.read()
+    reader = getattr(value, "read", None)
+    if callable(reader):
+        value = reader()
     if _is_scalar_missing(value):
         return ""
     if isinstance(value, bytes):

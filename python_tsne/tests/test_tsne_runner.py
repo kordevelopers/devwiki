@@ -162,6 +162,12 @@ class AnalysisTests(unittest.TestCase):
                 "original_data.xlsx",
             }
             self.assertEqual(expected_files, {path.name for path in output_dir.iterdir()})
+            exported_source = pd.read_excel(
+                output_dir / "original_data.xlsx", dtype=str, keep_default_na=False
+            )
+            pd.testing.assert_frame_equal(
+                normalize_source_columns(load_source_csv(source_path)), exported_source
+            )
             diagnostic = json.loads((output_dir / "diagnostic.json").read_text(encoding="utf-8"))
             self.assertEqual("TSNE", diagnostic["ProjectionMethod"])
             self.assertEqual("csv", diagnostic["SourceMode"])

@@ -4,6 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
+import pandas as pd
+
 from .analysis import find_neighbors, run_tsne
 from .chart import save_scatter
 from .config import load_config
@@ -57,8 +59,10 @@ def main() -> int:
         source_mode = config.mode
         source_reference = config.sql_file or "inline SQL"
 
-    source = normalize_source_columns(raw_source)
-    original_data = source[source["PARAM_TYP"] == config.param_type].copy()
+    source: pd.DataFrame = normalize_source_columns(raw_source)
+    original_data: pd.DataFrame = source.loc[
+        source["PARAM_TYP"].eq(config.param_type), :
+    ].copy()
     feature_frame = build_feature_frame(source, config.param_type)
     result = run_tsne(feature_frame)
 
