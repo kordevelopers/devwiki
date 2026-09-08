@@ -7,6 +7,7 @@ from pathlib import Path
 from .analysis import find_neighbors, run_tsne
 from .chart import save_scatter
 from .config import load_config
+from .export import export_original_data
 from .source import (
     SUPPORTED_PARAMETER_TYPES,
     build_feature_frame,
@@ -57,6 +58,7 @@ def main() -> int:
         source_reference = config.sql_file or "inline SQL"
 
     source = normalize_source_columns(raw_source)
+    original_data = source[source["PARAM_TYP"] == config.param_type].copy()
     feature_frame = build_feature_frame(source, config.param_type)
     result = run_tsne(feature_frame)
 
@@ -69,11 +71,13 @@ def main() -> int:
     audit_path = output_dir / "feature_selection_audit.csv"
     population_path = output_dir / "surviving_population.csv"
     diagnostic_path = output_dir / "diagnostic.json"
+    original_xlsx_path = output_dir / "original_data.xlsx"
 
     output_dir.mkdir(parents=True, exist_ok=True)
     result.points.to_csv(points_path, index=False, encoding="utf-8-sig")
     result.feature_audit.to_csv(audit_path, index=False, encoding="utf-8-sig")
     result.surviving_population.to_csv(population_path, index=False, encoding="utf-8-sig")
+    export_original_data(original_data, original_xlsx_path)
     diagnostic = {
         **result.diagnostic,
         "SourceMode": source_mode,
@@ -98,6 +102,8 @@ def main() -> int:
         show_chart=not args.no_show_chart,
         standardized_matrix=result.standardized_matrix,
         neighbor_count=3,
+        original_data=original_data,
+        original_export_path=original_xlsx_path,
     )
 
     print(f"Mode: {source_mode}")
@@ -119,4 +125,5 @@ def main() -> int:
     print(f"Feature audit: {audit_path}")
     print(f"Surviving population: {population_path}")
     print(f"Diagnostic: {diagnostic_path}")
+    print(f"Original Excel: {original_xlsx_path}")
     return 0

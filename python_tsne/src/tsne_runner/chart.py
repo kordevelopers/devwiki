@@ -13,6 +13,8 @@ if not os.environ.get("MPLBACKEND"):
 
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
+from matplotlib.gridspec import GridSpec
+from matplotlib.widgets import Button
 import numpy as np
 import pandas as pd
 
@@ -24,11 +26,17 @@ def save_scatter(
     show_chart: bool = True,
     standardized_matrix: np.ndarray | None = None,
     neighbor_count: int = 3,
+    original_data: pd.DataFrame | None = None,
+    original_export_path: Path | None = None,
 ) -> None:
     if not show_chart:
         plt.switch_backend("Agg")
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    figure, axis = plt.subplots(figsize=(11, 7))
+    figure = plt.figure(figsize=(11, 9))
+    layout = GridSpec(2, 1, figure=figure, height_ratios=(3.8, 1.2), hspace=0.18)
+    axis = figure.add_subplot(layout[0])
+    table_axis = figure.add_subplot(layout[1])
+    table_axis.axis("off")
     points = points.reset_index(drop=True)
 
     palette = {"PASS": "#2a9d8f", "REVIEW": "#e76f51"}
@@ -94,8 +102,33 @@ def save_scatter(
         neighbor_overlay,
         standardized_matrix,
         neighbor_count,
+        table_axis,
     )
-    figure.tight_layout()
+    if show_chart and original_data is not None:
+        button_axis = figure.add_axes((0.78, 0.015, 0.18, 0.04))
+        export_button = Button(button_axis, "Export original Excel")
+
+        def export_from_chart(_event: object) -> None:
+            import tkinter as tk
+            from tkinter import filedialog
+
+            root = tk.Tk()
+            root.withdraw()
+            selected_path = filedialog.asksaveasfilename(
+                title="Export original data",
+                defaultextension=".xlsx",
+                filetypes=[("Excel workbook", "*.xlsx")],
+                initialfile=(original_export_path.name if original_export_path else "original_data.xlsx"),
+            )
+            root.destroy()
+            if selected_path:
+                from .export import export_original_data
+
+                export_original_data(original_data, Path(selected_path))
+                print(f"Original Excel: {selected_path}")
+
+        export_button.on_clicked(export_from_chart)
+    figure.subplots_adjust(bottom=0.08)
     figure.savefig(output_path, dpi=150, facecolor="white")
     if show_chart:
         print(f"Opening t-SNE chart with matplotlib backend: {plt.get_backend()}")
@@ -166,13 +199,13 @@ def _register_click_handler(
     neighbor_overlay: PathCollection,
     standardized_matrix: np.ndarray | None,
     neighbor_count: int,
+    table_axis: plt.Axes,
 ) -> None:
     coordinates = points[["X1", "X2"]].to_numpy(dtype=float)
-    distance_matrix = (
-        standardized_matrix
-        if standardized_matrix is not None and len(standardized_matrix) == len(points)
-        else coordinates
-    )
+    # WinForms uses the rendered X1/X2 coordinates for chart selection.
+    # Keep the click behavior consistent even though the batch KNN CSV uses
+    # the standardized feature space.
+    distance_matrix = coordinates
     annotation = axis.annotate(
         "",
         xy=(0, 0),
@@ -182,6 +215,33 @@ def _register_click_handler(
         fontsize=9,
         visible=False,
     )
+
+    def update_grid(selected_index: int, neighbor_indices: np.ndarray, distances: np.ndarray) -> None:
+        table_axis.clear()
+        table_axis.axis("off")
+        selected = points.iloc[selected_index]
+        rows = [["Selected", selected["DRAFT_NO"], selected["PARAM_TYP"], selected["LABEL_Y"],
+                 f"{selected['X1']:.4f}", f"{selected['X2']:.4f}", "0.0000"]]
+        for rank, (source_index, distance) in enumerate(zip(neighbor_indices, distances), start=1):
+            item = points.iloc[source_index]
+            rows.append([f"Nearest {rank}", item["DRAFT_NO"], item["PARAM_TYP"], item["LABEL_Y"],
+                         f"{item['X1']:.4f}", f"{item['X2']:.4f}", f"{distance:.4f}"])
+        table = table_axis.table(
+            cellText=rows,
+            colLabels=["Relation", "DRAFT_NO", "PARAM_TYP", "LABEL(Y)", "X1", "X2", "Distance"],
+            loc="center", cellLoc="left",
+            colWidths=[0.13, 0.18, 0.13, 0.18, 0.12, 0.12, 0.14],
+        )
+        table.auto_set_font_size(False)
+        table.set_fontsize(8.5)
+        table.scale(1, 1.35)
+        for cell in table.get_celld().values():
+            cell.set_edgecolor("#cbd5e1")
+
+    initial_neighbors, initial_distances = _find_nearest_indices(
+        distance_matrix, 0, max(1, neighbor_count)
+    )
+    update_grid(0, initial_neighbors, initial_distances)
 
     def on_click(event: object) -> None:
         if getattr(event, "inaxes", None) is not axis:
@@ -201,6 +261,7 @@ def _register_click_handler(
         )
         selected_overlay.set_offsets(coordinates[[clicked_index]])
         neighbor_overlay.set_offsets(coordinates[neighbor_indices])
+        update_grid(clicked_index, neighbor_indices, distances)
 
         selected = points.iloc[clicked_index]
         lines = [f"Selected: {selected['DRAFT_NO']}", "Nearest:"]

@@ -10,7 +10,7 @@
 4. 숫자 coverage가 90% 이상이고 분산이 `1e-10`보다 큰 feature를 선택합니다.
 5. 누락된 값은 해당 feature 평균으로 대체하고 `StandardScaler`로 표준화합니다.
 6. sklearn t-SNE를 실행하고 전체 표준화 feature 공간에서 KNN을 계산합니다.
-7. CSV, 진단 JSON, PNG를 저장한 뒤 matplotlib 차트를 표시합니다.
+7. CSV, 진단 JSON, PNG, 바인딩 원본 Excel을 저장한 뒤 matplotlib 차트를 표시합니다.
 
 기본 SQL은 기존 PCA와 동일한 테이블을 조회합니다.
 
@@ -53,7 +53,7 @@ NearestNeighbors(
 )
 ```
 
-차트에서 선택한 점에는 이 KNN 결과 중 가까운 3개가 표시됩니다. t-SNE 좌표상의 거리가 아니라 전체 표준화 feature 공간의 유클리드 거리입니다.
+차트에서 마커를 클릭하면 WinForms와 동일하게 화면에 표시된 X1/X2 좌표 기준의 가까운 3개가 차트 하단 그리드에 표시됩니다. 배치 KNN CSV는 기존 동작대로 전체 표준화 feature 공간 기준입니다. 창에서 `Export original Excel`을 누르면 차트에 바인딩된 원본 행을 엑셀로 저장할 수 있습니다.
 
 ## VS Code에서 실행
 
@@ -70,8 +70,10 @@ cd python_tsne
 Copy-Item .env.example .env
 notepad .env
 powershell -ExecutionPolicy Bypass -File .\scripts\setup_python.ps1
-.\.venv\Scripts\python.exe -m tsne_runner
+powershell -ExecutionPolicy Bypass -File .\scripts\run_tsne.ps1
 ```
+
+`setup_python.ps1`은 최초 1회 또는 패키지 변경 시에만 실행합니다. `run_tsne.ps1`은 가상환경 존재 여부만 확인하고 패키지를 설치하거나 비교하지 않습니다.
 
 차트를 열지 않고 결과 파일만 생성하려면 다음과 같이 실행합니다.
 
@@ -111,6 +113,7 @@ DB에 접속할 수 없는 개발 PC에서는 동일 쿼리 결과를 CSV로 내
 - `feature_selection_audit.csv`: feature별 포함 여부와 제외 이유
 - `surviving_population.csv`: 최종 feature와 t-SNE 좌표
 - `diagnostic.json`: t-SNE 설정, 유효 learning rate, 실제 반복 횟수, KL divergence, KNN 설정, 런타임 버전 및 입력 행렬 해시
+- `original_data.xlsx`: 선택한 `PARAM_TYP`의 DB/CSV 원본 바인딩 데이터(`OriginalData` 시트)
 
 `max_iter=1000`은 최대 반복 횟수입니다. sklearn의 조기 종료 조건이 충족되면 실제 실행 횟수는 더 작을 수 있으며, 두 값은 `diagnostic.json`에 구분해서 저장됩니다.
 

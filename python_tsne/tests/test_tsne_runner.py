@@ -159,6 +159,7 @@ class AnalysisTests(unittest.TestCase):
                 "feature_selection_audit.csv",
                 "surviving_population.csv",
                 "diagnostic.json",
+                "original_data.xlsx",
             }
             self.assertEqual(expected_files, {path.name for path in output_dir.iterdir()})
             diagnostic = json.loads((output_dir / "diagnostic.json").read_text(encoding="utf-8"))
