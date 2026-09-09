@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .config import load_config
 from .db import load_source_rows, normalize_source_columns
+from .export import export_chart_data
 from .json_features import build_feature_frame
 from .pca_pipeline import find_neighbors, run_pca
 from .plot import save_scatter
@@ -39,10 +40,12 @@ def main() -> int:
     audit_path = output_dir / "feature_selection_audit.csv"
     population_path = output_dir / "surviving_population.csv"
     diagnostic_path = output_dir / "diagnostic.json"
+    chart_xlsx_path = output_dir / "chart_data.xlsx"
 
     result.points.to_csv(points_path, index=False, encoding="utf-8-sig")
     result.feature_audit.to_csv(audit_path, index=False, encoding="utf-8-sig")
     result.surviving_population.to_csv(population_path, index=False, encoding="utf-8-sig")
+    export_chart_data(result.points, chart_xlsx_path)
     diagnostic_path.write_text(
         json.dumps(result.diagnostic, ensure_ascii=False, indent=2),
         encoding="utf-8",
@@ -58,6 +61,8 @@ def main() -> int:
         show_chart=not args.no_show_chart,
         standardized_matrix=result.standardized_matrix,
         neighbor_count=3,
+        chart_data=result.points,
+        chart_export_path=chart_xlsx_path,
     )
 
     print(f"Mode: {config.mode}")
@@ -80,4 +85,5 @@ def main() -> int:
     print(f"Feature audit: {audit_path}")
     print(f"Surviving population: {population_path}")
     print(f"Diagnostic: {diagnostic_path}")
+    print(f"Chart Excel: {chart_xlsx_path}")
     return 0

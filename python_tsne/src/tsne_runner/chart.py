@@ -14,7 +14,7 @@ if not os.environ.get("MPLBACKEND"):
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 from matplotlib.gridspec import GridSpec
-from matplotlib.widgets import Button
+from matplotlib.widgets import Button, TextBox
 import numpy as np
 import pandas as pd
 
@@ -26,8 +26,8 @@ def save_scatter(
     show_chart: bool = True,
     standardized_matrix: np.ndarray | None = None,
     neighbor_count: int = 3,
-    original_data: pd.DataFrame | None = None,
-    original_export_path: Path | None = None,
+    chart_data: pd.DataFrame | None = None,
+    chart_export_path: Path | None = None,
 ) -> None:
     if not show_chart:
         plt.switch_backend("Agg")
@@ -103,10 +103,11 @@ def save_scatter(
         standardized_matrix,
         neighbor_count,
         table_axis,
+        target_draft_no,
     )
-    if show_chart and original_data is not None:
+    if show_chart and chart_data is not None:
         button_axis = figure.add_axes((0.78, 0.015, 0.18, 0.04))
-        export_button = Button(button_axis, "Export original Excel")
+        export_button = Button(button_axis, "Export chart Excel")
 
         def export_from_chart(_event: object) -> None:
             import tkinter as tk
@@ -115,17 +116,17 @@ def save_scatter(
             root = tk.Tk()
             root.withdraw()
             selected_path = filedialog.asksaveasfilename(
-                title="Export original data",
+                title="Export chart data",
                 defaultextension=".xlsx",
                 filetypes=[("Excel workbook", "*.xlsx")],
-                initialfile=(original_export_path.name if original_export_path else "original_data.xlsx"),
+                initialfile=(chart_export_path.name if chart_export_path else "chart_data.xlsx"),
             )
             root.destroy()
             if selected_path:
-                from .export import export_original_data
+                from .export import export_chart_data
 
-                export_original_data(original_data, Path(selected_path))
-                print(f"Original Excel: {selected_path}")
+                export_chart_data(chart_data, Path(selected_path))
+                print(f"Chart Excel: {selected_path}")
 
         export_button.on_clicked(export_from_chart)
     figure.subplots_adjust(bottom=0.08)
@@ -200,6 +201,7 @@ def _register_click_handler(
     standardized_matrix: np.ndarray | None,
     neighbor_count: int,
     table_axis: plt.Axes,
+    target_draft_no: str = "",
 ) -> None:
     coordinates = points[["X1", "X2"]].to_numpy(dtype=float)
     # WinForms uses the rendered X1/X2 coordinates for chart selection.
@@ -215,6 +217,7 @@ def _register_click_handler(
         fontsize=9,
         visible=False,
     )
+    table_cells: dict[int, int] = {}
 
     def update_grid(selected_index: int, neighbor_indices: np.ndarray, distances: np.ndarray) -> None:
         table_axis.clear()
@@ -237,6 +240,29 @@ def _register_click_handler(
         table.scale(1, 1.35)
         for cell in table.get_celld().values():
             cell.set_edgecolor("#cbd5e1")
+        table_cells.clear()
+        for row_index, source_index in enumerate([selected_index, *neighbor_indices], start=1):
+            for column_index in range(7):
+                cell = table.get_celld()[(row_index, column_index)]
+                cell.set_picker(True)
+                table_cells[id(cell)] = source_index
+
+    def select_index(selected_index: int, show_annotation: bool = True) -> None:
+        neighbor_indices, distances = _find_nearest_indices(
+            distance_matrix, selected_index, max(1, neighbor_count)
+        )
+        selected_overlay.set_offsets(coordinates[[selected_index]])
+        neighbor_overlay.set_offsets(coordinates[neighbor_indices])
+        update_grid(selected_index, neighbor_indices, distances)
+        selected = points.iloc[selected_index]
+        if show_annotation:
+            lines = [f"Selected: {selected['DRAFT_NO']}", "Nearest:"]
+            for rank, (source_index, distance) in enumerate(zip(neighbor_indices, distances), start=1):
+                lines.append(f"{rank}. {points.iloc[source_index]['DRAFT_NO']}  d={distance:.4f}")
+            annotation.xy = (float(selected["X1"]), float(selected["X2"]))
+            annotation.set_text("\n".join(lines))
+            annotation.set_visible(True)
+        figure.canvas.draw_idle()
 
     initial_neighbors, initial_distances = _find_nearest_indices(
         distance_matrix, 0, max(1, neighbor_count)
@@ -254,28 +280,28 @@ def _register_click_handler(
         clicked_index = int(
             np.argmin(np.sum((coordinates - np.array([xdata, ydata])) ** 2, axis=1))
         )
-        neighbor_indices, distances = _find_nearest_indices(
-            distance_matrix,
-            clicked_index,
-            max(1, neighbor_count),
-        )
-        selected_overlay.set_offsets(coordinates[[clicked_index]])
-        neighbor_overlay.set_offsets(coordinates[neighbor_indices])
-        update_grid(clicked_index, neighbor_indices, distances)
+        select_index(clicked_index)
 
-        selected = points.iloc[clicked_index]
-        lines = [f"Selected: {selected['DRAFT_NO']}", "Nearest:"]
-        for rank, (source_index, distance) in enumerate(
-            zip(neighbor_indices, distances),
-            start=1,
-        ):
-            lines.append(f"{rank}. {points.iloc[source_index]['DRAFT_NO']}  d={distance:.4f}")
-        annotation.xy = (float(selected["X1"]), float(selected["X2"]))
-        annotation.set_text("\n".join(lines))
-        annotation.set_visible(True)
+    def on_table_pick(event: object) -> None:
+        index = table_cells.get(id(getattr(event, "artist", None)))
+        if index is not None:
+            select_index(index)
+
+    def on_draft_submit(value: str) -> None:
+        matches = points.index[points["DRAFT_NO"].astype(str).str.casefold() == value.strip().casefold()]
+        if len(matches):
+            _set_target_overlay(target_overlay, points, value.strip())
+            select_index(int(matches[0]))
+            return
+        annotation.set_text(f"Draft Number not found: {value.strip()}")
+        annotation.set_visible(bool(value.strip()))
         figure.canvas.draw_idle()
 
     figure.canvas.mpl_connect("button_press_event", on_click)
+    figure.canvas.mpl_connect("pick_event", on_table_pick)
+    input_axis = figure.add_axes((0.08, 0.015, 0.26, 0.04))
+    draft_box = TextBox(input_axis, "Draft Number: ", initial=target_draft_no or "")
+    draft_box.on_submit(on_draft_submit)
 
 
 def _find_nearest_indices(

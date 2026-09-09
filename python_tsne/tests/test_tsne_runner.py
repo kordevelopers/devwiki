@@ -159,15 +159,25 @@ class AnalysisTests(unittest.TestCase):
                 "feature_selection_audit.csv",
                 "surviving_population.csv",
                 "diagnostic.json",
-                "original_data.xlsx",
+                "chart_data.xlsx",
             }
             self.assertEqual(expected_files, {path.name for path in output_dir.iterdir()})
             exported_source = pd.read_excel(
-                output_dir / "original_data.xlsx", dtype=str, keep_default_na=False
+                output_dir / "chart_data.xlsx", dtype=str, keep_default_na=False
             )
-            pd.testing.assert_frame_equal(
-                normalize_source_columns(load_source_csv(source_path)), exported_source
-            )
+            self.assertEqual(list(result.points.columns), list(exported_source.columns))
+            for column in ("DRAFT_NO", "PARAM_TYP", "LABEL_Y", "RSLT_CD"):
+                self.assertEqual(
+                    result.points[column].astype(str).tolist(),
+                    exported_source[column].astype(str).tolist(),
+                )
+            for column in ("X1", "X2"):
+                np.testing.assert_allclose(
+                    result.points[column].to_numpy(dtype=float),
+                    exported_source[column].to_numpy(dtype=float),
+                    rtol=1e-6,
+                    atol=1e-6,
+                )
             diagnostic = json.loads((output_dir / "diagnostic.json").read_text(encoding="utf-8"))
             self.assertEqual("TSNE", diagnostic["ProjectionMethod"])
             self.assertEqual("csv", diagnostic["SourceMode"])

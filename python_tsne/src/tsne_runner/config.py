@@ -23,57 +23,37 @@ DEFAULT_SQL = (
 
 @dataclass(frozen=True)
 class AppConfig:
-    mode: str
     param_type: str
     target_draft_no: str
     sql: str
     sql_file: str
-    oracle_host: str
-    oracle_port: str
-    oracle_service_name: str
-    oracle_sid: str
-    odbc_dsn: str
-    odbc_driver: str
-    odbc_user: str
-    odbc_password: str
-    odbc_connection_string: str
-    oracle_user: str
-    oracle_password: str
-    oracle_dsn: str
+    host: str
+    database: str
+    port: str
+    username: str
+    password: str
 
 
 def load_config(
-    mode_override: str | None = None,
     target_override: str | None = None,
     param_type_override: str | None = None,
     resolve_sql: bool = True,
 ) -> AppConfig:
     _load_dotenv_files()
-    mode = mode_override or _get_setting("DB_MODE", "oracledb")
-    normalized_mode = mode.strip().lower()
-    # PCA can use generated sample data, but this standalone t-SNE runner must
-    # always read the real database when PCA_* settings are reused.
-    if normalized_mode == "sample":
-        normalized_mode = "oracledb"
-    if normalized_mode not in {"odbc", "oracledb"}:
-        raise ValueError("TSNE_DB_MODE must be either 'odbc' or 'oracledb'.")
-
     target = (
         target_override
         if target_override is not None
-        else _get_setting("TARGET_DRAFT_NO", "")
+        else os.environ.get("TSNE_TARGET_DRAFT_NO", "")
     )
     param_type = (
         param_type_override
         if param_type_override is not None
-        else _get_setting("PARAM_TYP", "RESPONSE")
+        else os.environ.get("TSNE_PARAM_TYP", "RESPONSE")
     )
-    # Keep the t-SNE query independent from PCA_SQL_FILE. This prevents a
-    # copied PCA .env from pointing at a missing relative path or sample flow.
+    # t-SNE SQL is read only from this project's TSNE_SQL_FILE setting.
     sql_file = os.environ.get("TSNE_SQL_FILE", "queries/exadata_tsne.sql").strip()
     fallback_sql = os.environ.get("TSNE_SQL", DEFAULT_SQL)
     return AppConfig(
-        mode=normalized_mode,
         param_type=param_type.strip().upper(),
         target_draft_no=target.strip(),
         sql=(
@@ -82,29 +62,12 @@ def load_config(
             else _strip_sql_terminator(fallback_sql)
         ),
         sql_file=sql_file,
-        oracle_host=_get_setting("ORACLE_HOST", "").strip(),
-        oracle_port=_get_setting("ORACLE_PORT", "1521").strip(),
-        oracle_service_name=_get_setting("ORACLE_SERVICE_NAME", "").strip(),
-        oracle_sid=_get_setting("ORACLE_SID", "").strip(),
-        odbc_dsn=_get_setting("ODBC_DSN", ""),
-        odbc_driver=_get_setting("ODBC_DRIVER", "Oracle in instantclient_23_8"),
-        odbc_user=_get_setting("ODBC_USER", ""),
-        odbc_password=_get_setting("ODBC_PASSWORD", ""),
-        odbc_connection_string=_get_setting("ODBC_CONNECTION_STRING", ""),
-        oracle_user=_get_setting("ORACLE_USER", ""),
-        oracle_password=_get_setting("ORACLE_PASSWORD", ""),
-        oracle_dsn=_get_setting("ORACLE_DSN", "").strip(),
+        host=os.environ.get("TSNE_DB_HOST", "127.0.0.1").strip(),
+        database=os.environ.get("TSNE_DB_DATABASE", "ORCL").strip(),
+        port=os.environ.get("TSNE_DB_PORT", "1521").strip(),
+        username=os.environ.get("TSNE_DB_USERNAME", "test_user").strip(),
+        password=os.environ.get("TSNE_DB_PASSWORD", "test_password"),
     )
-
-
-def _get_setting(name: str, default: str) -> str:
-    tsne_name = f"TSNE_{name}"
-    if tsne_name in os.environ:
-        return os.environ[tsne_name]
-    pca_name = f"PCA_{name}"
-    if pca_name in os.environ:
-        return os.environ[pca_name]
-    return default
 
 
 def _load_sql(sql_file: str, fallback_sql: str) -> str:
@@ -129,14 +92,12 @@ def _load_dotenv_files() -> None:
     candidates = [
         Path.cwd() / ".env",
         application_dir / ".env",
-        application_dir.parent / "python_pca" / ".env",
     ]
     loaded_paths: set[Path] = set()
     for env_path in candidates:
         resolved_path = env_path.resolve()
         if resolved_path in loaded_paths or not resolved_path.exists():
             continue
-        # Load PCA settings as a fallback, then let TSNE_* settings win.
         load_dotenv(resolved_path, override=False)
         loaded_paths.add(resolved_path)
 

@@ -9,7 +9,7 @@ import pandas as pd
 from .analysis import find_neighbors, run_tsne
 from .chart import save_scatter
 from .config import load_config
-from .export import export_original_data
+from .export import export_chart_data
 from .source import (
     SUPPORTED_PARAMETER_TYPES,
     build_feature_frame,
@@ -23,7 +23,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run t-SNE scatter and KNN analysis from the PCCB source data."
     )
-    parser.add_argument("--mode", choices=["odbc", "oracledb"], help="Override TSNE_DB_MODE.")
     parser.add_argument(
         "--source-csv",
         type=Path,
@@ -44,25 +43,17 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    config = load_config(
-        args.mode if args.source_csv is None else (args.mode or "oracledb"),
-        args.target,
-        args.param_type,
-        resolve_sql=args.source_csv is None,
-    )
+    config = load_config(args.target, args.param_type, resolve_sql=args.source_csv is None)
     if args.source_csv is not None:
         raw_source = load_source_csv(args.source_csv)
         source_mode = "csv"
         source_reference = str(args.source_csv.resolve())
     else:
         raw_source = load_source_rows(config)
-        source_mode = config.mode
+        source_mode = "oracledb"
         source_reference = config.sql_file or "inline SQL"
 
     source: pd.DataFrame = normalize_source_columns(raw_source)
-    original_data: pd.DataFrame = source.loc[
-        source["PARAM_TYP"].eq(config.param_type), :
-    ].copy()
     feature_frame = build_feature_frame(source, config.param_type)
     result = run_tsne(feature_frame)
 
@@ -75,13 +66,13 @@ def main() -> int:
     audit_path = output_dir / "feature_selection_audit.csv"
     population_path = output_dir / "surviving_population.csv"
     diagnostic_path = output_dir / "diagnostic.json"
-    original_xlsx_path = output_dir / "original_data.xlsx"
+    chart_xlsx_path = output_dir / "chart_data.xlsx"
 
     output_dir.mkdir(parents=True, exist_ok=True)
     result.points.to_csv(points_path, index=False, encoding="utf-8-sig")
     result.feature_audit.to_csv(audit_path, index=False, encoding="utf-8-sig")
     result.surviving_population.to_csv(population_path, index=False, encoding="utf-8-sig")
-    export_original_data(original_data, original_xlsx_path)
+    export_chart_data(result.points, chart_xlsx_path)
     diagnostic = {
         **result.diagnostic,
         "SourceMode": source_mode,
@@ -106,8 +97,8 @@ def main() -> int:
         show_chart=not args.no_show_chart,
         standardized_matrix=result.standardized_matrix,
         neighbor_count=3,
-        original_data=original_data,
-        original_export_path=original_xlsx_path,
+        chart_data=result.points,
+        chart_export_path=chart_xlsx_path,
     )
 
     print(f"Mode: {source_mode}")
@@ -129,5 +120,5 @@ def main() -> int:
     print(f"Feature audit: {audit_path}")
     print(f"Surviving population: {population_path}")
     print(f"Diagnostic: {diagnostic_path}")
-    print(f"Original Excel: {original_xlsx_path}")
+    print(f"Chart Excel: {chart_xlsx_path}")
     return 0

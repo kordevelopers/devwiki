@@ -4,7 +4,7 @@
 
 ## 처리 흐름
 
-1. Oracle 또는 ODBC로 PCCB 조회 SQL을 실행합니다.
+1. Oracle DB에서 PCCB 조회 SQL을 실행합니다.
 2. `PARAM_TYP`으로 분석 대상을 선택합니다.
 3. `CONV_EXPER_CTN` JSON 객체를 `A.B`, `A[0]` 형태의 feature로 펼칩니다.
 4. 숫자 coverage가 90% 이상이고 분산이 `1e-10`보다 큰 feature를 선택합니다.
@@ -106,7 +106,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run_tsne.ps1
 .\.venv\Scripts\python.exe -m tsne_runner --no-show-chart
 ```
 
-기존 `python_pca`의 Oracle 접속값은 재사용할 수 있습니다. `TSNE_*` 설정이 없으면 같은 이름의 `PCA_*` 설정을 읽지만, `PCA_DB_MODE=sample`은 지원하지 않습니다. PCA `.env`를 복사했다면 `TSNE_DB_MODE`을 `odbc` 또는 `oracledb`로 지정하고 `TSNE_SQL_FILE=queries/exadata_tsne.sql`을 추가해야 합니다. 두 접두사의 설정이 모두 있으면 `TSNE_*`가 우선합니다.
+DB 접속은 `python_tsne/.env`의 `TSNE_DB_HOST`, `TSNE_DB_DATABASE`, `TSNE_DB_PORT`, `TSNE_DB_USERNAME`, `TSNE_DB_PASSWORD` 다섯 값만 사용합니다.
 
 ## PCCB CSV로 실행
 
@@ -138,42 +138,33 @@ DB에 접속할 수 없는 개발 PC에서는 동일 쿼리 결과를 CSV로 내
 - `feature_selection_audit.csv`: feature별 포함 여부와 제외 이유
 - `surviving_population.csv`: 최종 feature와 t-SNE 좌표
 - `diagnostic.json`: t-SNE 설정, 유효 learning rate, 실제 반복 횟수, KL divergence, KNN 설정, 런타임 버전 및 입력 행렬 해시
-- `original_data.xlsx`: 선택한 `PARAM_TYP`의 DB/CSV 원본 바인딩 데이터(`OriginalData` 시트)
+- `chart_data.xlsx`: 차트에 실제 바인딩된 행과 X1/X2 좌표(`ChartData` 시트)
 
 `max_iter=1000`은 최대 반복 횟수입니다. sklearn의 조기 종료 조건이 충족되면 실제 실행 횟수는 더 작을 수 있으며, 두 값은 `diagnostic.json`에 구분해서 저장됩니다.
 
 ## Oracle 설정
 
-Oracle이 설치되지 않은 Windows PC에서는 `TSNE_DB_MODE=oracledb`를 사용합니다. python-oracledb의 기본 Thin 모드로 접속하므로 Oracle Client, Instant Client, ODBC 드라이버를 설치하지 않아도 됩니다. 이 프로젝트의 해당 연결 경로는 `init_oracle_client()`를 호출하지 않습니다. DB 서버 주소와 계정, 서버로의 네트워크 접속은 필요합니다.
+python-oracledb의 기본 Thin 모드로 접속하므로 Oracle Client나 Instant Client를 설치하지 않아도 됩니다. DB 서버 주소와 계정, 서버로의 네트워크 접속은 필요합니다.
 
 ```env
-TSNE_DB_MODE=oracledb
-TSNE_ORACLE_HOST=10.0.0.10
-TSNE_ORACLE_PORT=1521
-TSNE_ORACLE_SERVICE_NAME=EXADATA_SERVICE
-TSNE_ORACLE_USER=your_user
-TSNE_ORACLE_PASSWORD=your_password
+TSNE_DB_HOST=127.0.0.1
+TSNE_DB_DATABASE=ORCL
+TSNE_DB_PORT=1521
+TSNE_DB_USERNAME=test_user
+TSNE_DB_PASSWORD=test_password
 TSNE_SQL_FILE=queries/exadata_tsne.sql
 TSNE_PARAM_TYP=RESPONSE
 TSNE_TARGET_DRAFT_NO=
 ```
 
-DBeaver를 JDBC로 접속하더라도 Python에는 JDBC URL 전체를 넣지 않습니다. DBeaver의 URL이 `jdbc:oracle:thin:@db-server:1521/ORCL`이면 `.env`에 `HOST=db-server`, `PORT=1521`, `SERVICE_NAME=ORCL`을 각각 입력합니다. 사용자명과 비밀번호는 DBeaver 접속정보와 동일하게 `TSNE_ORACLE_USER`, `TSNE_ORACLE_PASSWORD`에 입력합니다. SID 형식인 `jdbc:oracle:thin:@db-server:1521:ORCL`이면 `SERVICE_NAME`을 비우고 `TSNE_ORACLE_SID=ORCL`을 입력합니다.
-
-Exadata 접속 정보는 일반적으로 `SERVICE_NAME`을 사용합니다. SID를 사용하는 DB는 `TSNE_ORACLE_SERVICE_NAME`을 비우고 `TSNE_ORACLE_SID`를 지정하면 Oracle 접속 descriptor를 구성합니다. `TSNE_ORACLE_DSN`을 직접 지정하면 HOST/PORT/SERVICE_NAME/SID보다 우선합니다.
+DBeaver JDBC URL이 `jdbc:oracle:thin:@db-server:1521/ORCL`이면 `TSNE_DB_HOST=db-server`, `TSNE_DB_PORT=1521`, `TSNE_DB_DATABASE=ORCL`로 입력합니다. 사용자명과 비밀번호는 `TSNE_DB_USERNAME`, `TSNE_DB_PASSWORD`에 입력합니다.
 
 기존 WinForms 조회 SQL을 사용하려면 `queries/exadata_tsne.sql`에 해당 SELECT를 넣습니다. 기본 파일은 `python_pca/queries/exadata_pca.sql`과 같은 테이블·조인·조회 조건을 사용하며 정렬을 추가한 것입니다. WinForms 차트는 외부에서 전달받은 `DataTable`을 사용하므로 실제 서비스의 쿼리를 가져올 때는 `DRAFT_NO`, `PARAM_TYP`, `ENGR_RSLT_VAL` 또는 `LABEL_Y`, `CONV_EXPER_CTN` 컬럼을 유지합니다. 선택 컬럼은 `RSLT_CD`입니다.
 
 DB 조회를 먼저 확인하려면 다음을 실행합니다. 이 스크립트는 설정한 SQL을 실행하여 조회 행 수와 컬럼 이름을 출력합니다.
 
 ```powershell
-.\.venv\Scripts\python.exe .\scripts\test_oracle_connection.py --mode oracledb
-```
-
-ODBC는 Oracle ODBC 드라이버가 설치된 환경에서만 사용합니다. 해당 환경에서는 `TSNE_DB_MODE=odbc`와 `TSNE_ODBC_DSN` 또는 전체 연결 문자열을 설정합니다.
-
-```powershell
-.\.venv\Scripts\python.exe .\scripts\test_oracle_connection.py --mode odbc
+.\.venv\Scripts\python.exe .\scripts\test_oracle_connection.py
 ```
 
 ## 테스트 및 EXE 빌드

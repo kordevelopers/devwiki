@@ -9,6 +9,7 @@ import pandas as pd
 
 from .config import load_config
 from .db import SUPPORTED_PARAMETER_TYPES, load_source_rows, normalize_source_columns
+from .export import export_chart_data
 from .json_features import build_feature_frame
 from .plot import save_scatter
 from .tsne_pipeline import NeighborRow, TSNEResult, find_neighbors, run_tsne
@@ -97,6 +98,8 @@ def main() -> int:
         neighbor_count=3,
         chart_title="t-SNE Scatter",
         projection_name="t-SNE",
+        chart_data=result.points,
+        chart_export_path=paths["chart_data"],
     )
     _print_summary(config.param_type, source_mode, target, result, neighbors, paths)
     return 0
@@ -151,10 +154,12 @@ def _write_outputs(
         "audit": output_dir / "feature_selection_audit.csv",
         "population": output_dir / "surviving_population.csv",
         "diagnostic": output_dir / "diagnostic.json",
+        "chart_data": output_dir / "chart_data.xlsx",
     }
     result.points.to_csv(paths["points"], index=False, encoding="utf-8-sig")
     result.feature_audit.to_csv(paths["audit"], index=False, encoding="utf-8-sig")
     result.surviving_population.to_csv(paths["population"], index=False, encoding="utf-8-sig")
+    export_chart_data(result.points, paths["chart_data"])
     diagnostic = {
         **result.diagnostic,
         "SourceMode": source_mode,
@@ -201,6 +206,7 @@ def _print_summary(
     print(f"Feature audit: {paths['audit']}")
     print(f"Surviving population: {paths['population']}")
     print(f"Diagnostic: {paths['diagnostic']}")
+    print(f"Chart Excel: {paths['chart_data']}")
 
 
 if __name__ == "__main__":

@@ -19,11 +19,7 @@ METADATA_LEAF_NAMES = {"DRAFT_NO", "AI_RSLT_VAL", "PUB_NO", "_VERSION_NM"}
 
 
 def load_source_rows(config: AppConfig) -> pd.DataFrame:
-    if config.mode == "odbc":
-        return _load_with_odbc(config)
-    if config.mode == "oracledb":
-        return _load_with_oracledb(config)
-    raise ValueError("TSNE_DB_MODE must be either 'odbc' or 'oracledb'.")
+    return _load_with_oracledb(config)
 
 
 def load_source_csv(path: Path) -> pd.DataFrame:
@@ -130,46 +126,24 @@ def _normalize_label_column(frame: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
-def _load_with_odbc(config: AppConfig) -> pd.DataFrame:
-    import pyodbc
-
-    connection_string = _build_odbc_connection_string(config)
-    # pyodbc's connection context manages transactions, not connection lifetime.
-    with closing(pyodbc.connect(connection_string)) as connection:
-        with closing(connection.cursor()) as cursor:
-            cursor.execute(config.sql)
-            if cursor.description is None:
-                raise ValueError("The source SQL must return a result set with column names.")
-            columns = [description[0] for description in cursor.description]
-            frame = pd.DataFrame.from_records(
-                (tuple(row) for row in cursor.fetchall()), columns=columns
-            )
-            # Read any LOB values while the connection is still open, as in Oracle mode.
-            return _materialize_lob_values(frame)
-
-
 def _load_with_oracledb(config: AppConfig) -> pd.DataFrame:
     from sqlalchemy import create_engine, text
     from sqlalchemy.pool import NullPool
 
-    # DBeaver가 JDBC로 접속하더라도 Python에서는 JDBC를 직접 사용하지 않는다.
-    # JDBC URL의 host/port/service(SID)를 .env의 TSNE_ORACLE_HOST,
-    # TSNE_ORACLE_PORT, TSNE_ORACLE_SERVICE_NAME 또는 TSNE_ORACLE_SID에
-    # 입력하면 python-oracledb Thin 모드가 같은 Oracle 서버에 접속한다.
-    # 예: jdbc:oracle:thin:@db-server:1521/ORCL
-    #     HOST=db-server, PORT=1521, SERVICE_NAME=ORCL
-    dsn = _build_oracle_dsn(config)
-    if not (config.oracle_user and config.oracle_password and dsn):
+    # DBeaver JDBC URL의 jdbc:oracle:thin:@호스트:포트/데이터베이스 값을
+    # TSNE_DB_HOST, TSNE_DB_PORT, TSNE_DB_DATABASE로 나누어 입력한다.
+    # Python에서는 JDBC 드라이버 대신 python-oracledb Thin 모드를 사용한다.
+    dsn = f"{config.host}:{config.port}/{config.database}"
+    if not (config.username and config.password and config.host and config.database):
         raise ValueError(
-            "TSNE_ORACLE_USER, TSNE_ORACLE_PASSWORD, and Oracle DSN values are required. "
-            "Set TSNE_ORACLE_DSN or "
-            "TSNE_ORACLE_HOST/TSNE_ORACLE_PORT/TSNE_ORACLE_SERVICE_NAME."
+            "TSNE_DB_HOST, TSNE_DB_DATABASE, TSNE_DB_PORT, TSNE_DB_USERNAME, "
+            "and TSNE_DB_PASSWORD are required."
         )
     engine = create_engine(
         "oracle+oracledb://",
         connect_args={
-            "user": config.oracle_user,
-            "password": config.oracle_password,
+            "user": config.username,
+            "password": config.password,
             "dsn": dsn,
         },
         poolclass=NullPool,
@@ -180,47 +154,6 @@ def _load_with_oracledb(config: AppConfig) -> pd.DataFrame:
             return _materialize_lob_values(frame)
     finally:
         engine.dispose()
-
-
-def _build_odbc_connection_string(config: AppConfig) -> str:
-    if config.odbc_connection_string.strip():
-        return config.odbc_connection_string.strip()
-    if config.odbc_dsn.strip():
-        return f"DSN={config.odbc_dsn};UID={config.odbc_user};PWD={config.odbc_password}"
-
-    host_descriptor = _build_host_descriptor(config)
-    if not (config.odbc_driver and host_descriptor and config.odbc_user and config.odbc_password):
-        raise ValueError(
-            "ODBC mode requires one of TSNE_ODBC_CONNECTION_STRING, TSNE_ODBC_DSN, or "
-            "TSNE_ODBC_DRIVER plus Oracle host values and TSNE_ODBC_USER/TSNE_ODBC_PASSWORD."
-        )
-    return (
-        f"DRIVER={{{config.odbc_driver}}};"
-        f"DBQ={host_descriptor};"
-        f"UID={config.odbc_user};"
-        f"PWD={config.odbc_password}"
-    )
-
-
-def _build_oracle_dsn(config: AppConfig) -> str:
-    return config.oracle_dsn or _build_host_descriptor(config)
-
-
-def _build_host_descriptor(config: AppConfig) -> str:
-    if not config.oracle_host:
-        return ""
-    port = config.oracle_port or "1521"
-    if config.oracle_service_name:
-        return f"{config.oracle_host}:{port}/{config.oracle_service_name}"
-    if config.oracle_sid:
-        # Easy Connect accepts a service name, not a SID. Use the Oracle Net
-        # descriptor understood by both python-oracledb Thin and Oracle ODBC.
-        return (
-            "(DESCRIPTION="
-            f"(ADDRESS=(PROTOCOL=TCP)(HOST={config.oracle_host})(PORT={port}))"
-            f"(CONNECT_DATA=(SID={config.oracle_sid})))"
-        )
-    return ""
 
 
 def _to_json_text(value: object) -> str:

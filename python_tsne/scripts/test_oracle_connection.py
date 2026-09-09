@@ -7,13 +7,12 @@ from tsne_runner.source import load_source_rows, normalize_source_columns
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Test the Oracle/ODBC t-SNE source query.")
-    parser.add_argument("--mode", choices=["odbc", "oracledb"], required=True)
-    args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="Test the Oracle t-SNE source query.")
+    parser.parse_args()
 
-    config = load_config(mode_override=args.mode)
+    config = load_config()
     frame = normalize_source_columns(load_source_rows(config))
-    print(f"Connected with mode: {args.mode}")
+    print("Connected with python-oracledb")
     print(f"Rows fetched: {len(frame)}")
     print(f"Columns: {', '.join(frame.columns)}")
     return 0

@@ -23,15 +23,7 @@
       "label": "Test Oracle t-SNE connection",
       "type": "shell",
       "command": "${workspaceFolder}/.venv/Scripts/python.exe",
-      "args": ["./scripts/test_oracle_connection.py", "--mode", "oracledb"],
-      "options": { "cwd": "${workspaceFolder}" },
-      "problemMatcher": []
-    },
-    {
-      "label": "Test ODBC t-SNE connection",
-      "type": "shell",
-      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
-      "args": ["./scripts/test_oracle_connection.py", "--mode", "odbc"],
+      "args": ["./scripts/test_oracle_connection.py"],
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
     },

@@ -147,6 +147,7 @@ class IntegratedTsneTests(unittest.TestCase):
                 "feature_selection_audit.csv",
                 "surviving_population.csv",
                 "diagnostic.json",
+                "chart_data.xlsx",
             }
             self.assertEqual({path.name for path in output_path.iterdir()}, expected_files)
             diagnostic = json.loads((output_path / "diagnostic.json").read_text(encoding="utf-8"))
