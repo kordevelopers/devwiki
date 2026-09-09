@@ -28,18 +28,19 @@ try {
     .\.venv\Scripts\python.exe -m pip install -e .
 
     $buildPath = Assert-ProjectChildPath "build"
-    $distProductPath = Assert-ProjectChildPath (Join-Path "dist" $ExeName)
+    $distRootPath = Assert-ProjectChildPath "dist"
     if ($Clean -and (Test-Path -LiteralPath $buildPath)) {
         Remove-Item -LiteralPath $buildPath -Recurse -Force
     }
-    if ($Clean -and (Test-Path -LiteralPath $distProductPath)) {
-        Remove-Item -LiteralPath $distProductPath -Recurse -Force
+    if ($Clean -and (Test-Path -LiteralPath $distRootPath)) {
+        Remove-Item -LiteralPath $distRootPath -Recurse -Force
     }
 
     .\.venv\Scripts\python.exe -m PyInstaller `
         --noconfirm `
         --clean `
-        --onedir `
+        --onefile `
+        --console `
         --name $ExeName `
         --paths .\src `
         --collect-submodules sqlalchemy.dialects.oracle `
@@ -47,34 +48,31 @@ try {
         --collect-all matplotlib `
         .\tsne_runner_cli.py
 
-    $distDir = Join-Path ".\dist" $ExeName
-    if (-not (Test-Path -LiteralPath $distDir)) {
-        throw "PyInstaller did not create the expected directory: $distDir"
+    $exePath = Join-Path ".\dist" "$ExeName.exe"
+    if (-not (Test-Path -LiteralPath $exePath)) {
+        throw "PyInstaller did not create the expected executable: $exePath"
     }
 
-    Copy-Item -LiteralPath ".\.env.example" -Destination (Join-Path $distDir ".env.example") -Force
-    $queryDir = Join-Path $distDir "queries"
-    if (-not (Test-Path -LiteralPath $queryDir)) {
-        New-Item -ItemType Directory -Path $queryDir | Out-Null
-    }
-    Copy-Item -Path ".\queries\*" -Destination $queryDir -Recurse -Force
+    $envExamplePath = Join-Path ".\dist" "$ExeName.env.example"
+    Copy-Item -LiteralPath ".\.env.example" -Destination $envExamplePath -Force
 
     $readme = @"
 Hynix TAS t-SNE Runner
 ======================
 
-1. Copy .env.example to .env in this folder.
-2. Fill the Oracle connection values and TSNE_SQL_FILE.
+1. Rename $ExeName.env.example to .env in this folder.
+2. Fill the five DB values from DBeaver JDBC: host, database, port, username, password.
 3. Run $ExeName.exe.
 
 Example:
-  Copy-Item .env.example .env
+  Copy-Item $ExeName.env.example .env
   notepad .env
   .\$ExeName.exe
 
-The executable reads .env and queries\*.sql from this folder.
+The executable reads .env from the same folder. The default PCCB SQL is embedded in the executable.
+The optional TSNE_SQL_FILE setting can point to a custom SQL file.
 "@
-    $readme | Set-Content -LiteralPath (Join-Path $distDir "RUN_EXE_README.txt") -Encoding UTF8
+    $readme | Set-Content -LiteralPath (Join-Path ".\dist" "RUN_EXE_README.txt") -Encoding UTF8
 
     if (-not $SkipZip) {
         $zipPath = Assert-ProjectChildPath (Join-Path "dist" "$ExeName.zip")
@@ -83,7 +81,7 @@ The executable reads .env and queries\*.sql from this folder.
         }
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         [System.IO.Compression.ZipFile]::CreateFromDirectory(
-            (Resolve-Path $distDir).Path,
+            (Resolve-Path ".\dist").Path,
             $zipPath,
             [System.IO.Compression.CompressionLevel]::Optimal,
             $false
@@ -94,8 +92,8 @@ The executable reads .env and queries\*.sql from this folder.
 
     Write-Host ""
     Write-Host "EXE build completed:"
-    Write-Host (Resolve-Path $distDir)
-    Write-Host "Distribute the entire folder, not only the executable."
+    Write-Host (Resolve-Path $exePath)
+    Write-Host "Distribute $ExeName.exe and a configured .env file."
 }
 finally {
     Pop-Location

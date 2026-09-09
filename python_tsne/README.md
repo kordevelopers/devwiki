@@ -152,7 +152,6 @@ TSNE_DB_DATABASE=ORCL
 TSNE_DB_PORT=1521
 TSNE_DB_USERNAME=test_user
 TSNE_DB_PASSWORD=test_password
-TSNE_SQL_FILE=queries/exadata_tsne.sql
 TSNE_PARAM_TYP=RESPONSE
 TSNE_TARGET_DRAFT_NO=
 ```
@@ -174,7 +173,7 @@ DB 조회를 먼저 확인하려면 다음을 실행합니다. 이 스크립트�
 powershell -ExecutionPolicy Bypass -File .\scripts\build_exe.ps1 -Clean
 ```
 
-EXE 결과는 `dist/HynixTasTsne`에 생성됩니다. 다른 PC에는 EXE 파일 하나가 아니라 해당 폴더 전체를 전달해야 합니다.
+EXE 결과는 `dist/HynixTasTsne.exe` 단일 파일로 생성됩니다. 실행 시 EXE와 같은 폴더에 외부 `.env` 파일을 두면 DBeaver JDBC 접속정보로 DB를 조회합니다. 빌드 폴더의 `HynixTasTsne.env.example`을 `.env`로 복사해 실제 접속정보를 입력하면 됩니다.
 
 ## 결과 해석 주의사항
 

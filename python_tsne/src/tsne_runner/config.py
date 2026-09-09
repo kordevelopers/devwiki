@@ -50,8 +50,8 @@ def load_config(
         if param_type_override is not None
         else os.environ.get("TSNE_PARAM_TYP", "RESPONSE")
     )
-    # t-SNE SQL is read only from this project's TSNE_SQL_FILE setting.
-    sql_file = os.environ.get("TSNE_SQL_FILE", "queries/exadata_tsne.sql").strip()
+    # 기본 SQL은 EXE에 포함된 코드이며, 외부 SQL 파일은 선택사항입니다.
+    sql_file = os.environ.get("TSNE_SQL_FILE", "").strip()
     fallback_sql = os.environ.get("TSNE_SQL", DEFAULT_SQL)
     return AppConfig(
         param_type=param_type.strip().upper(),
