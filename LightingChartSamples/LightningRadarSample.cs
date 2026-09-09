@@ -174,6 +174,7 @@ namespace LightingChartSamples
             // 3. 값은 보통 0~100 범위를 권장합니다.
             // 4. 카테고리 개수보다 값이 적으면 내부에서 남는 값은 0으로 채워집니다.
             // 5. 값이 더 많으면 카테고리 개수까지만 사용됩니다.
+            // 6. LinePattern과 FillMode는 시리즈별로 독립 설정할 수 있습니다.
             return new[]
             {
                 new LightningRadarSeries
@@ -181,14 +182,18 @@ namespace LightingChartSamples
                     Name = "설비 A",
                     Values = new[] { 88f, 82f, 91f, 79f, 95f },
                     FillColor = Color.FromArgb(110, 255, 196, 214),
-                    LineColor = Color.FromArgb(230, 225, 104, 150)
+                    LineColor = Color.FromArgb(230, 225, 104, 150),
+                    LinePattern = LightningRadarLinePattern.Solid,
+                    FillMode = LightningRadarFillMode.Transparent
                 },
                 new LightningRadarSeries
                 {
                     Name = "설비 B",
                     Values = new[] { 76f, 73f, 86f, 70f, 84f },
                     FillColor = Color.FromArgb(95, 186, 235, 255),
-                    LineColor = Color.FromArgb(230, 74, 166, 224)
+                    LineColor = Color.FromArgb(230, 74, 166, 224),
+                    LinePattern = LightningRadarLinePattern.Dot,
+                    FillMode = LightningRadarFillMode.Color
                 }
             };
         }
@@ -203,14 +208,18 @@ namespace LightingChartSamples
                     Name = "설비 A",
                     Values = new[] { 90f, 84f, 94f, 80f, 96f },
                     FillColor = Color.FromArgb(110, 255, 196, 214),
-                    LineColor = Color.FromArgb(230, 225, 104, 150)
+                    LineColor = Color.FromArgb(230, 225, 104, 150),
+                    LinePattern = LightningRadarLinePattern.Solid,
+                    FillMode = LightningRadarFillMode.Transparent
                 },
                 new LightningRadarSeries
                 {
                     Name = "설비 B",
                     Values = new[] { 78f, 75f, 89f, 72f, 86f },
                     FillColor = Color.FromArgb(95, 186, 235, 255),
-                    LineColor = Color.FromArgb(230, 74, 166, 224)
+                    LineColor = Color.FromArgb(230, 74, 166, 224),
+                    LinePattern = LightningRadarLinePattern.Dot,
+                    FillMode = LightningRadarFillMode.Color
                 }
             };
         }

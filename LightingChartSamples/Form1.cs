@@ -80,14 +80,18 @@ namespace LightingChartSamples
                     Name = "Series 1",
                     Values = new[] { 88f, 82f, 91f, 79f, 95f },
                     FillColor = Color.FromArgb(110, 255, 196, 214),
-                    LineColor = Color.FromArgb(230, 225, 104, 150)
+                    LineColor = Color.FromArgb(230, 225, 104, 150),
+                    LinePattern = LightningRadarLinePattern.Solid,
+                    FillMode = LightningRadarFillMode.Transparent
                 },
                 new LightningRadarSeries
                 {
                     Name = "Series 2",
                     Values = new[] { 76f, 73f, 86f, 70f, 84f },
                     FillColor = Color.FromArgb(95, 186, 235, 255),
-                    LineColor = Color.FromArgb(230, 74, 166, 224)
+                    LineColor = Color.FromArgb(230, 74, 166, 224),
+                    LinePattern = LightningRadarLinePattern.Dot,
+                    FillMode = LightningRadarFillMode.Color
                 }
             };
         }

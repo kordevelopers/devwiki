@@ -2,11 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using Arction.WinForms.Charting;
+using Arction.WinForms.Charting.Annotations;
+using Arction.WinForms.Charting.Axes;
+using Arction.WinForms.Charting.SeriesXY;
+using Arction.WinForms.Charting.Views.ViewXY;
 
 namespace LightingChartSamples
 {
@@ -20,7 +23,8 @@ namespace LightingChartSamples
     public enum LightningRadarScaleLabelDisplayMode
     {
         Auto,
-        All
+        All,
+        None
     }
 
     public enum LightningRadarScaleLabelValueMode
@@ -29,26 +33,52 @@ namespace LightingChartSamples
         RingIndex0ToGridRingCount
     }
 
-    /// <summary>
-    /// 레이더 차트에 필요한 단일 시리즈 데이터를 정의합니다.
-    /// </summary>
+    /// <summary>LightningChart의 선 패턴과 1:1로 대응하는 Radar 시리즈 선 모양입니다.</summary>
+    public enum LightningRadarLinePattern
+    {
+        Solid,
+        Dash,
+        Dot,
+        SmallDot,
+        DashDot
+    }
+
+    /// <summary>Radar 시리즈 내부 영역 표시 방법입니다.</summary>
+    public enum LightningRadarFillMode
+    {
+        Transparent,
+        Color
+    }
+
     public class LightningRadarSeries
     {
         public LightningRadarSeries()
         {
             Name = string.Empty;
             Values = new float[0];
-            FillColor = Color.FromArgb(110, 255, 196, 214);
-            LineColor = Color.FromArgb(230, 225, 104, 150);
+            FillColor = Color.FromArgb(80, 91, 155, 213);
+            LineColor = Color.FromArgb(230, 65, 105, 225);
+            LinePattern = LightningRadarLinePattern.Solid;
+            FillMode = LightningRadarFillMode.Transparent;
+            LineWidth = 0f;
+            ShowPoints = true;
         }
 
         public string Name { get; set; }
-
         public float[] Values { get; set; }
-
         public Color FillColor { get; set; }
-
         public Color LineColor { get; set; }
+
+        /// <summary>기본값은 Solid입니다. 시리즈마다 Dash, Dot 등을 지정할 수 있습니다.</summary>
+        public LightningRadarLinePattern LinePattern { get; set; }
+
+        /// <summary>기본값은 Transparent입니다. Color이면 FillColor로 내부를 채웁니다.</summary>
+        public LightningRadarFillMode FillMode { get; set; }
+
+        /// <summary>0 이하면 LightningRadarOptions.SeriesLineWidth를 사용합니다.</summary>
+        public float LineWidth { get; set; }
+
+        public bool ShowPoints { get; set; }
 
         public LightningRadarSeries Clone()
         {
@@ -57,14 +87,15 @@ namespace LightingChartSamples
                 Name = Name,
                 Values = Values == null ? new float[0] : Values.ToArray(),
                 FillColor = FillColor,
-                LineColor = LineColor
+                LineColor = LineColor,
+                LinePattern = LinePattern,
+                FillMode = FillMode,
+                LineWidth = LineWidth,
+                ShowPoints = ShowPoints
             };
         }
     }
 
-    /// <summary>
-    /// 레이더 차트의 표시 옵션을 정의합니다.
-    /// </summary>
     public class LightningRadarOptions
     {
         public LightningRadarOptions()
@@ -79,6 +110,7 @@ namespace LightingChartSamples
             RadiusPadding = 2f;
             GridRingCount = 10;
             CategoryLabelOffset = 4f;
+            TopCategoryLabelHorizontalOffset = 0f;
             TopCategoryLabelVerticalOffset = 0f;
             CategoryFontSize = 8.5f;
             CategoryLabelColor = Color.FromArgb(95, 95, 95);
@@ -102,174 +134,37 @@ namespace LightingChartSamples
             ImageStorage = new LightningRadarImageStorageOptions();
         }
 
-        /// <summary>
-        /// 차트 상단에 표시할 제목입니다.
-        /// 기본값: Radar Chart Sample
-        /// </summary>
         public string Title { get; set; }
-
-        /// <summary>
-        /// 제목 텍스트 색상입니다.
-        /// 기본값: 진한 회색
-        /// </summary>
         public Color TitleColor { get; set; }
-
-        /// <summary>
-        /// 제목 글자 크기입니다.
-        /// 기본값: 12
-        /// </summary>
         public float TitleFontSize { get; set; }
-
-        /// <summary>
-        /// 차트 전체 배경색입니다.
-        /// 기본값: 흰색
-        /// </summary>
         public Color BackgroundColor { get; set; }
-
-        /// <summary>
-        /// 차트 영역 바깥쪽 기본 여백입니다.
-        /// 기본값: 40
-        /// </summary>
         public int ChartPadding { get; set; }
-
-        /// <summary>
-        /// 범례 영역 확보 폭입니다.
-        /// 기본값: 180
-        /// </summary>
         public int LegendWidth { get; set; }
-
-        /// <summary>
-        /// 제목/범례를 위한 상단 여백입니다.
-        /// 기본값: 90
-        /// </summary>
         public int TopOffset { get; set; }
-
-        /// <summary>
-        /// 계산된 반지름에서 추가로 뺄 내부 여유 공간입니다.
-        /// 기본값: 15
-        /// </summary>
         public float RadiusPadding { get; set; }
-
-        /// <summary>
-        /// 내부 원형 가이드 개수입니다.
-        /// 기본값: 10
-        /// </summary>
         public int GridRingCount { get; set; }
-
-        /// <summary>
-        /// 카테고리 라벨을 차트 외곽에서 얼마나 떨어뜨릴지 설정합니다.
-        /// 기본값: 32
-        /// </summary>
         public float CategoryLabelOffset { get; set; }
-
-        /// <summary>
-        /// 최상단(인덱스 0) 카테고리 라벨의 가로(X) 이동량입니다.
-        /// 음수면 왼쪽, 양수면 오른쪽으로 이동합니다.
-        /// 기본값: 0
-        /// </summary>
         public float TopCategoryLabelHorizontalOffset { get; set; }
-
-        /// <summary>
-        /// 최상단(인덱스 0) 카테고리 라벨의 세로(Y) 이동량입니다.
-        /// 양수면 위(12시 방향), 음수면 아래로 이동합니다.
-        /// 기본값: 0
-        /// </summary>
         public float TopCategoryLabelVerticalOffset { get; set; }
-
-        /// <summary>
-        /// 카테고리 라벨 글자 크기입니다.
-        /// 기본값: 8.5
-        /// </summary>
         public float CategoryFontSize { get; set; }
-
-        /// <summary>
-        /// 카테고리 라벨 색상입니다.
-        /// 기본값: 회색
-        /// </summary>
         public Color CategoryLabelColor { get; set; }
-
-        /// <summary>
-        /// 눈금 라벨 글자 크기입니다.
-        /// 기본값: 9
-        /// </summary>
         public float ScaleFontSize { get; set; }
-
-        /// <summary>
-        /// 눈금 라벨 색상입니다.
-        /// 기본값: 회색
-        /// </summary>
         public Color ScaleLabelColor { get; set; }
-
         public LightningRadarScaleLabelDisplayMode ScaleLabelDisplayMode { get; set; }
-
         public LightningRadarScaleLabelValueMode ScaleLabelValueMode { get; set; }
-
-        /// <summary>
-        /// 주요 가이드 선 색상입니다.
-        /// 기본값: 연한 회색
-        /// </summary>
         public Color MajorGridColor { get; set; }
-
-        /// <summary>
-        /// 보조 가이드 선 색상입니다.
-        /// 기본값: 더 연한 회색
-        /// </summary>
         public Color MinorGridColor { get; set; }
-
-        /// <summary>
-        /// 중심에서 각 축으로 뻗는 선 색상입니다.
-        /// 기본값: 연한 회색
-        /// </summary>
         public Color SpokeColor { get; set; }
-
-        /// <summary>
-        /// 범례 텍스트 색상입니다.
-        /// 기본값: 진한 회색
-        /// </summary>
         public Color LegendTextColor { get; set; }
-
-        /// <summary>
-        /// 시리즈 범례 항목 사이 가로 간격입니다.
-        /// 기본값: 28
-        /// </summary>
         public float LegendItemSpacing { get; set; }
-
         public LightningRadarLegendLabelLocation LegendLabelLocation { get; set; }
-
         public bool MarkerTooltipEnabled { get; set; }
-
         public float MarkerTooltipHitRadius { get; set; }
-
         public string MarkerTooltipFormat { get; set; }
-
-        /// <summary>
-        /// 차트 제목 표시 여부입니다.
-        /// 기본값: true
-        /// </summary>
         public bool ShowTitle { get; set; }
-
-        /// <summary>
-        /// 범례 표시 여부입니다.
-        /// 기본값: true
-        /// </summary>
         public bool ShowLegend { get; set; }
-
-        /// <summary>
-        /// 시리즈 외곽선 두께입니다.
-        /// 기본값: 2
-        /// </summary>
         public float SeriesLineWidth { get; set; }
-
-        /// <summary>
-        /// 데이터 포인트 마커 크기입니다.
-        /// 기본값: 8
-        /// </summary>
         public float SeriesPointSize { get; set; }
-
-        /// <summary>
-        /// 차트 이미지 저장 관련 옵션입니다.
-        /// 기본값: Documents 폴더, PNG, 현재 컨트롤 크기, JPEG 품질 90
-        /// </summary>
         public LightningRadarImageStorageOptions ImageStorage { get; set; }
 
         public LightningRadarOptions Clone()
@@ -280,21 +175,15 @@ namespace LightingChartSamples
         }
     }
 
-    /// <summary>
-    /// 기본 저장 루트를 지정합니다.
-    /// </summary>
     public enum LightningRadarStorageRootType
     {
+        Documents,
         AppData,
         LocalAppData,
-        Documents,
         Desktop,
         Custom
     }
 
-    /// <summary>
-    /// 저장할 이미지 포맷을 지정합니다.
-    /// </summary>
     public enum LightningRadarImageFormat
     {
         Png,
@@ -303,9 +192,6 @@ namespace LightingChartSamples
         Gif
     }
 
-    /// <summary>
-    /// 차트 이미지 저장 옵션을 정의합니다.
-    /// </summary>
     public class LightningRadarImageStorageOptions
     {
         public LightningRadarImageStorageOptions()
@@ -314,55 +200,17 @@ namespace LightingChartSamples
             CustomRootPath = string.Empty;
             RootFolderName = "LightningRadarImages";
             ImageFormat = LightningRadarImageFormat.Png;
-            ImageWidth = 0;
-            ImageHeight = 0;
+            ImageWidth = 1280;
+            ImageHeight = 720;
             JpegQuality = 90L;
         }
 
-        /// <summary>
-        /// 기본 저장 루트 위치입니다.
-        /// Documents, AppData, Desktop, Custom 중에서 선택합니다.
-        /// 기본값: Documents
-        /// </summary>
         public LightningRadarStorageRootType RootType { get; set; }
-
-        /// <summary>
-        /// RootType 이 Custom 일 때 사용할 사용자 지정 루트 경로입니다.
-        /// 기본값: 빈 문자열
-        /// </summary>
         public string CustomRootPath { get; set; }
-
-        /// <summary>
-        /// 기본 루트 아래에 생성할 상위 폴더 이름입니다.
-        /// 기본값: LightningRadarImages
-        /// </summary>
         public string RootFolderName { get; set; }
-
-        /// <summary>
-        /// 저장할 파일 포맷입니다.
-        /// 기본값: PNG
-        /// </summary>
         public LightningRadarImageFormat ImageFormat { get; set; }
-
-        /// <summary>
-        /// 저장 이미지 너비입니다.
-        /// 0 이하이면 현재 차트 컨트롤 너비를 사용합니다.
-        /// 기본값: 0
-        /// </summary>
         public int ImageWidth { get; set; }
-
-        /// <summary>
-        /// 저장 이미지 높이입니다.
-        /// 0 이하이면 현재 차트 컨트롤 높이를 사용합니다.
-        /// 기본값: 0
-        /// </summary>
         public int ImageHeight { get; set; }
-
-        /// <summary>
-        /// JPEG 저장 시 사용할 품질 값입니다.
-        /// 1~100 범위를 권장합니다.
-        /// 기본값: 90
-        /// </summary>
         public long JpegQuality { get; set; }
 
         public LightningRadarImageStorageOptions Clone()
@@ -371,9 +219,6 @@ namespace LightingChartSamples
         }
     }
 
-    /// <summary>
-    /// FAB_ID, LOT_CD, DRAFT_NO 기준으로 이미지 저장/검색 경로를 식별합니다.
-    /// </summary>
     public class LightningRadarImagePathInfo
     {
         public LightningRadarImagePathInfo()
@@ -384,25 +229,9 @@ namespace LightingChartSamples
             FileNamePrefix = "radar";
         }
 
-        /// <summary>
-        /// 공장 식별자입니다. 최상위 하위 폴더명으로 사용됩니다.
-        /// </summary>
         public string FabId { get; set; }
-
-        /// <summary>
-        /// LOT 코드입니다. 두 번째 하위 폴더명으로 사용됩니다.
-        /// </summary>
         public string LotCd { get; set; }
-
-        /// <summary>
-        /// DRAFT 번호입니다. 세 번째 하위 폴더명으로 사용됩니다.
-        /// </summary>
         public string DraftNo { get; set; }
-
-        /// <summary>
-        /// 저장 파일명 앞에 붙일 접두어입니다.
-        /// 기본값: radar
-        /// </summary>
         public string FileNamePrefix { get; set; }
 
         public LightningRadarImagePathInfo Clone()
@@ -412,94 +241,80 @@ namespace LightingChartSamples
     }
 
     /// <summary>
-    /// 코드만으로 생성하여 여러 WinForms 폼에서 재사용할 수 있는 레이더 차트 컨트롤입니다.
+    /// Arction LightningChart Ultimate 8.5 기반 Radar 차트입니다.
+    /// 격자, 축, 데이터 외곽선, 마커 및 채움은 모두 LightningChart 시리즈로 렌더링합니다.
     /// </summary>
-    public class LightningRadar : Control
+    public class LightningRadar : UserControl
     {
+        private const double RadarRadius = 100d;
         private readonly object syncRoot = new object();
+        private readonly LightningChartUltimate chart;
+        private readonly ToolTip markerToolTip;
+        private readonly List<RadarPointBinding> radarPointBindings = new List<RadarPointBinding>();
         private string[] categories = new string[0];
         private List<LightningRadarSeries> series = new List<LightningRadarSeries>();
         private LightningRadarOptions options = new LightningRadarOptions();
-        // 마지막 레전드가 그려진 영역을 보관하여 스케일/라벨이 그 영역과 겹치지 않도록 처리합니다.
-        private RectangleF lastLegendBounds = RectangleF.Empty;
-        private readonly ToolTip markerToolTip = new ToolTip();
-        private readonly List<RadarMarkerHitInfo> markerHitInfos = new List<RadarMarkerHitInfo>();
         private string currentToolTipText = string.Empty;
-        private bool collectMarkerHits;
+        private bool rebuildingChart;
 
         public LightningRadar()
         {
-            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
-            DoubleBuffered = true;
-            BackColor = Color.White;
             Size = new Size(820, 540);
-            markerToolTip.InitialDelay = 150;
-            markerToolTip.ReshowDelay = 100;
-            markerToolTip.AutoPopDelay = 5000;
+            BackColor = Color.White;
+            chart = new LightningChartUltimate
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0),
+                Font = new Font("맑은 고딕", 9f, FontStyle.Regular)
+            };
+            chart.ActiveView = ActiveView.ViewXY;
+            chart.MouseMove += Chart_MouseMove;
+            chart.MouseLeave += Chart_MouseLeave;
+            chart.Resize += Chart_Resize;
+            Controls.Add(chart);
+
+            markerToolTip = new ToolTip
+            {
+                InitialDelay = 150,
+                ReshowDelay = 100,
+                AutoPopDelay = 5000
+            };
+
+            EnsureChartNodes();
+            RebuildChart();
         }
 
-        protected override void Dispose(bool disposing)
+        [Browsable(false)]
+        public LightningChartUltimate Chart
         {
-            if (disposing)
-            {
-                markerToolTip.Dispose();
-            }
-
-            base.Dispose(disposing);
+            get { return chart; }
         }
 
         [Browsable(false)]
         public string[] Categories
         {
-            get
-            {
-                lock (syncRoot)
-                {
-                    return categories.ToArray();
-                }
-            }
+            get { lock (syncRoot) { return categories.ToArray(); } }
         }
 
         [Browsable(false)]
         public LightningRadarSeries[] Series
         {
-            get
-            {
-                lock (syncRoot)
-                {
-                    return series.Select(item => item.Clone()).ToArray();
-                }
-            }
+            get { lock (syncRoot) { return series.Select(item => item.Clone()).ToArray(); } }
         }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         [Browsable(false)]
         public LightningRadarOptions Options
         {
-            get
-            {
-                lock (syncRoot)
-                {
-                    return options.Clone();
-                }
-            }
+            get { lock (syncRoot) { return options.Clone(); } }
         }
 
         public static T AttachTo<T>(Control parent, DockStyle dockStyle, Rectangle? bounds, LightningRadarOptions options)
             where T : LightningRadar, new()
         {
             T radar = new T();
-
-            if (options != null)
-            {
-                radar.SetOptions(options);
-            }
-
-            if (bounds.HasValue)
-            {
-                radar.Bounds = bounds.Value;
-            }
-
+            if (options != null) radar.SetOptions(options);
+            if (bounds.HasValue) radar.Bounds = bounds.Value;
             radar.Dock = dockStyle;
             radar.AddTo(parent);
             return radar;
@@ -514,95 +329,58 @@ namespace LightingChartSamples
 
         public void AddTo(Control parent)
         {
-            if (parent == null)
-            {
-                throw new ArgumentNullException("parent");
-            }
-
+            if (parent == null) throw new ArgumentNullException("parent");
             ExecuteOnUiThread(parent, delegate
             {
-                if (Parent == parent)
-                {
-                    return;
-                }
-
-                parent.Controls.Add(this);
+                if (Parent != parent) parent.Controls.Add(this);
                 BringToFront();
-            });
+            }, false);
         }
 
         public void SetData(IEnumerable<string> newCategories, IEnumerable<LightningRadarSeries> newSeries)
         {
-            string[] categoryArray = newCategories == null ? new string[0] : newCategories.ToArray();
-            List<LightningRadarSeries> seriesList = newSeries == null
-                ? new List<LightningRadarSeries>()
-                : newSeries.Select(item => item == null ? new LightningRadarSeries() : item.Clone()).ToList();
-
-            NormalizeSeries(categoryArray, seriesList);
-
+            string[] nextCategories = newCategories == null ? new string[0] : newCategories.ToArray();
+            List<LightningRadarSeries> nextSeries = CloneSeries(newSeries);
+            NormalizeSeries(nextCategories, nextSeries);
             lock (syncRoot)
             {
-                categories = categoryArray;
-                series = seriesList;
+                categories = nextCategories;
+                series = nextSeries;
             }
-
             RefreshSafe();
         }
 
-        public void SetCategories(IEnumerable<string> newCategories)
-        {
-            SetData(newCategories, Series);
-        }
-
-        public void SetSeries(IEnumerable<LightningRadarSeries> newSeries)
-        {
-            SetData(Categories, newSeries);
-        }
+        public void SetCategories(IEnumerable<string> newCategories) { SetData(newCategories, Series); }
+        public void SetSeries(IEnumerable<LightningRadarSeries> newSeries) { SetData(Categories, newSeries); }
 
         public void UpdateData(IEnumerable<string> newCategories, IEnumerable<LightningRadarSeries> newSeries, LightningRadarOptions newOptions)
         {
-            string[] categoryArray = newCategories == null ? new string[0] : newCategories.ToArray();
-            List<LightningRadarSeries> seriesList = newSeries == null
-                ? new List<LightningRadarSeries>()
-                : newSeries.Select(item => item == null ? new LightningRadarSeries() : item.Clone()).ToList();
-            LightningRadarOptions nextOptions = newOptions == null ? new LightningRadarOptions() : newOptions.Clone();
-
-            NormalizeSeries(categoryArray, seriesList);
-
+            string[] nextCategories = newCategories == null ? new string[0] : newCategories.ToArray();
+            List<LightningRadarSeries> nextSeries = CloneSeries(newSeries);
+            NormalizeSeries(nextCategories, nextSeries);
             lock (syncRoot)
             {
-                categories = categoryArray;
-                series = seriesList;
-                options = nextOptions;
+                categories = nextCategories;
+                series = nextSeries;
+                options = newOptions == null ? new LightningRadarOptions() : newOptions.Clone();
             }
-
             RefreshSafe();
         }
 
         public void SetOptions(LightningRadarOptions newOptions)
         {
-            if (newOptions == null)
-            {
-                throw new ArgumentNullException("newOptions");
-            }
-
-            lock (syncRoot)
-            {
-                options = newOptions.Clone();
-            }
-
+            if (newOptions == null) throw new ArgumentNullException("newOptions");
+            lock (syncRoot) { options = newOptions.Clone(); }
             RefreshSafe();
         }
 
         public void Update(Action<LightningRadar> updateAction)
         {
-            if (updateAction == null)
-            {
-                throw new ArgumentNullException("updateAction");
-            }
-
-            ExecuteOnUiThread(this, delegate { updateAction(this); });
+            if (updateAction == null) throw new ArgumentNullException("updateAction");
+            ExecuteOnUiThread(this, delegate { updateAction(this); }, false);
         }
+
+        public virtual LightningRadarOptions CreateDefaultOptions() { return new LightningRadarOptions(); }
 
         public string SaveImage(LightningRadarImagePathInfo pathInfo)
         {
@@ -611,26 +389,19 @@ namespace LightingChartSamples
 
         public string SaveImage(LightningRadarImagePathInfo pathInfo, LightningRadarImageStorageOptions storageOptions)
         {
-            if (pathInfo == null)
-            {
-                throw new ArgumentNullException("pathInfo");
-            }
-
-            LightningRadarImageStorageOptions effectiveOptions = storageOptions == null ? new LightningRadarImageStorageOptions() : storageOptions.Clone();
-            string folderPath = GetImageFolderPath(pathInfo, effectiveOptions, true);
-            string fileExtension = GetFileExtension(effectiveOptions.ImageFormat);
-            string safePrefix = SanitizePathSegment(pathInfo.FileNamePrefix, "radar");
-            string fileName = string.Format("{0}_{1:yyyyMMdd_HHmmssfff}{2}", safePrefix, DateTime.Now, fileExtension);
-            string fullPath = Path.Combine(folderPath, fileName);
-
+            if (pathInfo == null) throw new ArgumentNullException("pathInfo");
+            LightningRadarImageStorageOptions effective = storageOptions == null ? new LightningRadarImageStorageOptions() : storageOptions.Clone();
+            string folder = GetImageFolderPath(pathInfo, effective, true);
+            string fileName = string.Format("{0}_{1:yyyyMMdd_HHmmssfff}{2}",
+                SanitizePathSegment(pathInfo.FileNamePrefix, "radar"), DateTime.Now, GetFileExtension(effective.ImageFormat));
+            string fullPath = Path.Combine(folder, fileName);
             ExecuteOnUiThread(this, delegate
             {
-                using (Bitmap bitmap = CreateChartBitmap(effectiveOptions))
-                {
-                    SaveBitmapToFile(bitmap, fullPath, effectiveOptions);
-                }
+                bool saved = chart.SaveToFile(fullPath,
+                    Math.Max(1, effective.ImageWidth > 0 ? effective.ImageWidth : Width),
+                    Math.Max(1, effective.ImageHeight > 0 ? effective.ImageHeight : Height), true);
+                if (!saved) throw new IOException("LightningChart 이미지 저장에 실패했습니다: " + fullPath);
             }, true);
-
             return fullPath;
         }
 
@@ -639,31 +410,19 @@ namespace LightingChartSamples
             return GetImageFolderPath(pathInfo, Options.ImageStorage, false);
         }
 
-        public string[] FindImages(LightningRadarImagePathInfo pathInfo)
-        {
-            return FindImages(pathInfo, Options.ImageStorage);
-        }
+        public string[] FindImages(LightningRadarImagePathInfo pathInfo) { return FindImages(pathInfo, Options.ImageStorage); }
 
         public string[] FindImages(LightningRadarImagePathInfo pathInfo, LightningRadarImageStorageOptions storageOptions)
         {
-            string folderPath = GetImageFolderPath(pathInfo, storageOptions, false);
-            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
-            {
-                return new string[0];
-            }
-
-            string[] allowedExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
-            return Directory.GetFiles(folderPath)
-                .Where(file => allowedExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
-                .OrderByDescending(File.GetCreationTime)
-                .ToArray();
+            string folder = GetImageFolderPath(pathInfo, storageOptions, false);
+            if (!Directory.Exists(folder)) return new string[0];
+            string[] extensions = { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
+            return Directory.GetFiles(folder)
+                .Where(file => extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
+                .OrderByDescending(File.GetCreationTime).ToArray();
         }
 
-        public string FindLatestImage(LightningRadarImagePathInfo pathInfo)
-        {
-            return FindLatestImage(pathInfo, Options.ImageStorage);
-        }
-
+        public string FindLatestImage(LightningRadarImagePathInfo pathInfo) { return FindLatestImage(pathInfo, Options.ImageStorage); }
         public string FindLatestImage(LightningRadarImagePathInfo pathInfo, LightningRadarImageStorageOptions storageOptions)
         {
             return FindImages(pathInfo, storageOptions).FirstOrDefault();
@@ -676,818 +435,499 @@ namespace LightingChartSamples
 
         public int DeleteImagesCreatedAfter(LightningRadarImagePathInfo pathInfo, DateTime threshold, LightningRadarImageStorageOptions storageOptions)
         {
-            string[] files = FindImages(pathInfo, storageOptions);
-            int deletedCount = 0;
-
-            foreach (string file in files)
+            int count = 0;
+            foreach (string file in FindImages(pathInfo, storageOptions))
             {
-                DateTime createdTime = File.GetCreationTime(file);
-                if (createdTime <= threshold)
-                {
-                    continue;
-                }
-
+                if (File.GetCreationTime(file) <= threshold) continue;
                 File.Delete(file);
-                deletedCount++;
+                count++;
             }
-
-            return deletedCount;
+            return count;
         }
 
-        public virtual LightningRadarOptions CreateDefaultOptions()
+        protected override void Dispose(bool disposing)
         {
-            return new LightningRadarOptions();
+            if (disposing)
+            {
+                markerToolTip.Dispose();
+                chart.MouseMove -= Chart_MouseMove;
+                chart.MouseLeave -= Chart_MouseLeave;
+                chart.Resize -= Chart_Resize;
+                chart.Dispose();
+            }
+            base.Dispose(disposing);
         }
 
-        protected override void OnPaint(PaintEventArgs e)
+        private void EnsureChartNodes()
         {
-            base.OnPaint(e);
+            ViewXY view = chart.ViewXY;
+            if (view.XAxes.Count == 0) view.XAxes.Add(new AxisX(view));
+            if (view.YAxes.Count == 0) view.YAxes.Add(new AxisY(view));
+            if (view.LegendBoxes.Count == 0) view.LegendBoxes.Add(new LegendBoxXY());
+        }
 
-            string[] snapshotCategories;
-            LightningRadarSeries[] snapshotSeries;
-            LightningRadarOptions snapshotOptions;
-
+        private void RebuildChart()
+        {
+            if (IsDisposed || chart.IsDisposed || rebuildingChart) return;
+            rebuildingChart = true;
+            string[] currentCategories;
+            LightningRadarSeries[] currentSeries;
+            LightningRadarOptions currentOptions;
             lock (syncRoot)
             {
-                snapshotCategories = categories.ToArray();
-                snapshotSeries = series.Select(item => item.Clone()).ToArray();
-                snapshotOptions = options.Clone();
+                currentCategories = categories.ToArray();
+                currentSeries = series.Select(item => item.Clone()).ToArray();
+                currentOptions = options.Clone();
             }
 
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            e.Graphics.Clear(snapshotOptions.BackgroundColor);
-
-            // 먼저 레전드가 차지할 영역을 계산하여 다른 요소(스케일 라벨 등)가 겹치지 않도록 합니다.
-            lastLegendBounds = snapshotOptions.ShowLegend
-                ? CalculateLegendBounds(e.Graphics, snapshotSeries, snapshotOptions, ClientSize)
-                : RectangleF.Empty;
-
-            if (snapshotOptions.ShowTitle)
+            chart.BeginUpdate();
+            try
             {
-                DrawTitle(e.Graphics, snapshotOptions);
+                EnsureChartNodes();
+                ClearChartObjects();
+                ApplyChartAppearance(currentOptions);
+                ApplyAxisRange(currentOptions);
+                AddGrid(currentCategories.Length, currentOptions);
+                AddCategoryLabels(currentCategories, currentOptions);
+                AddSeries(currentCategories, currentSeries, currentOptions);
+                ApplyLegend(currentOptions);
             }
-
-            markerHitInfos.Clear();
-            collectMarkerHits = true;
-            DrawRadarChart(e.Graphics, snapshotCategories, snapshotSeries, snapshotOptions);
-            collectMarkerHits = false;
-
-            // 레전드를 실제로 그립니다.
-            if (snapshotOptions.ShowLegend)
+            finally
             {
-                DrawLegend(e.Graphics, snapshotSeries, snapshotOptions);
+                chart.EndUpdate();
+                rebuildingChart = false;
             }
         }
 
-        /// <summary>
-        /// 레전드가 실제로 차지할 영역을 계산하여 반환합니다.
-        /// DrawLegend와 동일한 좌표 계산을 사용합니다.
-        /// </summary>
-        protected virtual RectangleF CalculateLegendBounds(Graphics graphics, LightningRadarSeries[] currentSeries, LightningRadarOptions currentOptions, Size renderSize)
+        private void ClearChartObjects()
         {
-            if (currentSeries == null || currentSeries.Length == 0)
-            {
-                return RectangleF.Empty;
-            }
-
-            const float markerWidth = 20f;
-            const float labelSpacing = 8f;
-            float sectionSpacing = Math.Max(0f, currentOptions.LegendItemSpacing);
-
-            using (var legendFont = new Font("맑은 고딕", 9f, FontStyle.Regular))
-            {
-                float totalLegendWidth = 0f;
-                float maxHeight = 0f;
-                foreach (LightningRadarSeries radarSeries in currentSeries)
-                {
-                    SizeF textSize = graphics.MeasureString(radarSeries.Name ?? string.Empty, legendFont);
-                    totalLegendWidth += markerWidth + labelSpacing + textSize.Width + sectionSpacing;
-                    maxHeight = Math.Max(maxHeight, Math.Max(textSize.Height, 14f));
-                }
-
-                totalLegendWidth = Math.Max(0f, totalLegendWidth - sectionSpacing);
-                PointF legendLocation = CalculateLegendLocation(currentOptions, renderSize, totalLegendWidth);
-
-                return new RectangleF(legendLocation.X, legendLocation.Y - 2f, totalLegendWidth, maxHeight + 4f);
-            }
+            ViewXY view = chart.ViewXY;
+            view.FreeformPointLineSeries.Clear();
+            view.PolygonSeries.Clear();
+            view.Annotations.Clear();
+            radarPointBindings.Clear();
         }
 
-        protected virtual void DrawTitle(Graphics graphics, LightningRadarOptions currentOptions)
+        private void ApplyChartAppearance(LightningRadarOptions currentOptions)
         {
-            using (var titleFont = new Font("맑은 고딕", currentOptions.TitleFontSize, FontStyle.Bold))
-            using (var titleBrush = new SolidBrush(currentOptions.TitleColor))
-            {
-                graphics.DrawString(currentOptions.Title ?? string.Empty, titleFont, titleBrush, 20f, 15f);
-            }
+            Color background = currentOptions.BackgroundColor.IsEmpty ? Color.White : currentOptions.BackgroundColor;
+            chart.ColorTheme = ColorTheme.LightGray;
+            chart.BackColor = background;
+            chart.Background.Color = background;
+            chart.Background.GradientColor = background;
+            chart.Background.GradientFill = GradientFill.Solid;
+            chart.Background.Style = RectFillStyle.ColorOnly;
+            chart.Title.Text = currentOptions.Title ?? string.Empty;
+            chart.Title.Visible = currentOptions.ShowTitle && !string.IsNullOrWhiteSpace(currentOptions.Title);
+            chart.Title.Font = new Font("맑은 고딕", Math.Max(1f, currentOptions.TitleFontSize), FontStyle.Bold);
+            chart.Title.Color = currentOptions.TitleColor;
+
+            ViewXY view = chart.ViewXY;
+            view.GraphBackground.Color = background;
+            view.GraphBackground.GradientColor = background;
+            view.GraphBackground.GradientFill = GradientFill.Solid;
+            view.GraphBackground.Style = RectFillStyle.ColorOnly;
+            view.Border.Color = background;
+            int padding = Math.Max(0, currentOptions.ChartPadding);
+            view.Margins = new Padding(padding, Math.Max(padding, currentOptions.TopOffset), padding, padding);
+            view.ZoomPanOptions.LeftMouseButtonAction = MouseButtonAction.None;
+            view.ZoomPanOptions.RightMouseButtonAction = MouseButtonAction.None;
+            view.ZoomPanOptions.MiddleMouseButtonAction = MouseButtonAction.None;
+            view.ZoomPanOptions.MouseWheelZooming = MouseWheelZooming.Off;
+
+            AxisX xAxis = view.XAxes[0];
+            AxisY yAxis = view.YAxes[0];
+            xAxis.Visible = false;
+            yAxis.Visible = false;
+            xAxis.LabelsVisible = false;
+            yAxis.LabelsVisible = false;
+            xAxis.MajorGrid.Visible = false;
+            yAxis.MajorGrid.Visible = false;
+            xAxis.MinorGrid.Visible = false;
+            yAxis.MinorGrid.Visible = false;
         }
 
-        protected override void OnMouseMove(MouseEventArgs e)
+        private void ApplyAxisRange(LightningRadarOptions currentOptions)
         {
-            base.OnMouseMove(e);
-            UpdateMarkerToolTip(e.Location);
+            double width = Math.Max(1d, chart.ClientSize.Width - (Math.Max(0, currentOptions.ChartPadding) * 2d));
+            double height = Math.Max(1d, chart.ClientSize.Height - Math.Max(0, currentOptions.TopOffset) - Math.Max(0, currentOptions.ChartPadding));
+            double aspect = width / height;
+            double extent = RadarRadius + Math.Max(0d, currentOptions.CategoryLabelOffset) + 18d +
+                Math.Max(0d, currentOptions.RadiusPadding);
+            double xExtent = aspect >= 1d ? extent * aspect : extent;
+            double yExtent = aspect >= 1d ? extent : extent / aspect;
+            chart.ViewXY.XAxes[0].SetRange(-xExtent, xExtent);
+            chart.ViewXY.YAxes[0].SetRange(-yExtent, yExtent);
         }
 
-        protected override void OnMouseLeave(EventArgs e)
+        private void AddGrid(int categoryCount, LightningRadarOptions currentOptions)
         {
-            base.OnMouseLeave(e);
-            HideMarkerToolTip();
-        }
-
-        protected virtual void DrawRadarChart(Graphics graphics, string[] currentCategories, LightningRadarSeries[] currentSeries, LightningRadarOptions currentOptions)
-        {
-            DrawRadarChart(graphics, currentCategories, currentSeries, currentOptions, ClientSize);
-        }
-
-        protected virtual void DrawRadarChart(Graphics graphics, string[] currentCategories, LightningRadarSeries[] currentSeries, LightningRadarOptions currentOptions, Size renderSize)
-        {
-            if (currentCategories.Length == 0)
-            {
-                return;
-            }
-
-            int topOffset = GetEffectiveTopOffset(currentOptions);
-            ChartLabelMargins labelMargins = CalculateCategoryLabelMargins(graphics, currentCategories, currentOptions);
-            float availableWidth = renderSize.Width - (currentOptions.ChartPadding * 2f) - labelMargins.Left - labelMargins.Right;
-            float availableHeight = renderSize.Height - topOffset - currentOptions.ChartPadding - labelMargins.Top - labelMargins.Bottom;
-            float diameter = Math.Min(availableWidth, availableHeight);
-            if (diameter <= 100)
-            {
-                return;
-            }
-
-            float radius = (diameter / 2f) - currentOptions.RadiusPadding;
-            float chartAreaWidth = renderSize.Width - (currentOptions.ChartPadding * 2f);
-            float chartAreaHeight = renderSize.Height - topOffset - currentOptions.ChartPadding;
-            float totalChartWidth = diameter + labelMargins.Left + labelMargins.Right;
-            float totalChartHeight = diameter + labelMargins.Top + labelMargins.Bottom;
-            float horizontalSlack = Math.Max(0f, chartAreaWidth - totalChartWidth);
-            float verticalSlack = Math.Max(0f, chartAreaHeight - totalChartHeight);
-            PointF center = new PointF(
-                currentOptions.ChartPadding + labelMargins.Left + (horizontalSlack / 2f) + (diameter / 2f),
-                topOffset + labelMargins.Top + (verticalSlack / 2f) + (diameter / 2f));
-
-            DrawGrid(graphics, center, radius, currentCategories, currentOptions);
-            DrawScaleLabels(graphics, center, radius, currentOptions);
-            DrawCategories(graphics, center, radius, currentCategories, currentOptions);
-
-            foreach (LightningRadarSeries radarSeries in currentSeries)
-            {
-                DrawSeries(graphics, center, radius, currentCategories, radarSeries, currentOptions);
-            }
-        }
-
-        protected virtual void DrawGrid(Graphics graphics, PointF center, float radius, string[] currentCategories, LightningRadarOptions currentOptions)
-        {
+            if (categoryCount < 3) return;
             int ringCount = Math.Max(1, currentOptions.GridRingCount);
+            int skip = CalculateScaleLabelSkip(ringCount, currentOptions);
 
-            using (var majorGridPen = new Pen(currentOptions.MajorGridColor, 1.4f))
-            using (var minorGridPen = new Pen(currentOptions.MinorGridColor, 1f))
-            using (var spokePen = new Pen(currentOptions.SpokeColor, 1f))
+            if (currentOptions.ScaleLabelDisplayMode != LightningRadarScaleLabelDisplayMode.None)
             {
-                for (int i = 1; i <= ringCount; i++)
-                {
-                    float currentRadius = radius * i / ringCount;
-                    Pen currentPen = (i % 2 == 0 || i == ringCount) ? majorGridPen : minorGridPen;
-                    graphics.DrawEllipse(currentPen, center.X - currentRadius, center.Y - currentRadius, currentRadius * 2f, currentRadius * 2f);
-                }
+                AddTextAnnotation(FormatScaleLabel(0, ringCount, currentOptions), 0d, 0d,
+                    currentOptions.ScaleFontSize, currentOptions.ScaleLabelColor,
+                    AlignmentHorizontal.Center, AlignmentVertical.Center, FontStyle.Bold);
+            }
 
+            for (int ring = 1; ring <= ringCount; ring++)
+            {
+                double radius = RadarRadius * ring / ringCount;
+                bool major = ring % 2 == 0 || ring == ringCount;
+                Color color = major ? currentOptions.MajorGridColor : currentOptions.MinorGridColor;
+                AddClosedLine(CreateCirclePoints(radius), color, major ? 1.4f : 1f, LinePattern.Solid, false, string.Empty);
+                if (ShouldShowScaleLabel(ring, ringCount, skip, currentOptions))
+                {
+                    AddTextAnnotation(FormatScaleLabel(ring, ringCount, currentOptions), 0d, radius + 2d,
+                        currentOptions.ScaleFontSize, currentOptions.ScaleLabelColor,
+                        AlignmentHorizontal.Center, AlignmentVertical.Bottom, FontStyle.Bold);
+                }
+            }
+
+            for (int i = 0; i < categoryCount; i++)
+            {
+                PointDouble2D point = GetRadarPoint(RadarRadius, i, categoryCount);
+                AddOpenLine(new[] { new PointDouble2D(0d, 0d), point }, currentOptions.SpokeColor, 1f, LinePattern.Solid, false, string.Empty);
+            }
+        }
+
+        private void AddCategoryLabels(string[] currentCategories, LightningRadarOptions currentOptions)
+        {
+            for (int i = 0; i < currentCategories.Length; i++)
+            {
+                PointDouble2D point = GetRadarPoint(RadarRadius + Math.Max(0f, currentOptions.CategoryLabelOffset), i, currentCategories.Length);
+                if (i == 0)
+                {
+                    point.X += currentOptions.TopCategoryLabelHorizontalOffset;
+                    point.Y += currentOptions.TopCategoryLabelVerticalOffset;
+                }
+                double angle = -Math.PI / 2d + (Math.PI * 2d * i / currentCategories.Length);
+                double cos = Math.Cos(angle);
+                double sin = Math.Sin(angle);
+                AlignmentHorizontal horizontal = cos > 0.25d ? AlignmentHorizontal.Left :
+                    (cos < -0.25d ? AlignmentHorizontal.Right : AlignmentHorizontal.Center);
+                AlignmentVertical vertical = sin > 0.25d ? AlignmentVertical.Top :
+                    (sin < -0.25d ? AlignmentVertical.Bottom : AlignmentVertical.Center);
+                AddTextAnnotation(currentCategories[i] ?? string.Empty, point.X, point.Y,
+                    currentOptions.CategoryFontSize, currentOptions.CategoryLabelColor,
+                    horizontal, vertical, FontStyle.Regular);
+            }
+        }
+
+        private void AddSeries(string[] currentCategories, LightningRadarSeries[] currentSeries, LightningRadarOptions currentOptions)
+        {
+            for (int seriesIndex = 0; seriesIndex < currentSeries.Length; seriesIndex++)
+            {
+                LightningRadarSeries source = currentSeries[seriesIndex] ?? new LightningRadarSeries();
+                PointDouble2D[] points = new PointDouble2D[currentCategories.Length];
                 for (int i = 0; i < currentCategories.Length; i++)
                 {
-                    PointF outerPoint = GetRadarPoint(center, radius, i, currentCategories.Length);
-                    graphics.DrawLine(spokePen, center, outerPoint);
+                    double value = source.Values == null || i >= source.Values.Length ? 0d : source.Values[i];
+                    value = Math.Max(0d, Math.Min(100d, value));
+                    points[i] = GetRadarPoint(RadarRadius * value / 100d, i, currentCategories.Length);
+                    radarPointBindings.Add(new RadarPointBinding(points[i], source.Name, currentCategories[i], (float)value, source.LineColor));
                 }
+
+                if (points.Length < 3) continue;
+                if (source.FillMode == LightningRadarFillMode.Color)
+                {
+                    PolygonSeries polygon = new PolygonSeries(chart.ViewXY, chart.ViewXY.XAxes[0], chart.ViewXY.YAxes[0]);
+                    polygon.Points = points;
+                    polygon.Fill.Style = RectFillStyle.ColorOnly;
+                    polygon.Fill.Color = source.FillColor;
+                    polygon.BorderVisible = false;
+                    polygon.ShowInLegendBox = false;
+                    polygon.MouseInteraction = false;
+                    chart.ViewXY.PolygonSeries.Add(polygon);
+                }
+
+                float lineWidth = source.LineWidth > 0f ? source.LineWidth : Math.Max(0.5f, currentOptions.SeriesLineWidth);
+                FreeformPointLineSeries line = AddClosedLine(points, source.LineColor, lineWidth,
+                    ConvertLinePattern(source.LinePattern), true, source.Name ?? string.Empty);
+                line.PointsVisible = source.ShowPoints;
+                line.PointStyle.Width = Math.Max(1f, currentOptions.SeriesPointSize);
+                line.PointStyle.Height = Math.Max(1f, currentOptions.SeriesPointSize);
+                line.PointStyle.Shape = Shape.Circle;
+                line.PointStyle.Color1 = source.LineColor;
+                line.PointStyle.Color2 = source.LineColor;
+                line.PointStyle.BorderColor = source.LineColor;
+                line.PointStyle.BorderWidth = 1f;
+                line.PointStyle.Antialiasing = true;
             }
         }
 
-        protected virtual void DrawScaleLabels(Graphics graphics, PointF center, float radius, LightningRadarOptions currentOptions)
+        private FreeformPointLineSeries AddClosedLine(PointDouble2D[] points, Color color, float width, LinePattern pattern, bool showLegend, string title)
         {
-            int ringCount = Math.Max(1, currentOptions.GridRingCount);
-            using (var labelFont = new Font("맑은 고딕", currentOptions.ScaleFontSize, FontStyle.Bold))
-            using (var labelBrush = new SolidBrush(currentOptions.ScaleLabelColor))
+            SeriesPoint[] closed = new SeriesPoint[points.Length + 1];
+            for (int i = 0; i < points.Length; i++) closed[i] = new SeriesPoint(points[i].X, points[i].Y);
+            closed[closed.Length - 1] = new SeriesPoint(points[0].X, points[0].Y);
+            return AddLine(closed, color, width, pattern, showLegend, title);
+        }
+
+        private FreeformPointLineSeries AddOpenLine(PointDouble2D[] points, Color color, float width, LinePattern pattern, bool showLegend, string title)
+        {
+            return AddLine(points.Select(point => new SeriesPoint(point.X, point.Y)).ToArray(), color, width, pattern, showLegend, title);
+        }
+
+        private FreeformPointLineSeries AddLine(SeriesPoint[] points, Color color, float width, LinePattern pattern, bool showLegend, string title)
+        {
+            ViewXY view = chart.ViewXY;
+            FreeformPointLineSeries line = new FreeformPointLineSeries(view, view.XAxes[0], view.YAxes[0]);
+            line.Points = points;
+            line.LineVisible = true;
+            line.PointsVisible = false;
+            line.LineStyle.Color = color;
+            line.LineStyle.Width = Math.Max(0.5f, width);
+            line.LineStyle.Pattern = pattern;
+            line.LineStyle.PatternScale = 1;
+            line.Title.Text = title;
+            line.ShowInLegendBox = showLegend;
+            line.MouseInteraction = false;
+            view.FreeformPointLineSeries.Add(line);
+            return line;
+        }
+
+        private void AddTextAnnotation(string text, double x, double y, float fontSize, Color color,
+            AlignmentHorizontal horizontal, AlignmentVertical vertical, FontStyle fontStyle)
+        {
+            ViewXY view = chart.ViewXY;
+            AnnotationXY annotation = new AnnotationXY(view, view.XAxes[0], view.YAxes[0]);
+            annotation.Text = text;
+            annotation.LocationCoordinateSystem = CoordinateSystem.AxisValues;
+            annotation.LocationAxisValues = new PointDoubleXY(x, y);
+            annotation.Sizing = AnnotationXYSizing.Automatic;
+            annotation.Fill.Style = RectFillStyle.None;
+            annotation.BorderVisible = false;
+            annotation.TextStyle.Font = new Font("맑은 고딕", Math.Max(1f, fontSize), fontStyle);
+            annotation.TextStyle.Color = color;
+            annotation.TextStyle.HorizAlign = horizontal;
+            annotation.TextStyle.MultiLineTextHorizontalAlign = horizontal;
+            annotation.TextStyle.VerticalAlign = vertical;
+            annotation.MouseInteraction = false;
+            view.Annotations.Add(annotation);
+        }
+
+        private void ApplyLegend(LightningRadarOptions currentOptions)
+        {
+            LegendBoxXY legend = chart.ViewXY.LegendBoxes[0];
+            legend.Visible = currentOptions.ShowLegend;
+            legend.Position = ConvertLegendPosition(currentOptions.LegendLabelLocation);
+            legend.Layout = LegendBoxLayout.Horizontal;
+            legend.AutoSize = true;
+            legend.SeriesTitleFont = new Font("맑은 고딕", 9f, FontStyle.Regular);
+            legend.SeriesTitleColor = currentOptions.LegendTextColor;
+            legend.UseSeriesTitlesColors = true;
+            legend.Fill.Style = RectFillStyle.None;
+            legend.BorderWidth = 0;
+            legend.Shadow.Visible = false;
+            legend.MoveByMouse = false;
+            legend.MoveFromSeriesTitle = false;
+            legend.AllowMouseResize = false;
+        }
+
+        private void Chart_MouseMove(object sender, MouseEventArgs e)
+        {
+            LightningRadarOptions currentOptions = Options;
+            if (!currentOptions.MarkerTooltipEnabled || radarPointBindings.Count == 0) { HideToolTip(); return; }
+            double bestDistance = double.MaxValue;
+            RadarPointBinding best = null;
+            foreach (RadarPointBinding binding in radarPointBindings)
             {
-                // 동적 간격 계산: 라벨 높이와 반지름 기반 픽셀 간격을 비교해 표시할 라벨 간격(skip)을 결정합니다.
-                SizeF sampleSize = graphics.MeasureString("100", labelFont);
-                float labelHeight = sampleSize.Height;
-                float ringPixelStep = radius / ringCount;
-                int skip = (int)Math.Ceiling((labelHeight + 4f) / Math.Max(0.5f, ringPixelStep));
-                if (skip < 1) skip = 1;
-                if (currentOptions.ScaleLabelDisplayMode == LightningRadarScaleLabelDisplayMode.All)
-                {
-                    skip = 1;
-                }
+                float x = chart.ViewXY.XAxes[0].ValueToCoord(binding.Point.X, false);
+                float y = chart.ViewXY.YAxes[0].ValueToCoord(binding.Point.Y, false);
+                double dx = x - e.X;
+                double dy = y - e.Y;
+                double distance = (dx * dx) + (dy * dy);
+                if (distance < bestDistance) { bestDistance = distance; best = binding; }
+            }
+            double hitRadius = Math.Max(2d, currentOptions.MarkerTooltipHitRadius);
+            if (best == null || bestDistance > hitRadius * hitRadius) { HideToolTip(); return; }
+            string format = string.IsNullOrWhiteSpace(currentOptions.MarkerTooltipFormat) ? "{0} / {1}: {2:0.#}" : currentOptions.MarkerTooltipFormat;
+            string text;
+            try { text = string.Format(format, best.SeriesName, best.CategoryName, best.Value); }
+            catch (FormatException) { text = string.Format("{0} / {1}: {2:0.#}", best.SeriesName, best.CategoryName, best.Value); }
+            if (text == currentToolTipText) return;
+            currentToolTipText = text;
+            markerToolTip.Show(text, chart, e.X + 14, e.Y + 14);
+        }
 
-                // 0은 항상 표시 (단, 레전드와 겹치면 표시 생략)
-                string zeroText = FormatScaleLabel(0, ringCount, currentOptions);
-                SizeF zeroLabelSize = graphics.MeasureString(zeroText, labelFont);
-                var zeroRect = new RectangleF(center.X - (zeroLabelSize.Width / 2f), center.Y - (zeroLabelSize.Height / 2f), zeroLabelSize.Width, zeroLabelSize.Height);
-                if (!lastLegendBounds.IntersectsWith(zeroRect))
-                {
-                    graphics.DrawString(zeroText, labelFont, labelBrush, zeroRect.X, zeroRect.Y);
-                }
+        private void Chart_MouseLeave(object sender, EventArgs e) { HideToolTip(); }
+        private void Chart_Resize(object sender, EventArgs e) { RebuildChart(); }
+        private void HideToolTip()
+        {
+            if (string.IsNullOrEmpty(currentToolTipText)) return;
+            currentToolTipText = string.Empty;
+            markerToolTip.Hide(chart);
+        }
 
-                // 간격(skip)에 따라 라벨을 출력
-                for (int ring = skip; ring <= ringCount; ring += skip)
-                {
-                    string labelText = FormatScaleLabel(ring, ringCount, currentOptions);
-                    float currentRadius = radius * ring / ringCount;
-                    PointF point = new PointF(center.X, center.Y - currentRadius);
-                    SizeF labelSize = graphics.MeasureString(labelText, labelFont);
-                    var labelRect = new RectangleF(point.X - (labelSize.Width / 2f), point.Y - labelSize.Height - 4f, labelSize.Width, labelSize.Height);
-                    // 레전드와 겹치면 표시하지 않음
-                    if (!lastLegendBounds.IntersectsWith(labelRect))
-                    {
-                        graphics.DrawString(labelText, labelFont, labelBrush, labelRect.X, labelRect.Y);
-                    }
-                }
+        private static PointDouble2D[] CreateRadarPoints(double radius, int count)
+        {
+            PointDouble2D[] points = new PointDouble2D[count];
+            for (int i = 0; i < count; i++) points[i] = GetRadarPoint(radius, i, count);
+            return points;
+        }
 
-                // 최상단(100)이 출력되지 않았을 경우 보장 출력
-                if ((ringCount % skip) != 0)
-                {
-                    string labelText = FormatScaleLabel(ringCount, ringCount, currentOptions);
-                    float currentRadius = radius;
-                    PointF point = new PointF(center.X, center.Y - currentRadius);
-                    SizeF labelSize = graphics.MeasureString(labelText, labelFont);
-                    var labelRect = new RectangleF(point.X - (labelSize.Width / 2f), point.Y - labelSize.Height - 4f, labelSize.Width, labelSize.Height);
-                    if (!lastLegendBounds.IntersectsWith(labelRect))
-                    {
-                        graphics.DrawString(labelText, labelFont, labelBrush, labelRect.X, labelRect.Y);
-                    }
-                }
+        private static PointDouble2D[] CreateCirclePoints(double radius)
+        {
+            const int SegmentCount = 120;
+            PointDouble2D[] points = new PointDouble2D[SegmentCount];
+            for (int i = 0; i < SegmentCount; i++)
+            {
+                double angle = Math.PI * 2d * i / SegmentCount;
+                points[i] = new PointDouble2D(Math.Cos(angle) * radius, Math.Sin(angle) * radius);
+            }
+            return points;
+        }
+
+        private static PointDouble2D GetRadarPoint(double radius, int index, int count)
+        {
+            double angle = -Math.PI / 2d + (Math.PI * 2d * index / count);
+            return new PointDouble2D(Math.Cos(angle) * radius, -Math.Sin(angle) * radius);
+        }
+
+        private int CalculateScaleLabelSkip(int ringCount, LightningRadarOptions currentOptions)
+        {
+            if (currentOptions.ScaleLabelDisplayMode == LightningRadarScaleLabelDisplayMode.All) return 1;
+            using (Font font = new Font("맑은 고딕", Math.Max(1f, currentOptions.ScaleFontSize), FontStyle.Bold))
+            {
+                float labelHeight = font.GetHeight() + 4f;
+                float radiusPixels = Math.Max(1f, Math.Min(chart.ClientSize.Width, chart.ClientSize.Height) * 0.38f);
+                return Math.Max(1, (int)Math.Ceiling(labelHeight / Math.Max(0.5f, radiusPixels / ringCount)));
             }
         }
 
-        protected virtual string FormatScaleLabel(int ring, int ringCount, LightningRadarOptions currentOptions)
+        private static bool ShouldShowScaleLabel(int ring, int ringCount, int skip, LightningRadarOptions currentOptions)
+        {
+            if (currentOptions.ScaleLabelDisplayMode == LightningRadarScaleLabelDisplayMode.None) return false;
+            return ring == ringCount || ring % Math.Max(1, skip) == 0;
+        }
+
+        private static string FormatScaleLabel(int ring, int ringCount, LightningRadarOptions currentOptions)
         {
             if (currentOptions.ScaleLabelValueMode == LightningRadarScaleLabelValueMode.RingIndex0ToGridRingCount)
             {
                 return ring.ToString();
             }
 
-            int value = (int)Math.Round(ring * (100f / Math.Max(1, ringCount)));
-            return value.ToString();
+            return Math.Round(ring * (100d / Math.Max(1, ringCount))).ToString("0");
         }
 
-        protected virtual void DrawCategories(Graphics graphics, PointF center, float radius, string[] currentCategories, LightningRadarOptions currentOptions)
+        private static LinePattern ConvertLinePattern(LightningRadarLinePattern pattern)
         {
-            using (var labelFont = new Font("맑은 고딕", currentOptions.CategoryFontSize, FontStyle.Regular))
-            using (var labelBrush = new SolidBrush(currentOptions.CategoryLabelColor))
+            switch (pattern)
             {
-                for (int i = 0; i < currentCategories.Length; i++)
-                {
-                    float angle = GetRadarAngle(i, currentCategories.Length);
-                    PointF point = GetRadarPoint(center, radius + currentOptions.CategoryLabelOffset, i, currentCategories.Length);
-
-                    if (i == 0 && Math.Abs(currentOptions.TopCategoryLabelHorizontalOffset) > float.Epsilon)
-                    {
-                        point = new PointF(point.X + currentOptions.TopCategoryLabelHorizontalOffset, point.Y);
-                    }
-
-                    if (i == 0 && Math.Abs(currentOptions.TopCategoryLabelVerticalOffset) > float.Epsilon)
-                    {
-                        point = new PointF(point.X, point.Y - currentOptions.TopCategoryLabelVerticalOffset);
-                    }
-
-                    using (var format = CreateCategoryLabelFormat(angle))
-                    {
-                        graphics.DrawString(currentCategories[i], labelFont, labelBrush, point, format);
-                    }
-                }
+                case LightningRadarLinePattern.Dash: return LinePattern.Dash;
+                case LightningRadarLinePattern.Dot: return LinePattern.Dot;
+                case LightningRadarLinePattern.SmallDot: return LinePattern.SmallDot;
+                case LightningRadarLinePattern.DashDot: return LinePattern.DashDot;
+                default: return LinePattern.Solid;
             }
         }
 
-        protected virtual void DrawSeries(Graphics graphics, PointF center, float radius, string[] currentCategories, LightningRadarSeries radarSeries, LightningRadarOptions currentOptions)
+        private static LegendBoxPositionXY ConvertLegendPosition(LightningRadarLegendLabelLocation location)
         {
-            if (radarSeries == null || radarSeries.Values == null || radarSeries.Values.Length == 0 || currentCategories.Length == 0)
+            switch (location)
             {
-                return;
-            }
-
-            PointF[] points = radarSeries.Values
-                .Take(currentCategories.Length)
-                .Select((value, index) => GetRadarPoint(center, radius * Math.Max(0f, Math.Min(100f, value)) / 100f, index, currentCategories.Length))
-                .ToArray();
-
-            if (points.Length < 3)
-            {
-                return;
-            }
-
-            using (var fillBrush = new SolidBrush(radarSeries.FillColor))
-            using (var linePen = new Pen(radarSeries.LineColor, currentOptions.SeriesLineWidth))
-            using (var pointBrush = new SolidBrush(radarSeries.LineColor))
-            {
-                graphics.FillPolygon(fillBrush, points);
-                graphics.DrawPolygon(linePen, points);
-
-                float markerRadius = currentOptions.SeriesPointSize / 2f;
-                for (int i = 0; i < points.Length; i++)
-                {
-                    PointF point = points[i];
-                    graphics.FillEllipse(pointBrush, point.X - markerRadius, point.Y - markerRadius, currentOptions.SeriesPointSize, currentOptions.SeriesPointSize);
-                    if (collectMarkerHits)
-                    {
-                        markerHitInfos.Add(new RadarMarkerHitInfo
-                        {
-                            Location = point,
-                            SeriesName = radarSeries.Name ?? string.Empty,
-                            CategoryName = currentCategories[i],
-                            Value = radarSeries.Values[i]
-                        });
-                    }
-                }
+                case LightningRadarLegendLabelLocation.TopLeft: return LegendBoxPositionXY.TopLeft;
+                case LightningRadarLegendLabelLocation.TopRight: return LegendBoxPositionXY.TopRight;
+                default: return LegendBoxPositionXY.TopCenter;
             }
         }
 
-        protected virtual int GetEffectiveTopOffset(LightningRadarOptions currentOptions)
+        private static List<LightningRadarSeries> CloneSeries(IEnumerable<LightningRadarSeries> source)
         {
-            if (currentOptions.ShowTitle || currentOptions.ShowLegend)
-            {
-                return Math.Max(0, currentOptions.TopOffset);
-            }
-
-            return Math.Max(0, currentOptions.ChartPadding);
+            return source == null ? new List<LightningRadarSeries>() :
+                source.Select(item => item == null ? new LightningRadarSeries() : item.Clone()).ToList();
         }
 
-        protected virtual ChartLabelMargins CalculateCategoryLabelMargins(Graphics graphics, string[] currentCategories, LightningRadarOptions currentOptions)
+        private static void NormalizeSeries(string[] currentCategories, IList<LightningRadarSeries> currentSeries)
         {
-            if (currentCategories == null || currentCategories.Length == 0)
+            int count = currentCategories == null ? 0 : currentCategories.Length;
+            foreach (LightningRadarSeries item in currentSeries)
             {
-                return new ChartLabelMargins();
-            }
-
-            using (var labelFont = new Font("맑은 고딕", currentOptions.CategoryFontSize, FontStyle.Regular))
-            {
-                float maxWidth = 0f;
-                float maxHeight = 0f;
-
-                foreach (string category in currentCategories)
-                {
-                    SizeF labelSize = graphics.MeasureString(category ?? string.Empty, labelFont);
-                    maxWidth = Math.Max(maxWidth, labelSize.Width);
-                    maxHeight = Math.Max(maxHeight, labelSize.Height);
-                }
-
-                float labelOffset = Math.Max(0f, currentOptions.CategoryLabelOffset);
-                float topLabelExtraOffset = Math.Max(0f, currentOptions.TopCategoryLabelVerticalOffset);
-
-                return new ChartLabelMargins
-                {
-                    Top = maxHeight + labelOffset + topLabelExtraOffset + 2f,
-                    Right = maxWidth + labelOffset + 2f,
-                    Bottom = maxHeight + labelOffset + 2f,
-                    Left = maxWidth + labelOffset + 2f
-                };
+                float[] source = item.Values ?? new float[0];
+                if (source.Length == count) continue;
+                float[] normalized = new float[count];
+                Array.Copy(source, normalized, Math.Min(source.Length, count));
+                item.Values = normalized;
             }
         }
 
-        protected virtual void DrawLegend(Graphics graphics, LightningRadarSeries[] currentSeries, LightningRadarOptions currentOptions)
+        private string GetImageFolderPath(LightningRadarImagePathInfo pathInfo, LightningRadarImageStorageOptions storageOptions, bool create)
         {
-            DrawLegend(graphics, currentSeries, currentOptions, ClientSize);
-        }
-
-        protected virtual void DrawLegend(Graphics graphics, LightningRadarSeries[] currentSeries, LightningRadarOptions currentOptions, Size renderSize)
-        {
-            if (currentSeries == null || currentSeries.Length == 0)
-            {
-                return;
-            }
-
-            const float markerWidth = 20f;
-            const float labelSpacing = 8f;
-            float sectionSpacing = Math.Max(0f, currentOptions.LegendItemSpacing);
-
-            using (var legendFont = new Font("맑은 고딕", 9f, FontStyle.Regular))
-            using (var textBrush = new SolidBrush(currentOptions.LegendTextColor))
-            {
-                float totalLegendWidth = 0f;
-                foreach (LightningRadarSeries radarSeries in currentSeries)
-                {
-                    SizeF textSize = graphics.MeasureString(radarSeries.Name ?? string.Empty, legendFont);
-                    totalLegendWidth += markerWidth + labelSpacing + textSize.Width + sectionSpacing;
-                }
-
-                totalLegendWidth = Math.Max(0f, totalLegendWidth - sectionSpacing);
-                PointF legendLocation = CalculateLegendLocation(currentOptions, renderSize, totalLegendWidth);
-                float legendX = legendLocation.X;
-                float legendY = legendLocation.Y;
-
-                foreach (LightningRadarSeries radarSeries in currentSeries)
-                {
-                    SizeF textSize = graphics.MeasureString(radarSeries.Name ?? string.Empty, legendFont);
-                    DrawLegendItem(graphics, legendFont, textBrush, legendX, legendY, radarSeries.FillColor, radarSeries.LineColor, radarSeries.Name ?? string.Empty);
-                    legendX += markerWidth + labelSpacing + textSize.Width + sectionSpacing;
-                }
-            }
-        }
-
-        protected virtual void DrawLegendItem(Graphics graphics, Font font, Brush textBrush, float x, float y, Color fillColor, Color lineColor, string text)
-        {
-            RectangleF markerRect = new RectangleF(x, y, 20f, 14f);
-
-            using (var fillBrush = new SolidBrush(fillColor))
-            using (var borderPen = new Pen(lineColor, 1.5f))
-            {
-                graphics.FillRectangle(fillBrush, markerRect);
-                graphics.DrawRectangle(borderPen, markerRect.X, markerRect.Y, markerRect.Width, markerRect.Height);
-            }
-
-            graphics.DrawString(text, font, textBrush, x + 28f, y - 2f);
-        }
-
-        protected virtual PointF CalculateLegendLocation(LightningRadarOptions currentOptions, Size renderSize, float legendWidth)
-        {
-            const float horizontalPadding = 8f;
-            const float legendY = 8f;
-
-            float legendX;
-            switch (currentOptions.LegendLabelLocation)
-            {
-                case LightningRadarLegendLabelLocation.TopLeft:
-                    legendX = horizontalPadding;
-                    break;
-                case LightningRadarLegendLabelLocation.TopRight:
-                    legendX = renderSize.Width - legendWidth - horizontalPadding;
-                    break;
-                case LightningRadarLegendLabelLocation.TopCenter:
-                default:
-                    legendX = (renderSize.Width - legendWidth) / 2f;
-                    break;
-            }
-
-            legendX = Math.Max(horizontalPadding, legendX);
-            return new PointF(legendX, legendY);
-        }
-
-        protected virtual PointF GetRadarPoint(PointF center, float radius, int index, int totalCount)
-        {
-            double angle = GetRadarAngle(index, totalCount);
-            float x = center.X + (float)(Math.Cos(angle) * radius);
-            float y = center.Y + (float)(Math.Sin(angle) * radius);
-            return new PointF(x, y);
-        }
-
-        protected virtual float GetRadarAngle(int index, int totalCount)
-        {
-            return (float)((-Math.PI / 2d) + ((Math.PI * 2d * index) / totalCount));
-        }
-
-        protected virtual StringFormat CreateCategoryLabelFormat(float angle)
-        {
-            var format = new StringFormat();
-            float cos = (float)Math.Cos(angle);
-            float sin = (float)Math.Sin(angle);
-
-            if (cos > 0.25f)
-            {
-                format.Alignment = StringAlignment.Near;
-            }
-            else if (cos < -0.25f)
-            {
-                format.Alignment = StringAlignment.Far;
-            }
-            else
-            {
-                format.Alignment = StringAlignment.Center;
-            }
-
-            if (sin > 0.25f)
-            {
-                format.LineAlignment = StringAlignment.Near;
-            }
-            else if (sin < -0.25f)
-            {
-                format.LineAlignment = StringAlignment.Far;
-            }
-            else
-            {
-                format.LineAlignment = StringAlignment.Center;
-            }
-
-            return format;
-        }
-
-        protected virtual void UpdateMarkerToolTip(Point location)
-        {
-            LightningRadarOptions currentOptions = Options;
-            if (!currentOptions.MarkerTooltipEnabled)
-            {
-                HideMarkerToolTip();
-                return;
-            }
-
-            RadarMarkerHitInfo hitInfo = FindMarkerHit(location, currentOptions.MarkerTooltipHitRadius);
-            if (hitInfo == null)
-            {
-                HideMarkerToolTip();
-                return;
-            }
-
-            string toolTipText = FormatMarkerToolTip(hitInfo, currentOptions);
-            if (toolTipText == currentToolTipText)
-            {
-                return;
-            }
-
-            currentToolTipText = toolTipText;
-            markerToolTip.Show(toolTipText, this, location.X + 14, location.Y + 14);
-        }
-
-        protected virtual RadarMarkerHitInfo FindMarkerHit(Point location, float hitRadius)
-        {
-            float effectiveRadius = Math.Max(2f, hitRadius);
-            float hitRadiusSquared = effectiveRadius * effectiveRadius;
-
-            return markerHitInfos
-                .Select(item => new
-                {
-                    HitInfo = item,
-                    DistanceSquared = GetDistanceSquared(item.Location, location)
-                })
-                .Where(item => item.DistanceSquared <= hitRadiusSquared)
-                .OrderBy(item => item.DistanceSquared)
-                .Select(item => item.HitInfo)
-                .FirstOrDefault();
-        }
-
-        protected virtual string FormatMarkerToolTip(RadarMarkerHitInfo hitInfo, LightningRadarOptions currentOptions)
-        {
-            string format = string.IsNullOrWhiteSpace(currentOptions.MarkerTooltipFormat)
-                ? "{0} / {1}: {2:0.#}"
-                : currentOptions.MarkerTooltipFormat;
-
-            try
-            {
-                return string.Format(format, hitInfo.SeriesName, hitInfo.CategoryName, hitInfo.Value);
-            }
-            catch (FormatException)
-            {
-                return string.Format("{0} / {1}: {2:0.#}", hitInfo.SeriesName, hitInfo.CategoryName, hitInfo.Value);
-            }
-        }
-
-        protected virtual void HideMarkerToolTip()
-        {
-            if (string.IsNullOrEmpty(currentToolTipText))
-            {
-                return;
-            }
-
-            currentToolTipText = string.Empty;
-            markerToolTip.Hide(this);
-        }
-
-        private static float GetDistanceSquared(PointF point, Point location)
-        {
-            float dx = point.X - location.X;
-            float dy = point.Y - location.Y;
-            return (dx * dx) + (dy * dy);
-        }
-
-        protected class RadarMarkerHitInfo
-        {
-            public PointF Location { get; set; }
-
-            public string SeriesName { get; set; }
-
-            public string CategoryName { get; set; }
-
-            public float Value { get; set; }
-        }
-
-        protected class ChartLabelMargins
-        {
-            public float Top { get; set; }
-
-            public float Right { get; set; }
-
-            public float Bottom { get; set; }
-
-            public float Left { get; set; }
-        }
-
-        protected virtual void RefreshSafe()
-        {
-            ExecuteOnUiThread(this, Invalidate);
-        }
-
-        protected virtual void NormalizeSeries(string[] currentCategories, IList<LightningRadarSeries> currentSeries)
-        {
-            int targetCount = currentCategories == null ? 0 : currentCategories.Length;
-
-            if (targetCount <= 0 || currentSeries == null)
-            {
-                return;
-            }
-
-            foreach (LightningRadarSeries radarSeries in currentSeries)
-            {
-                if (radarSeries == null)
-                {
-                    continue;
-                }
-
-                float[] values = radarSeries.Values ?? new float[0];
-                if (values.Length == targetCount)
-                {
-                    continue;
-                }
-
-                float[] normalized = new float[targetCount];
-                Array.Copy(values, normalized, Math.Min(values.Length, targetCount));
-                radarSeries.Values = normalized;
-            }
-        }
-
-        protected virtual Bitmap CreateChartBitmap(LightningRadarImageStorageOptions storageOptions)
-        {
-            int width = Math.Max(1, storageOptions.ImageWidth > 0 ? storageOptions.ImageWidth : Width);
-            int height = Math.Max(1, storageOptions.ImageHeight > 0 ? storageOptions.ImageHeight : Height);
-
-            string[] snapshotCategories;
-            LightningRadarSeries[] snapshotSeries;
-            LightningRadarOptions snapshotOptions;
-
-            lock (syncRoot)
-            {
-                snapshotCategories = categories.ToArray();
-                snapshotSeries = series.Select(item => item.Clone()).ToArray();
-                snapshotOptions = options.Clone();
-            }
-
-            Bitmap bitmap = new Bitmap(width, height);
-            using (Graphics graphics = Graphics.FromImage(bitmap))
-            {
-                graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                graphics.Clear(snapshotOptions.BackgroundColor);
-
-                lastLegendBounds = snapshotOptions.ShowLegend
-                    ? CalculateLegendBounds(graphics, snapshotSeries, snapshotOptions, new Size(width, height))
-                    : RectangleF.Empty;
-
-                if (snapshotOptions.ShowTitle)
-                {
-                    DrawTitle(graphics, snapshotOptions);
-                }
-
-                DrawRadarChart(graphics, snapshotCategories, snapshotSeries, snapshotOptions, new Size(width, height));
-
-                if (snapshotOptions.ShowLegend)
-                {
-                    DrawLegend(graphics, snapshotSeries, snapshotOptions, new Size(width, height));
-                }
-            }
-
-            return bitmap;
-        }
-
-        protected virtual void SaveBitmapToFile(Bitmap bitmap, string path, LightningRadarImageStorageOptions storageOptions)
-        {
-            ImageFormat imageFormat = GetDrawingImageFormat(storageOptions.ImageFormat);
-            if (storageOptions.ImageFormat == LightningRadarImageFormat.Jpeg)
-            {
-                ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(item => item.FormatID == ImageFormat.Jpeg.Guid);
-                if (codec != null)
-                {
-                    EncoderParameters parameters = new EncoderParameters(1);
-                    long quality = Math.Max(1L, Math.Min(100L, storageOptions.JpegQuality));
-                    parameters.Param[0] = new EncoderParameter(Encoder.Quality, quality);
-                    bitmap.Save(path, codec, parameters);
-                    parameters.Dispose();
-                    return;
-                }
-            }
-
-            bitmap.Save(path, imageFormat);
-        }
-
-        protected virtual string GetImageFolderPath(LightningRadarImagePathInfo pathInfo, LightningRadarImageStorageOptions storageOptions, bool createIfMissing)
-        {
-            if (pathInfo == null)
-            {
-                throw new ArgumentNullException("pathInfo");
-            }
-
-            LightningRadarImageStorageOptions effectiveOptions = storageOptions == null ? new LightningRadarImageStorageOptions() : storageOptions.Clone();
-            string rootPath = ResolveRootPath(effectiveOptions);
-            string folderPath = Path.Combine(
-                rootPath,
-                SanitizePathSegment(effectiveOptions.RootFolderName, "LightningRadarImages"),
+            if (pathInfo == null) throw new ArgumentNullException("pathInfo");
+            LightningRadarImageStorageOptions effective = storageOptions == null ? new LightningRadarImageStorageOptions() : storageOptions.Clone();
+            string folder = Path.Combine(ResolveRootPath(effective),
+                SanitizePathSegment(effective.RootFolderName, "LightningRadarImages"),
                 SanitizePathSegment(pathInfo.FabId, "FAB_UNKNOWN"),
                 SanitizePathSegment(pathInfo.LotCd, "LOT_UNKNOWN"),
                 SanitizePathSegment(pathInfo.DraftNo, "DRAFT_UNKNOWN"));
-
-            if (createIfMissing && !Directory.Exists(folderPath))
-            {
-                Directory.CreateDirectory(folderPath);
-            }
-
-            return folderPath;
+            if (create && !Directory.Exists(folder)) Directory.CreateDirectory(folder);
+            return folder;
         }
 
-        protected virtual string ResolveRootPath(LightningRadarImageStorageOptions storageOptions)
+        private static string ResolveRootPath(LightningRadarImageStorageOptions storageOptions)
         {
             switch (storageOptions.RootType)
             {
-                case LightningRadarStorageRootType.AppData:
-                    return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                case LightningRadarStorageRootType.LocalAppData:
-                    return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                case LightningRadarStorageRootType.Desktop:
-                    return Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                case LightningRadarStorageRootType.AppData: return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                case LightningRadarStorageRootType.LocalAppData: return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                case LightningRadarStorageRootType.Desktop: return Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                 case LightningRadarStorageRootType.Custom:
-                    if (string.IsNullOrWhiteSpace(storageOptions.CustomRootPath))
-                    {
-                        throw new InvalidOperationException("CustomRootPath 값이 필요합니다.");
-                    }
-
+                    if (string.IsNullOrWhiteSpace(storageOptions.CustomRootPath)) throw new InvalidOperationException("CustomRootPath 값이 필요합니다.");
                     return storageOptions.CustomRootPath;
-                case LightningRadarStorageRootType.Documents:
-                default:
-                    return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                default: return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             }
         }
 
-        protected virtual ImageFormat GetDrawingImageFormat(LightningRadarImageFormat imageFormat)
+        private static string GetFileExtension(LightningRadarImageFormat format)
         {
-            switch (imageFormat)
+            switch (format)
             {
-                case LightningRadarImageFormat.Jpeg:
-                    return ImageFormat.Jpeg;
-                case LightningRadarImageFormat.Bmp:
-                    return ImageFormat.Bmp;
-                case LightningRadarImageFormat.Gif:
-                    return ImageFormat.Gif;
-                case LightningRadarImageFormat.Png:
-                default:
-                    return ImageFormat.Png;
+                case LightningRadarImageFormat.Jpeg: return ".jpg";
+                case LightningRadarImageFormat.Bmp: return ".bmp";
+                case LightningRadarImageFormat.Gif: return ".gif";
+                default: return ".png";
             }
         }
 
-        protected virtual string GetFileExtension(LightningRadarImageFormat imageFormat)
-        {
-            switch (imageFormat)
-            {
-                case LightningRadarImageFormat.Jpeg:
-                    return ".jpg";
-                case LightningRadarImageFormat.Bmp:
-                    return ".bmp";
-                case LightningRadarImageFormat.Gif:
-                    return ".gif";
-                case LightningRadarImageFormat.Png:
-                default:
-                    return ".png";
-            }
-        }
-
-        protected virtual string SanitizePathSegment(string value, string fallback)
+        private static string SanitizePathSegment(string value, string fallback)
         {
             string text = string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
-            foreach (char invalidChar in Path.GetInvalidFileNameChars())
-            {
-                text = text.Replace(invalidChar, '_');
-            }
-
+            foreach (char invalid in Path.GetInvalidFileNameChars()) text = text.Replace(invalid, '_');
             return string.IsNullOrWhiteSpace(text) ? fallback : text;
         }
 
-        protected virtual void ExecuteOnUiThread(Control control, Action action)
+        private void RefreshSafe()
         {
-            ExecuteOnUiThread(control, action, false);
+            ExecuteOnUiThread(this, RebuildChart, false);
         }
 
-        protected virtual void ExecuteOnUiThread(Control control, Action action, bool forceSynchronous)
+        private static void ExecuteOnUiThread(Control control, Action action, bool synchronous)
         {
-            if (action == null)
+            if (control == null || control.IsDisposed || action == null) return;
+            if (!control.IsHandleCreated || !control.InvokeRequired) { action(); return; }
+            if (synchronous) control.Invoke(action); else control.BeginInvoke(action);
+        }
+
+        private sealed class RadarPointBinding
+        {
+            public RadarPointBinding(PointDouble2D point, string seriesName, string categoryName, float value, Color color)
             {
-                return;
+                Point = point;
+                SeriesName = seriesName ?? string.Empty;
+                CategoryName = categoryName ?? string.Empty;
+                Value = value;
+                Color = color;
             }
-
-            if (control == null || control.IsDisposed)
-            {
-                return;
-            }
-
-            if (!control.IsHandleCreated)
-            {
-                action();
-                return;
-            }
-
-            if (control.InvokeRequired)
-            {
-                if (forceSynchronous)
-                {
-                    control.Invoke(action);
-                }
-                else
-                {
-                    control.BeginInvoke(action);
-                }
-
-                return;
-            }
-
-            action();
+            public PointDouble2D Point { get; private set; }
+            public string SeriesName { get; private set; }
+            public string CategoryName { get; private set; }
+            public float Value { get; private set; }
+            public Color Color { get; private set; }
         }
     }
 }
