@@ -5,9 +5,16 @@ import unittest
 from unittest import mock
 
 import pandas as pd
+import oracledb
+from sqlalchemy.pool import NullPool
 
 from tsne_runner.config import AppConfig
-from tsne_runner.source import load_source_rows, normalize_source_columns
+from tsne_runner.source import (
+    _build_odbc_connection_string,
+    _build_oracle_dsn,
+    load_source_rows,
+    normalize_source_columns,
+)
 
 
 class DatabaseSourceTests(unittest.TestCase):
@@ -33,6 +40,63 @@ class DatabaseSourceTests(unittest.TestCase):
         )
         self.columns = ["DRAFT_NO", "PARAM_TYP", "ENGR_RSLT_VAL", "CONV_EXPER_CTN"]
         self.json_text = '{"Feature_A": 1.5, "Feature_B": 2.5}'
+
+    def test_sid_descriptor_is_accepted_by_oracle_driver(self) -> None:
+        for configured_port, expected_port in (("1541", 1541), ("", 1521)):
+            with self.subTest(port=configured_port):
+                config = replace(
+                    self.config,
+                    oracle_dsn="",
+                    oracle_host="db.example.test",
+                    oracle_port=configured_port,
+                    oracle_sid="ORCL",
+                )
+                params = oracledb.ConnectParams()
+                params.parse_connect_string(_build_oracle_dsn(config))
+                self.assertEqual("db.example.test", params.host)
+                self.assertEqual(expected_port, params.port)
+                self.assertEqual("ORCL", params.sid)
+                self.assertIsNone(params.service_name)
+
+    def test_service_name_takes_precedence_over_sid(self) -> None:
+        config = replace(
+            self.config,
+            oracle_dsn="",
+            oracle_host="db.example.test",
+            oracle_service_name="APP_SERVICE",
+            oracle_sid="IGNORED_SID",
+        )
+        params = oracledb.ConnectParams()
+        params.parse_connect_string(_build_oracle_dsn(config))
+        self.assertEqual("db.example.test", params.host)
+        self.assertEqual(1521, params.port)
+        self.assertEqual("APP_SERVICE", params.service_name)
+        self.assertIsNone(params.sid)
+
+    def test_explicit_dsn_takes_precedence_over_host_service_and_sid(self) -> None:
+        config = replace(
+            self.config,
+            oracle_dsn="direct.example.test:1541/DIRECT_SERVICE",
+            oracle_host="ignored.example.test",
+            oracle_service_name="IGNORED_SERVICE",
+            oracle_sid="IGNORED_SID",
+        )
+        self.assertEqual(config.oracle_dsn, _build_oracle_dsn(config))
+
+    def test_odbc_host_connection_uses_valid_sid_descriptor(self) -> None:
+        config = replace(
+            self.config,
+            odbc_dsn="",
+            odbc_driver="Oracle ODBC Driver",
+            oracle_host="db.example.test",
+            oracle_sid="ORCL",
+        )
+        connection_string = _build_odbc_connection_string(config)
+        descriptor = connection_string.split("DBQ=", 1)[1].split(";", 1)[0]
+        params = oracledb.ConnectParams()
+        params.parse_connect_string(descriptor)
+        self.assertEqual("db.example.test", params.host)
+        self.assertEqual("ORCL", params.sid)
 
     def test_odbc_returns_dataframe_and_reads_lob_before_closing(self) -> None:
         for has_rows in (True, False):
@@ -110,11 +174,22 @@ class DatabaseSourceTests(unittest.TestCase):
                     columns=self.columns,
                 )
                 with (
-                    mock.patch("sqlalchemy.create_engine", return_value=engine),
+                    mock.patch("sqlalchemy.create_engine", return_value=engine) as factory,
                     mock.patch("pandas.read_sql_query", return_value=raw) as query,
+                    mock.patch("oracledb.init_oracle_client") as init_client,
                 ):
                     frame = load_source_rows(replace(self.config, mode="oracledb"))
 
+                factory.assert_called_once_with(
+                    "oracle+oracledb://",
+                    connect_args={
+                        "user": self.config.oracle_user,
+                        "password": self.config.oracle_password,
+                        "dsn": self.config.oracle_dsn,
+                    },
+                    poolclass=NullPool,
+                )
+                init_client.assert_not_called()
                 expected = pd.DataFrame(
                     [("001", "RESPONSE", "Pass", self.json_text)] if has_rows else [],
                     columns=self.columns,

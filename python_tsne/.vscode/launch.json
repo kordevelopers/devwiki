@@ -6,9 +6,10 @@
       "type": "debugpy",
       "request": "launch",
       "module": "tsne_runner",
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
       "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
       "console": "integratedTerminal",
-      "preLaunchTask": "Setup Python t-SNE",
       "args": []
     },
     {
@@ -16,9 +17,10 @@
       "type": "debugpy",
       "request": "launch",
       "module": "tsne_runner",
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
       "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
       "console": "integratedTerminal",
-      "preLaunchTask": "Setup Python t-SNE",
       "args": ["--source-csv", "C:\\temp\\pccb_export.csv"]
     }
   ]

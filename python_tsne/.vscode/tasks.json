@@ -4,44 +4,52 @@
     {
       "label": "Setup Python t-SNE",
       "type": "shell",
-      "command": "powershell -ExecutionPolicy Bypass -File .\\scripts\\setup_python.ps1",
+      "command": "powershell",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/setup_python.ps1"],
+      "options": { "cwd": "${workspaceFolder}" },
       "group": "build",
       "problemMatcher": []
     },
     {
       "label": "Run t-SNE from .env",
       "type": "shell",
-      "command": ".\\.venv\\Scripts\\python.exe -m tsne_runner",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["-m", "tsne_runner"],
+      "options": { "cwd": "${workspaceFolder}" },
       "group": "test",
-      "dependsOn": "Setup Python t-SNE",
       "problemMatcher": []
     },
     {
       "label": "Test Oracle t-SNE connection",
       "type": "shell",
-      "command": ".\\.venv\\Scripts\\python.exe .\\scripts\\test_oracle_connection.py --mode oracledb",
-      "dependsOn": "Setup Python t-SNE",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["./scripts/test_oracle_connection.py", "--mode", "oracledb"],
+      "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
     },
     {
       "label": "Test ODBC t-SNE connection",
       "type": "shell",
-      "command": ".\\.venv\\Scripts\\python.exe .\\scripts\\test_oracle_connection.py --mode odbc",
-      "dependsOn": "Setup Python t-SNE",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["./scripts/test_oracle_connection.py", "--mode", "odbc"],
+      "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": []
     },
     {
       "label": "Test t-SNE runner",
       "type": "shell",
-      "command": ".\\.venv\\Scripts\\python.exe -m unittest discover -s tests -v",
-      "dependsOn": "Setup Python t-SNE",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["-m", "unittest", "discover", "-s", "tests", "-v"],
+      "options": { "cwd": "${workspaceFolder}" },
       "group": "test",
       "problemMatcher": []
     },
     {
       "label": "Build t-SNE EXE",
       "type": "shell",
-      "command": "powershell -ExecutionPolicy Bypass -File .\\scripts\\build_exe.ps1 -Clean",
+      "command": "powershell",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/build_exe.ps1", "-Clean"],
+      "options": { "cwd": "${workspaceFolder}" },
       "dependsOn": "Setup Python t-SNE",
       "group": "build",
       "problemMatcher": []

@@ -51,6 +51,10 @@ def load_config(
     _load_dotenv_files()
     mode = mode_override or _get_setting("DB_MODE", "oracledb")
     normalized_mode = mode.strip().lower()
+    # PCA can use generated sample data, but this standalone t-SNE runner must
+    # always read the real database when PCA_* settings are reused.
+    if normalized_mode == "sample":
+        normalized_mode = "oracledb"
     if normalized_mode not in {"odbc", "oracledb"}:
         raise ValueError("TSNE_DB_MODE must be either 'odbc' or 'oracledb'.")
 
@@ -64,8 +68,10 @@ def load_config(
         if param_type_override is not None
         else _get_setting("PARAM_TYP", "RESPONSE")
     )
-    sql_file = _get_setting("SQL_FILE", "").strip()
-    fallback_sql = _get_setting("SQL", DEFAULT_SQL)
+    # Keep the t-SNE query independent from PCA_SQL_FILE. This prevents a
+    # copied PCA .env from pointing at a missing relative path or sample flow.
+    sql_file = os.environ.get("TSNE_SQL_FILE", "queries/exadata_tsne.sql").strip()
+    fallback_sql = os.environ.get("TSNE_SQL", DEFAULT_SQL)
     return AppConfig(
         mode=normalized_mode,
         param_type=param_type.strip().upper(),
@@ -119,14 +125,20 @@ def _strip_sql_terminator(sql: str) -> str:
 
 
 def _load_dotenv_files() -> None:
-    cwd_env = Path.cwd() / ".env"
-    app_env = _application_dir() / ".env"
-    if cwd_env.exists():
-        load_dotenv(cwd_env)
-    elif app_env.exists():
-        load_dotenv(app_env)
-    else:
-        load_dotenv()
+    application_dir = _application_dir()
+    candidates = [
+        Path.cwd() / ".env",
+        application_dir / ".env",
+        application_dir.parent / "python_pca" / ".env",
+    ]
+    loaded_paths: set[Path] = set()
+    for env_path in candidates:
+        resolved_path = env_path.resolve()
+        if resolved_path in loaded_paths or not resolved_path.exists():
+            continue
+        # Load PCA settings as a fallback, then let TSNE_* settings win.
+        load_dotenv(resolved_path, override=False)
+        loaded_paths.add(resolved_path)
 
 
 def _resolve_external_path(path_text: str) -> Path:

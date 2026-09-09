@@ -152,6 +152,12 @@ def _load_with_oracledb(config: AppConfig) -> pd.DataFrame:
     from sqlalchemy import create_engine, text
     from sqlalchemy.pool import NullPool
 
+    # DBeaver가 JDBC로 접속하더라도 Python에서는 JDBC를 직접 사용하지 않는다.
+    # JDBC URL의 host/port/service(SID)를 .env의 TSNE_ORACLE_HOST,
+    # TSNE_ORACLE_PORT, TSNE_ORACLE_SERVICE_NAME 또는 TSNE_ORACLE_SID에
+    # 입력하면 python-oracledb Thin 모드가 같은 Oracle 서버에 접속한다.
+    # 예: jdbc:oracle:thin:@db-server:1521/ORCL
+    #     HOST=db-server, PORT=1521, SERVICE_NAME=ORCL
     dsn = _build_oracle_dsn(config)
     if not (config.oracle_user and config.oracle_password and dsn):
         raise ValueError(
@@ -207,7 +213,13 @@ def _build_host_descriptor(config: AppConfig) -> str:
     if config.oracle_service_name:
         return f"{config.oracle_host}:{port}/{config.oracle_service_name}"
     if config.oracle_sid:
-        return f"{config.oracle_host}:{port}:{config.oracle_sid}"
+        # Easy Connect accepts a service name, not a SID. Use the Oracle Net
+        # descriptor understood by both python-oracledb Thin and Oracle ODBC.
+        return (
+            "(DESCRIPTION="
+            f"(ADDRESS=(PROTOCOL=TCP)(HOST={config.oracle_host})(PORT={port}))"
+            f"(CONNECT_DATA=(SID={config.oracle_sid})))"
+        )
     return ""
 
 

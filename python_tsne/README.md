@@ -58,13 +58,35 @@ NearestNeighbors(
 ## VS Code에서 실행
 
 1. 저장소 루트를 VS Code로 엽니다.
-2. `.env.example`을 `python_tsne/.env`로 복사하고 Oracle 접속 정보를 입력합니다.
+2. `python_tsne/.env.example`을 `python_tsne/.env`로 복사하고 Oracle 접속 정보를 입력합니다.
 3. 최초 1회 `Terminal > Run Task > Setup Python t-SNE (run once)`를 실행합니다.
 4. `Run and Debug`에서 `Python t-SNE (DB)`를 선택하고 실행합니다. 중단점은 Python 코드에 바로 설정할 수 있습니다.
 
 차트 없이 디버깅하려면 `Python t-SNE (no chart)`를 선택합니다. 디버깅 구성은 실행 때 패키지를 설치하지 않습니다.
 
-처음 실행하면 `Setup Python t-SNE` 작업이 Python 3.12 가상환경과 고정 버전 패키지를 설치합니다. 실행 중 표시되는 프로그램 메시지는 모두 영어입니다.
+`python_tsne` 폴더만 VS Code로 열었다면 최초 1회 `Setup Python t-SNE` 작업을 실행한 뒤 `Run t-SNE from .env`로 디버깅합니다. 두 방식 모두 이 프로젝트의 `.venv/Scripts/python.exe`를 명시적으로 사용하며, F5를 누를 때마다 설치 작업을 실행하지 않습니다. 실행 중 표시되는 프로그램 메시지는 모두 영어입니다.
+
+중단점은 `src/tsne_runner/main.py`의 `load_source_rows(config)` 호출 또는 `src/tsne_runner/source.py`의 `_load_with_oracledb()`에 설정하면 접속과 쿼리 실행 과정을 확인할 수 있습니다.
+
+### 기존 `.venv`의 Python 버전 오류
+
+`The existing .venv does not use Python 3.12. Remove .venv ...`는 기존 설치 스크립트에서 발생하던 메시지입니다. 이 프로젝트는 `pyproject.toml`에서 Python 3.12를 사용하도록 지정합니다. 다른 버전으로 생성했거나 다른 PC에서 복사한 `.venv`는 사용할 수 없을 수 있습니다. PC에 Python 3.12를 설치해도 기존 `.venv`가 자동으로 변경되지는 않습니다.
+
+수정된 설치 스크립트는 정상적인 3.12 환경을 재사용합니다. 버전이 다르거나 실행할 수 없는 환경은 프로젝트 내부의 `.venv.backup-<고유번호>`로 보존하고 새 `.venv`를 만듭니다. 먼저 실행 가능한 Python 3.12를 찾으며, 백업 폴더는 Git에서 제외됩니다. 디버깅과 해당 환경을 사용하는 터미널을 닫은 뒤 `python_tsne` 폴더에서 다음을 실행합니다.
+
+```powershell
+py -0p
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup_python.ps1
+.\.venv\Scripts\python.exe --version
+```
+
+Python이 사용자 지정 위치에 설치되어 자동 검색되지 않는 경우에는 실제 설치 경로를 직접 지정할 수 있습니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup_python.ps1 -PythonExecutable "C:\Python312\python.exe"
+```
+
+다른 PC에서 가져온 환경처럼 버전은 3.12여도 다시 만들어야 하는 경우에는 `-RecreateVenv`를 추가합니다. 이 경우에도 기존 환경을 백업합니다. 다른 PC에 프로젝트를 전달할 때는 `.venv`와 `.venv.backup-*` 폴더를 제외하고, 대상 PC에서 설치 작업을 실행합니다.
 
 ## 터미널에서 실행
 
@@ -122,7 +144,7 @@ DB에 접속할 수 없는 개발 PC에서는 동일 쿼리 결과를 CSV로 내
 
 ## Oracle 설정
 
-python-oracledb thin 모드는 Oracle Client 설치 없이 사용할 수 있습니다.
+Oracle이 설치되지 않은 Windows PC에서는 `TSNE_DB_MODE=oracledb`를 사용합니다. python-oracledb의 기본 Thin 모드로 접속하므로 Oracle Client, Instant Client, ODBC 드라이버를 설치하지 않아도 됩니다. 이 프로젝트의 해당 연결 경로는 `init_oracle_client()`를 호출하지 않습니다. DB 서버 주소와 계정, 서버로의 네트워크 접속은 필요합니다.
 
 ```env
 TSNE_DB_MODE=oracledb
@@ -136,10 +158,21 @@ TSNE_PARAM_TYP=RESPONSE
 TSNE_TARGET_DRAFT_NO=
 ```
 
-ODBC를 사용할 때는 `TSNE_DB_MODE=odbc`와 `TSNE_ODBC_DSN` 또는 전체 연결 문자열을 설정합니다. 접속만 확인하려면 다음을 실행합니다.
+DBeaver를 JDBC로 접속하더라도 Python에는 JDBC URL 전체를 넣지 않습니다. DBeaver의 URL이 `jdbc:oracle:thin:@db-server:1521/ORCL`이면 `.env`에 `HOST=db-server`, `PORT=1521`, `SERVICE_NAME=ORCL`을 각각 입력합니다. 사용자명과 비밀번호는 DBeaver 접속정보와 동일하게 `TSNE_ORACLE_USER`, `TSNE_ORACLE_PASSWORD`에 입력합니다. SID 형식인 `jdbc:oracle:thin:@db-server:1521:ORCL`이면 `SERVICE_NAME`을 비우고 `TSNE_ORACLE_SID=ORCL`을 입력합니다.
+
+Exadata 접속 정보는 일반적으로 `SERVICE_NAME`을 사용합니다. SID를 사용하는 DB는 `TSNE_ORACLE_SERVICE_NAME`을 비우고 `TSNE_ORACLE_SID`를 지정하면 Oracle 접속 descriptor를 구성합니다. `TSNE_ORACLE_DSN`을 직접 지정하면 HOST/PORT/SERVICE_NAME/SID보다 우선합니다.
+
+기존 WinForms 조회 SQL을 사용하려면 `queries/exadata_tsne.sql`에 해당 SELECT를 넣습니다. 기본 파일은 `python_pca/queries/exadata_pca.sql`과 같은 테이블·조인·조회 조건을 사용하며 정렬을 추가한 것입니다. WinForms 차트는 외부에서 전달받은 `DataTable`을 사용하므로 실제 서비스의 쿼리를 가져올 때는 `DRAFT_NO`, `PARAM_TYP`, `ENGR_RSLT_VAL` 또는 `LABEL_Y`, `CONV_EXPER_CTN` 컬럼을 유지합니다. 선택 컬럼은 `RSLT_CD`입니다.
+
+DB 조회를 먼저 확인하려면 다음을 실행합니다. 이 스크립트는 설정한 SQL을 실행하여 조회 행 수와 컬럼 이름을 출력합니다.
 
 ```powershell
 .\.venv\Scripts\python.exe .\scripts\test_oracle_connection.py --mode oracledb
+```
+
+ODBC는 Oracle ODBC 드라이버가 설치된 환경에서만 사용합니다. 해당 환경에서는 `TSNE_DB_MODE=odbc`와 `TSNE_ODBC_DSN` 또는 전체 연결 문자열을 설정합니다.
+
+```powershell
 .\.venv\Scripts\python.exe .\scripts\test_oracle_connection.py --mode odbc
 ```
 
