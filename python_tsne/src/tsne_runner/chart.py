@@ -129,6 +129,9 @@ def save_scatter(
                 print(f"Chart Excel: {selected_path}")
 
         export_button.on_clicked(export_from_chart)
+        widgets = getattr(figure, "_tsne_widgets", [])
+        widgets.append(export_button)
+        figure._tsne_widgets = widgets
     figure.subplots_adjust(bottom=0.08)
     figure.savefig(output_path, dpi=150, facecolor="white")
     if show_chart:
@@ -324,8 +327,6 @@ def _register_click_handler(
     # Matplotlib 위젯은 참조가 유지되어야 키보드 입력 이벤트가 계속 동작한다.
     widgets = getattr(figure, "_tsne_widgets", [])
     widgets.append(draft_box)
-    if show_chart and chart_data is not None:
-        widgets.append(export_button)
     widgets.append(search_button)
     figure._tsne_widgets = widgets
 
