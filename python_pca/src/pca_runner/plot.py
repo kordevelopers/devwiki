@@ -268,8 +268,34 @@ def _register_click_handler(
     fig.canvas.mpl_connect("button_press_event", on_click)
     fig.canvas.mpl_connect("pick_event", on_table_pick)
     input_axis = fig.add_axes((0.08, 0.015, 0.26, 0.04))
+    input_axis.set_zorder(100)
     draft_box = TextBox(input_axis, "Draft Number: ", initial=target_draft_no or "")
     draft_box.on_submit(on_draft_submit)
+    draft_box.set_active(True)
+    search_axis = fig.add_axes((0.35, 0.015, 0.10, 0.04))
+    search_axis.set_zorder(100)
+    search_button = Button(search_axis, "Find")
+
+    def open_draft_input(_event: object) -> None:
+        import tkinter as tk
+        from tkinter import simpledialog
+
+        root = tk.Tk()
+        root.withdraw()
+        value = simpledialog.askstring("Draft Number", "입력할 Draft Number:", initialvalue=draft_box.text)
+        root.destroy()
+        if value is not None:
+            draft_box.set_val(value)
+            on_draft_submit(value)
+
+    search_button.on_clicked(open_draft_input)
+    # Matplotlib 위젯은 참조가 유지되어야 키보드 입력 이벤트가 계속 동작한다.
+    widgets = getattr(fig, "_pca_widgets", [])
+    widgets.append(draft_box)
+    if show_chart and chart_data is not None:
+        widgets.append(export_button)
+    widgets.append(search_button)
+    fig._pca_widgets = widgets
 
 
 def _find_nearest_indices(matrix: np.ndarray, target_index: int, count: int) -> tuple[np.ndarray, np.ndarray]:
