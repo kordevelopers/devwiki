@@ -94,6 +94,13 @@ def save_scatter(
     _apply_axis_range_ticks(axis, points)
     axis.grid(True, color="#d8dee9", linewidth=0.7, alpha=0.75)
     axis.legend(loc="best")
+    controls_axis = figure.add_axes((0.04, 0.012, 0.92, 0.062), facecolor="#f8fafc")
+    controls_axis.set_zorder(90)
+    controls_axis.set_xticks([])
+    controls_axis.set_yticks([])
+    for spine in controls_axis.spines.values():
+        spine.set_color("#cbd5e1")
+        spine.set_linewidth(0.8)
     _register_click_handler(
         figure,
         axis,
@@ -106,8 +113,9 @@ def save_scatter(
         target_draft_no,
     )
     if show_chart and chart_data is not None:
-        button_axis = figure.add_axes((0.78, 0.015, 0.18, 0.04))
-        export_button = Button(button_axis, "Export chart Excel")
+        button_axis = figure.add_axes((0.72, 0.024, 0.20, 0.038))
+        export_button = Button(button_axis, "Export Excel", color="#2563eb", hovercolor="#1d4ed8")
+        _style_button_axis(button_axis)
 
         def export_from_chart(_event: object) -> None:
             import tkinter as tk
@@ -132,7 +140,7 @@ def save_scatter(
         widgets = getattr(figure, "_tsne_widgets", [])
         widgets.append(export_button)
         figure._tsne_widgets = widgets
-    figure.subplots_adjust(bottom=0.08)
+    figure.subplots_adjust(bottom=0.10)
     figure.savefig(output_path, dpi=150, facecolor="white")
     if show_chart:
         print(f"Opening t-SNE chart with matplotlib backend: {plt.get_backend()}")
@@ -302,14 +310,18 @@ def _register_click_handler(
 
     figure.canvas.mpl_connect("button_press_event", on_click)
     figure.canvas.mpl_connect("pick_event", on_table_pick)
-    input_axis = figure.add_axes((0.08, 0.015, 0.26, 0.04))
+    input_axis = figure.add_axes((0.10, 0.024, 0.31, 0.038))
     input_axis.set_zorder(100)
-    draft_box = TextBox(input_axis, "Draft Number: ", initial=target_draft_no or "")
+    draft_box = TextBox(input_axis, "Draft No ", initial=target_draft_no or "", color="white", hovercolor="#eff6ff")
+    input_axis.set_facecolor("white")
+    for spine in input_axis.spines.values():
+        spine.set_color("#94a3b8")
     draft_box.on_submit(on_draft_submit)
     draft_box.set_active(True)
-    search_axis = figure.add_axes((0.35, 0.015, 0.10, 0.04))
+    search_axis = figure.add_axes((0.43, 0.024, 0.12, 0.038))
     search_axis.set_zorder(100)
-    search_button = Button(search_axis, "Find")
+    search_button = Button(search_axis, "Search", color="#0f766e", hovercolor="#115e59")
+    _style_button_axis(search_axis)
 
     def open_draft_input(_event: object) -> None:
         import tkinter as tk
@@ -329,6 +341,14 @@ def _register_click_handler(
     widgets.append(draft_box)
     widgets.append(search_button)
     figure._tsne_widgets = widgets
+
+
+def _style_button_axis(axis: plt.Axes) -> None:
+    axis.set_xticks([])
+    axis.set_yticks([])
+    for spine in axis.spines.values():
+        spine.set_color("#cbd5e1")
+        spine.set_linewidth(0.8)
 
 
 def _find_nearest_indices(
