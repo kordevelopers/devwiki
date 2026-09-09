@@ -1,0 +1,11 @@
+matplotlib==3.11.0
+numpy==2.5.0
+openpyxl==3.1.5
+oracledb==4.0.1
+pandas==3.0.3
+python-dotenv==1.2.2
+scikit-learn==1.9.0
+scipy==1.18.0
+SQLAlchemy==2.0.51
+umap-learn==0.5.11
+pyinstaller==6.21.0

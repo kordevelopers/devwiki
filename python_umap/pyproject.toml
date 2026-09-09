@@ -1,0 +1,27 @@
+[project]
+name = "hynix-tas-python-umap"
+version = "0.1.0"
+description = "Oracle UMAP and nearest-neighbor analysis runner for Hynix TAS."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "matplotlib==3.11.0",
+    "numpy==2.5.0",
+    "openpyxl==3.1.5",
+    "oracledb==4.0.1",
+    "pandas==3.0.3",
+    "python-dotenv==1.2.2",
+    "scikit-learn==1.9.0",
+    "scipy==1.18.0",
+    "SQLAlchemy==2.0.51",
+    "umap-learn==0.5.11",
+]
+
+[project.optional-dependencies]
+build = ["pyinstaller==6.21.0"]
+
+[build-system]
+requires = ["setuptools>=70", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

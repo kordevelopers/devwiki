@@ -1,0 +1,7 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {"name": "UMAP: Run (Database)", "type": "debugpy", "request": "launch", "module": "umap_runner", "cwd": "${workspaceFolder}/python_umap", "python": "${workspaceFolder}/python_umap/.venv/Scripts/python.exe", "args": []},
+    {"name": "UMAP: Run (CSV)", "type": "debugpy", "request": "launch", "module": "umap_runner", "cwd": "${workspaceFolder}/python_umap", "python": "${workspaceFolder}/python_umap/.venv/Scripts/python.exe", "args": ["--source-csv", "${workspaceFolder}/python_umap/sample_source.csv"]}
+  ]
+}
