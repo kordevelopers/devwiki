@@ -28,7 +28,9 @@ def load_config(target_override=None, data_type_override=None, resolve_sql=True)
         if path.exists():
             load_dotenv(path, override=False)
     data_type = data_type_override or os.getenv("UMAP_DATA_TYPE", "RESPONSE")
-    sql_file = os.getenv("UMAP_SQL_FILE", "").strip()
+    # 개발 실행과 EXE 실행 모두 queries/umap.sql을 기본 SQL로 사용한다.
+    # EXE에서는 이 파일이 PyInstaller 번들 내부에서 로드되고, 필요하면 절대 경로로 교체할 수 있다.
+    sql_file = os.getenv("UMAP_SQL_FILE", "queries/umap.sql").strip()
     fallback = os.getenv("UMAP_SQL", DEFAULT_SQL)
     sql = _load_sql(sql_file, fallback) if resolve_sql else fallback.rstrip().rstrip(";").strip()
     return AppConfig(data_type.strip().upper(),
@@ -42,10 +44,17 @@ def _load_sql(sql_file, fallback):
         return fallback.rstrip().rstrip(";").strip()
     path = Path(sql_file)
     if not path.is_absolute():
-        path = Path.cwd() / path if (Path.cwd() / path).exists() else _application_dir() / path
+        candidates = [Path.cwd() / path, _application_dir() / path]
+        bundle_dir = getattr(sys, "_MEIPASS", None)
+        if bundle_dir:
+            candidates.append(Path(bundle_dir) / path)
+        path = next((candidate for candidate in candidates if candidate.exists()), candidates[0])
     if not path.exists():
         raise FileNotFoundError(f"UMAP_SQL_FILE was not found: {path}")
-    return path.read_text(encoding="utf-8-sig").rstrip().rstrip(";").strip()
+    sql = path.read_text(encoding="utf-8-sig").rstrip().rstrip(";").strip()
+    if not sql:
+        raise ValueError(f"UMAP_SQL_FILE is empty: {path}")
+    return sql
 
 def _application_dir():
     return Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path.cwd()
