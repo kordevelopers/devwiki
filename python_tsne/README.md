@@ -5,7 +5,7 @@
 ## 처리 흐름
 
 1. Oracle DB에서 PCCB 조회 SQL을 실행합니다.
-2. `PARAM_TYP`으로 분석 대상을 선택합니다.
+2. `PARAM_TYP`이 포함된 전체 결과를 조회하고, 차트 상단 Data Type에서 `RESPONSE`, `DEFECT`, `EPM` 중 분석 대상을 선택합니다.
 3. `CONV_EXPER_CTN` JSON 객체를 `A.B`, `A[0]` 형태의 feature로 펼칩니다.
 4. 숫자 coverage가 90% 이상이고 분산이 `1e-10`보다 큰 feature를 선택합니다.
 5. 누락된 값은 해당 feature 평균으로 대체하고 `StandardScaler`로 표준화합니다.
@@ -53,7 +53,7 @@ NearestNeighbors(
 )
 ```
 
-차트에서 마커를 클릭하면 WinForms와 동일하게 화면에 표시된 X1/X2 좌표 기준의 가까운 3개가 차트 하단 그리드에 표시됩니다. 배치 KNN CSV는 기존 동작대로 전체 표준화 feature 공간 기준입니다. 창에서 `Export original Excel`을 누르면 차트에 바인딩된 원본 행을 엑셀로 저장할 수 있습니다.
+차트 상단의 Data Type을 바꾸면 해당 타입의 t-SNE 결과·마커·인접 그리드가 다시 바인딩됩니다. Draft No를 입력하고 Search하면 해당 타입에서 마커와 인접 3개가 표시되며, Export Excel은 현재 차트에 바인딩된 타입의 데이터를 저장합니다. 마커나 하단 그리드 행을 클릭하면 WinForms와 동일하게 인접 3개가 표시됩니다. 배치 KNN CSV는 기존 동작대로 전체 표준화 feature 공간 기준입니다.
 
 ## VS Code에서 실행
 
@@ -152,9 +152,11 @@ TSNE_DB_DATABASE=ORCL
 TSNE_DB_PORT=1521
 TSNE_DB_USERNAME=test_user
 TSNE_DB_PASSWORD=test_password
-TSNE_PARAM_TYP=RESPONSE
+TSNE_DATA_TYPE=RESPONSE
 TSNE_TARGET_DRAFT_NO=
 ```
+
+`TSNE_DATA_TYPE`은 차트가 처음 열릴 때 선택할 Data Type입니다. 기존 배포 파일과의 호환을 위해 `TSNE_PARAM_TYP`도 계속 사용할 수 있지만, 두 값을 함께 지정하면 `TSNE_DATA_TYPE`이 우선합니다.
 
 DBeaver JDBC URL이 `jdbc:oracle:thin:@db-server:1521/ORCL`이면 `TSNE_DB_HOST=db-server`, `TSNE_DB_PORT=1521`, `TSNE_DB_DATABASE=ORCL`로 입력합니다. 사용자명과 비밀번호는 `TSNE_DB_USERNAME`, `TSNE_DB_PASSWORD`에 입력합니다.
 

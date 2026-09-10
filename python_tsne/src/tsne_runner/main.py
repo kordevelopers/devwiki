@@ -29,10 +29,12 @@ def main() -> int:
         help="Read an exported PCCB query CSV instead of connecting to the database.",
     )
     parser.add_argument(
+        "--data-type",
         "--param-type",
+        dest="data_type",
         type=str.upper,
         choices=sorted(SUPPORTED_PARAMETER_TYPES),
-        help="Override TSNE_PARAM_TYP.",
+        help="Initial DataType selection (overrides TSNE_DATA_TYPE).",
     )
     parser.add_argument("--target", help="Target DRAFT_NO for KNN search.")
     parser.add_argument("--output-dir", default="outputs", help="CSV and chart output directory.")
@@ -43,7 +45,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    config = load_config(args.target, args.param_type, resolve_sql=args.source_csv is None)
+    config = load_config(args.target, args.data_type, resolve_sql=args.source_csv is None)
     if args.source_csv is not None:
         raw_source = load_source_csv(args.source_csv)
         source_mode = "csv"
@@ -54,8 +56,17 @@ def main() -> int:
         source_reference = config.sql_file or "inline SQL"
 
     source: pd.DataFrame = normalize_source_columns(raw_source)
-    feature_frame = build_feature_frame(source, config.param_type)
-    result = run_tsne(feature_frame)
+    chart_types = ("RESPONSE", "DEFECT", "EPM")
+    results = {}
+    for data_type in chart_types:
+        try:
+            results[data_type] = run_tsne(build_feature_frame(source, data_type))
+        except ValueError:
+            continue
+    if not results:
+        raise ValueError("No usable RESPONSE, DEFECT, or EPM data was found.")
+    selected_type = config.param_type if config.param_type in results else next(iter(results))
+    result = results[selected_type]
 
     target = config.target_draft_no or result.points["DRAFT_NO"].iloc[0]
     neighbors = find_neighbors(result, target)
@@ -78,7 +89,7 @@ def main() -> int:
         "SourceMode": source_mode,
         "SourceReference": source_reference,
         "SourceRowCount": len(source),
-        "ParameterType": config.param_type,
+        "ParameterType": selected_type,
         "TargetDraftNo": target,
     }
     diagnostic_path.write_text(
@@ -99,10 +110,12 @@ def main() -> int:
         neighbor_count=3,
         chart_data=result.points,
         chart_export_path=chart_xlsx_path,
+        results_by_type=results,
+        data_type=selected_type,
     )
 
     print(f"Mode: {source_mode}")
-    print(f"PARAM_TYP: {config.param_type}")
+    print(f"DataType: {selected_type}")
     print(f"Rows: {len(result.points)}")
     print(f"Included features: {len(result.features)}")
     print(f"Excluded features: {len(result.excluded_features)}")

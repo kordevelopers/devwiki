@@ -48,7 +48,7 @@ def load_config(
     param_type = (
         param_type_override
         if param_type_override is not None
-        else os.environ.get("TSNE_PARAM_TYP", "RESPONSE")
+        else os.environ.get("TSNE_DATA_TYPE", os.environ.get("TSNE_PARAM_TYP", "RESPONSE"))
     )
     # 기본 SQL은 EXE에 포함된 코드이며, 외부 SQL 파일은 선택사항입니다.
     sql_file = os.environ.get("TSNE_SQL_FILE", "").strip()
