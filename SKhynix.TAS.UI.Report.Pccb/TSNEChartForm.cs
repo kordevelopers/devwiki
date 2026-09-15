@@ -30,6 +30,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         private bool parameterChangeEnabled;
         private bool nearestNeighborGridBinding;
         private string lastFeatureAuditLogPath;
+        private double lastChartBindingMilliseconds;
         private Font nearestNeighborGridFont;
         private bool showAnalysisSummaryText;
         private bool showRefreshAllButton;
@@ -530,7 +531,9 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
             exadataAnalysis = result;
             currentRecords = result.Records.ToList();
+            Stopwatch chartBinding = Stopwatch.StartNew();
             tsneChart.Bind(result, chartOptions);
+            lastChartBindingMilliseconds = chartBinding.Elapsed.TotalMilliseconds;
             // 차트를 새로 그린 직후 같은 로그 파일을 덮어써서, 화면과 로그가 항상 같은 분석 결과를 가리키게 한다.
             WriteFeatureSelectionAuditLog(result, chartOptions);
         }
@@ -542,8 +545,11 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 return;
             }
 
+            Stopwatch auditLogging = Stopwatch.StartNew();
             string detailedLog = BuildFeatureSelectionAuditText(result, chartOptions, true);
             lastFeatureAuditLogPath = SaveFeatureSelectionAuditLog(result, detailedLog);
+            Debug.WriteLine(string.Format(CultureInfo.InvariantCulture,
+                "TSNE audit text and file write: {0:0.###} ms", auditLogging.Elapsed.TotalMilliseconds));
             UpdateAnalysisLogButtonState();
             Debug.WriteLine("TSNE Feature Audit Log: " + lastFeatureAuditLogPath);
 
@@ -571,14 +577,15 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
         private string BuildFeatureSelectionAuditText(TSNEExadataAnalysisResult result, TSNEScatterOptions chartOptions, bool includeFullDetails)
         {
+            Stopwatch logGeneration = Stopwatch.StartNew();
             TSNEFeatureSelectionReport report = result.FeatureSelectionReport;
-            DataTable survivingPopulation = result.CreateSurvivingPopulationDataTable();
             var builder = new StringBuilder();
             builder.AppendLine(GetProjectionDisplayName() + " Feature Selection Audit");
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "CreatedAt: {0:yyyy-MM-dd HH:mm:ss.fff}", DateTime.Now));
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "ParameterType: {0}", TSNEParameterTypeParser.ToDatabaseValue(result.ParameterType)));
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "LogMode: {0}", includeFullDetails ? "Detailed" : "Summary"));
             builder.AppendLine();
+            AppendPerformanceTimings(builder, result);
             if (result.Diagnostic != null)
             {
                 builder.AppendLine(result.Diagnostic.CompactText);
@@ -607,7 +614,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             builder.AppendLine(string.Format(
                 CultureInfo.InvariantCulture,
                 "Surviving population rows: {0:N0}",
-                survivingPopulation.Rows.Count));
+                result.Records.Count));
             builder.AppendLine(string.Format(
                 CultureInfo.InvariantCulture,
                 "Surviving feature columns: {0:N0}",
@@ -633,7 +640,47 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 AppendFeatureDetailTable(builder, "Excluded feature details", report.Details.Where(detail => !detail.Included));
             }
 
+            AppendTiming(builder, "Audit text generation", logGeneration.Elapsed.TotalMilliseconds);
             return builder.ToString();
+        }
+
+        private void AppendPerformanceTimings(StringBuilder builder, TSNEExadataAnalysisResult result)
+        {
+            TSNEAnalysisResult analysis = result.AnalysisResult;
+            if (analysis == null)
+            {
+                return;
+            }
+
+            builder.AppendLine("Performance (milliseconds; source fetch and screen paint are not included in analysis total)");
+            TSNEAnalysisTimings timings = analysis.Timings;
+            if (timings != null)
+            {
+                AppendTiming(builder, "Source preparation", timings.SourcePreparationMilliseconds);
+                AppendTiming(builder, "Feature selection", timings.FeatureSelectionMilliseconds);
+                AppendTiming(builder, "Standardization", timings.StandardizationMilliseconds);
+                AppendTiming(builder, "Projection", timings.ProjectionMilliseconds);
+                AppendTiming(builder, "KNN and verification", timings.KnnAndVerificationMilliseconds);
+                AppendTiming(builder, "Feature audit", timings.AuditMilliseconds);
+                AppendTiming(builder, "Analysis total", timings.TotalMilliseconds);
+            }
+
+            TSNEProjectionModel projection = analysis.TSNEModel;
+            if (projection != null)
+            {
+                builder.AppendLine("Projection cache: " + (projection.CacheHit ? "Hit" : "Miss"));
+                builder.AppendLine("Projection details below are included in the projection time above.");
+                AppendTiming(builder, "PCA initialization", projection.PcaInitializationMilliseconds);
+                AppendTiming(builder, "t-SNE optimization", projection.OptimizationMilliseconds);
+            }
+            AppendTiming(builder, "Chart binding", lastChartBindingMilliseconds);
+            builder.AppendLine();
+        }
+
+        private static void AppendTiming(StringBuilder builder, string name, double milliseconds)
+        {
+            builder.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                "{0}: {1:0.###} ms", name, milliseconds));
         }
 
         private static string SaveFeatureSelectionAuditLog(TSNEExadataAnalysisResult result, string logText)

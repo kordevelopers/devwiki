@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
@@ -1271,6 +1272,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             TSNEScatterAnalysisOptions analysisOptions,
             string requiredDraftNo)
         {
+            Stopwatch totalWatch = Stopwatch.StartNew();
+            Stopwatch stageWatch = Stopwatch.StartNew();
             // 1단계: DB 행의 CONV_EXPER_CTN JSON을 파싱해 Draft별 실험 객체와 수치 feature 사전을 만든다.
             var parser = new ConvExperimentRowParser();
             var parsed = new List<ParsedTSNEExperiment>();
@@ -1310,6 +1313,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
             // 2단계: 파싱된 수치 feature를 TSNE 파이프라인이 받는 JSON row 형식으로 정규화한다.
             // Draft_NO와 AI_RSLT_Val은 식별/라벨로만 쓰고, 실제 TSNE feature에서는 제외된다.
+            // Keep the existing double -> JSON -> decimal -> double conversion:
+            // bypassing it can change input precision, underflow and validation.
             IList<string> normalizedRows = parsed.Select(item =>
             {
                 var row = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
@@ -1327,14 +1332,19 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
             TSNEAnalysisOptions pipelineOptions =
                 (analysisOptions ?? new TSNEScatterAnalysisOptions()).ToPipelineOptions();
+            double sourcePreparationMilliseconds = stageWatch.Elapsed.TotalMilliseconds;
             // 3단계: 수치 feature 선택, 정규화, TSNE 좌표 생성, KNN 인덱스 생성을 한 번에 수행한다.
-            TSNEAnalysisResult analysis = new TSNEAnalysisPipeline(pipelineOptions).Analyze(normalizedRows);
+            TSNEAnalysisResult analysis = new TSNEAnalysisPipeline(pipelineOptions)
+                .AnalyzeWithoutFeatureSelectionReport(normalizedRows);
+            analysis.Timings.SourcePreparationMilliseconds += sourcePreparationMilliseconds;
+            stageWatch.Restart();
             TSNEFeatureSelectionReport featureSelectionReport =
                 TSNEFeatureSelectionReport.CreateFromParsedExperiments(
                     parsed,
                     analysis.FeatureNames,
                     pipelineOptions.ConstantVarianceThreshold);
             analysis.FeatureSelectionReport = featureSelectionReport;
+            analysis.Timings.AuditMilliseconds += stageWatch.Elapsed.TotalMilliseconds;
             var records = new List<TSNEExperimentRecord>(parsed.Count);
             for (int index = 0; index < parsed.Count; index++)
             {
@@ -1358,13 +1368,15 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     string.IsNullOrWhiteSpace(record.LabelY) ? "-" : record.LabelY);
             }
 
-            return new TSNEExadataAnalysisResult(
+            var result = new TSNEExadataAnalysisResult(
                 snapshot,
                 parameterType,
                 analysis,
                 records,
                 missingCount,
                 featureSelectionReport);
+            analysis.Timings.TotalMilliseconds = totalWatch.Elapsed.TotalMilliseconds;
+            return result;
         }
     }
 }

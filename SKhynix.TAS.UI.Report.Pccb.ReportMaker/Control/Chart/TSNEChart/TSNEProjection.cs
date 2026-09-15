@@ -3,12 +3,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Accord.MachineLearning.Clustering;
@@ -134,6 +136,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         // This version-pinned internal overload keeps Accord's optimizer while
         // preserving the PCA coordinates supplied by this adapter.
         private static readonly MethodInfo AccordPcaInitializedRunMethod = ResolveAccordPcaInitializedRunMethod();
+        private static readonly object ProjectionCacheLock = new object();
+        // Keep only the most recent embedding and its fingerprint, not another
+        // potentially large copy of the high-dimensional input matrix.
+        private static ProjectionCacheEntry lastProjection;
         private readonly double[][] coordinates;
 
         private TSNEProjectionModel(double[][] coordinates, double effectivePerplexity, int randomSeed)
@@ -152,14 +158,35 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public int Iterations { get; private set; }
         public double LearningRate { get; private set; }
         public int RandomSeed { get; private set; }
+        public bool CacheHit { get; private set; }
+        public double PcaInitializationMilliseconds { get; private set; }
+        public double OptimizationMilliseconds { get; private set; }
+        public double ElapsedMilliseconds { get; private set; }
         public double KullbackLeiblerDivergence { get { return double.NaN; } }
         public string EngineName { get { return "Accord.NET TSNE (Barnes-Hut)"; } }
 
         public static TSNEProjectionModel FitTransform(double[][] standardizedMatrix, double perplexity, int iterations, double learningRate, int randomSeed)
         {
+            Stopwatch elapsed = Stopwatch.StartNew();
             ValidateMatrix(standardizedMatrix);
             int rowCount = standardizedMatrix.Length;
             double effectivePerplexity = ResolveEffectivePerplexity(rowCount, perplexity);
+            // The same private copy is fingerprinted, used for PCA initialization,
+            // and finally normalized in place by Accord's optimizer.
+            double[][] optimizerInput = CloneMatrix(standardizedMatrix);
+            string cacheKey = CreateProjectionCacheKey(optimizerInput, effectivePerplexity, randomSeed);
+            ProjectionCacheEntry cached;
+            lock (ProjectionCacheLock)
+            {
+                cached = lastProjection;
+            }
+            if (cached != null && string.Equals(cached.Key, cacheKey, StringComparison.Ordinal))
+            {
+                var reused = new TSNEProjectionModel(cached.Model.coordinates, effectivePerplexity, randomSeed);
+                reused.CacheHit = true;
+                reused.ElapsedMilliseconds = elapsed.Elapsed.TotalMilliseconds;
+                return reused;
+            }
 
             // Keep iterations and learningRate in the public contract for callers
             // that share chart settings. Accord.NET 3.8 owns the effective values
@@ -169,15 +196,19 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             // sklearn init='pca' uses two PCA scores, fixes each component sign
             // from its loadings, casts to float32, and scales both columns so the
             // population standard deviation of PC1 is 1e-4.
-            double[][] pcaInitialization = CreateSklearnPcaInitialization(standardizedMatrix);
+            Stopwatch stage = Stopwatch.StartNew();
+            double[][] pcaInitialization = CreateSklearnPcaInitialization(optimizerInput);
+            double pcaMilliseconds = stage.Elapsed.TotalMilliseconds;
             double[][] orientationReference = CloneMatrix(pcaInitialization);
 
             // Accord normalizes X in place and writes the optimized embedding into
             // Y. Pass an X copy so the StandardScaler output used by KNN is intact.
+            stage.Restart();
             RunAccordWithPcaInitialization(
-                CloneMatrix(standardizedMatrix),
+                optimizerInput,
                 pcaInitialization,
                 effectivePerplexity);
+            double optimizationMilliseconds = stage.Elapsed.TotalMilliseconds;
 
             // t-SNE distances are invariant under reflection. Resolve that free
             // sign per data set against the canonical PCA initialization instead
@@ -194,7 +225,58 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             // orientation. This second X reflection cancels the first one.
             ReflectHorizontalAxis(pcaInitialization);
 
-            return new TSNEProjectionModel(pcaInitialization, effectivePerplexity, randomSeed);
+            var model = new TSNEProjectionModel(pcaInitialization, effectivePerplexity, randomSeed);
+            model.PcaInitializationMilliseconds = pcaMilliseconds;
+            model.OptimizationMilliseconds = optimizationMilliseconds;
+            model.ElapsedMilliseconds = elapsed.Elapsed.TotalMilliseconds;
+            lock (ProjectionCacheLock)
+            {
+                lastProjection = new ProjectionCacheEntry(cacheKey, model);
+            }
+            return model;
+        }
+
+        private static string CreateProjectionCacheKey(double[][] matrix, double perplexity, int randomSeed)
+        {
+            // Include shape, row/feature order, every double's exact binary value,
+            // and effective settings. Labels and Draft identifiers are assembled
+            // from the current request after projection and are not cached.
+            using (SHA256 hash = SHA256.Create())
+            {
+                byte[] header = new byte[20];
+                Buffer.BlockCopy(BitConverter.GetBytes(matrix.Length), 0, header, 0, 4);
+                Buffer.BlockCopy(BitConverter.GetBytes(matrix[0].Length), 0, header, 4, 4);
+                Buffer.BlockCopy(BitConverter.GetBytes(perplexity), 0, header, 8, 8);
+                Buffer.BlockCopy(BitConverter.GetBytes(randomSeed), 0, header, 16, 4);
+                hash.TransformBlock(header, 0, header.Length, header, 0);
+                byte[] buffer = new byte[8192];
+                for (int row = 0; row < matrix.Length; row++)
+                {
+                    int valueOffset = 0;
+                    while (valueOffset < matrix[row].Length)
+                    {
+                        int valueCount = Math.Min(buffer.Length / sizeof(double), matrix[row].Length - valueOffset);
+                        int byteCount = valueCount * sizeof(double);
+                        Buffer.BlockCopy(matrix[row], valueOffset * sizeof(double), buffer, 0, byteCount);
+                        hash.TransformBlock(buffer, 0, byteCount, buffer, 0);
+                        valueOffset += valueCount;
+                    }
+                }
+                hash.TransformFinalBlock(new byte[0], 0, 0);
+                return Convert.ToBase64String(hash.Hash);
+            }
+        }
+
+        private sealed class ProjectionCacheEntry
+        {
+            public ProjectionCacheEntry(string key, TSNEProjectionModel model)
+            {
+                Key = key;
+                Model = model;
+            }
+
+            public readonly string Key;
+            public readonly TSNEProjectionModel Model;
         }
 
         private static void ReflectHorizontalAxis(double[][] coordinates)
@@ -220,8 +302,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 false,
                 OutputDimensionCount);
 
-            double[][] pcaInput = CloneMatrix(standardizedMatrix);
-            pca.Learn(pcaInput, null);
+            // Learn already creates its centered working matrix when Overwrite
+            // is false; an additional input clone duplicates that allocation.
+            pca.Overwrite = false;
+            pca.Learn(standardizedMatrix, null);
             double[][] scores = pca.Transform(
                 standardizedMatrix,
                 CreateMatrix(standardizedMatrix.Length, OutputDimensionCount));

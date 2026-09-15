@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
@@ -617,6 +618,17 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 
+    public sealed class TSNEAnalysisTimings
+    {
+        public double SourcePreparationMilliseconds { get; internal set; }
+        public double FeatureSelectionMilliseconds { get; internal set; }
+        public double StandardizationMilliseconds { get; internal set; }
+        public double ProjectionMilliseconds { get; internal set; }
+        public double KnnAndVerificationMilliseconds { get; internal set; }
+        public double AuditMilliseconds { get; internal set; }
+        public double TotalMilliseconds { get; internal set; }
+    }
+
     public sealed class TSNEAnalysisResult
     {
         internal TSNEAnalysisResult()
@@ -626,6 +638,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             ExcludedFeatureNames = new string[0];
             StandardizedMatrix = new double[0][];
             FeatureSelectionReport = TSNEFeatureSelectionReport.Empty();
+            Timings = new TSNEAnalysisTimings();
         }
 
         public IList<TSNEPointData> ScatterData { get; internal set; }
@@ -639,6 +652,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public TSNEVerificationReport Verification { get; internal set; }
         public TSNEAnalysisDiagnosticReport Diagnostic { get; internal set; }
         public TSNEFeatureSelectionReport FeatureSelectionReport { get; internal set; }
+        public TSNEAnalysisTimings Timings { get; internal set; }
 
         public IList<KnnNeighbor> FindNearest(string draftNo, int count)
         {
@@ -659,7 +673,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public string[] FeatureNames { get; set; }
         public string[] ExcludedFeatureNames { get; set; }
         public double[][] Matrix { get; set; }
-        public TSNEFeatureSelectionReport FeatureSelectionReport { get; set; }
     }
 
 
@@ -716,13 +729,35 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         /// </summary>
         public TSNEAnalysisResult Analyze(IEnumerable<string> jsonSamples)
         {
+            return AnalyzeCore(jsonSamples, true);
+        }
+
+        // The Exadata service builds the richer audit from the original parsed
+        // experiment fields, including metadata and nonnumeric values. Avoid
+        // first building a numeric-only audit that it immediately replaces.
+        internal TSNEAnalysisResult AnalyzeWithoutFeatureSelectionReport(IEnumerable<string> jsonSamples)
+        {
+            return AnalyzeCore(jsonSamples, false);
+        }
+
+        private TSNEAnalysisResult AnalyzeCore(IEnumerable<string> jsonSamples, bool createFeatureSelectionReport)
+        {
+            Stopwatch totalWatch = Stopwatch.StartNew();
+            Stopwatch stageWatch = Stopwatch.StartNew();
+            var timings = new TSNEAnalysisTimings();
             // rows: Draft별 원본 JSON에서 식별자/라벨과 수치 후보를 분리한 중간 데이터다.
             List<TSNESourceRow> rows = ParseRows(jsonSamples);
+            timings.SourcePreparationMilliseconds = stageWatch.Elapsed.TotalMilliseconds;
+            stageWatch.Restart();
             // features.Matrix: 행은 Draft, 열은 살아남은 수치 feature인 TSNE 입력 수치행렬이다.
             FeatureMatrixResult features = BuildFeatureMatrix(rows, options);
+            timings.FeatureSelectionMilliseconds = stageWatch.Elapsed.TotalMilliseconds;
+            stageWatch.Restart();
             StandardScalerModel scaler = StandardScalerModel.Fit(features.Matrix, features.FeatureNames);
             // standardized: 각 feature별 평균을 빼고 표준편차로 나눈 정규화 행렬이다.
             double[][] standardized = scaler.Transform(features.Matrix);
+            timings.StandardizationMilliseconds = stageWatch.Elapsed.TotalMilliseconds;
+            stageWatch.Restart();
             TSNEProjectionModel tsne = null;
             double[][] scores;
             tsne = TSNEProjectionModel.FitTransform(
@@ -732,6 +767,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 options.TSNELearningRate,
                 options.TSNERandomSeed);
             scores = tsne.Coordinates;
+            timings.ProjectionMilliseconds = stageWatch.Elapsed.TotalMilliseconds;
+            stageWatch.Restart();
 
             var scatterData = new List<TSNEPointData>(rows.Count);
             for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
@@ -765,6 +802,16 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 throw new InvalidOperationException("Projection/KNN verification failed: " + verification.Message);
             }
 
+            timings.KnnAndVerificationMilliseconds = stageWatch.Elapsed.TotalMilliseconds;
+            stageWatch.Restart();
+            TSNEFeatureSelectionReport featureSelectionReport = createFeatureSelectionReport
+                ? TSNEFeatureSelectionReport.CreateFromSourceRows(
+                    rows,
+                    features.FeatureNames,
+                    Math.Max(0d, options.ConstantVarianceThreshold))
+                : null;
+            timings.AuditMilliseconds = stageWatch.Elapsed.TotalMilliseconds;
+
             var result = new TSNEAnalysisResult
             {
                 ScatterData = scatterData,
@@ -776,9 +823,11 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 ProjectionMethod = options.ProjectionMethod,
                 Knn = knn,
                 Verification = verification,
-                FeatureSelectionReport = features.FeatureSelectionReport
+                FeatureSelectionReport = featureSelectionReport,
+                Timings = timings
             };
             result.Diagnostic = TSNEAnalysisDiagnosticReport.Create(result, rows.Count, 0);
+            timings.TotalMilliseconds = totalWatch.Elapsed.TotalMilliseconds;
             return result;
         }
 
@@ -986,11 +1035,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             {
                 FeatureNames = included.ToArray(),
                 ExcludedFeatureNames = excluded.ToArray(),
-                Matrix = matrix,
-                FeatureSelectionReport = TSNEFeatureSelectionReport.CreateFromSourceRows(
-                    rows,
-                    included,
-                    varianceThreshold)
+                Matrix = matrix
             };
         }
 
