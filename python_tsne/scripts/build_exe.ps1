@@ -45,6 +45,7 @@ try {
         --paths .\src `
         --collect-submodules sqlalchemy.dialects.oracle `
         --collect-all oracledb `
+        --collect-all cryptography `
         --collect-all matplotlib `
         .\tsne_runner_cli.py
 

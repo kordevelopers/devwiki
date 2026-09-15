@@ -8,7 +8,7 @@ try {
     & .venv\Scripts\python.exe -m pip install -e .
     if ($Clean -and (Test-Path build)) { Remove-Item build -Recurse -Force }
     if ($Clean -and (Test-Path dist)) { Remove-Item dist -Recurse -Force }
-    & .venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --onefile --console --name $ExeName --paths .\src --add-data ".\queries\umap.sql;queries" --collect-all umap --collect-all matplotlib --collect-all oracledb .\umap_runner_cli.py
+    & .venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --onefile --console --name $ExeName --paths .\src --add-data ".\queries\umap.sql;queries" --collect-all umap --collect-all matplotlib --collect-all oracledb --collect-all cryptography .\umap_runner_cli.py
     Copy-Item .\.env.example .\dist\$ExeName.env.example -Force
     @"
 Hynix TAS UMAP Runner
