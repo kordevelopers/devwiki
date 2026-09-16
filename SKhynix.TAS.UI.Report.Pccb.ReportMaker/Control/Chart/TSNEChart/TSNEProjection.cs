@@ -157,8 +157,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             Iterations = AccordDefaultIterations;
             LearningRate = AccordDefaultLearningRate;
             RandomSeed = randomSeed;
-            KullbackLeiblerDivergence = double.NaN;
-            Theta = double.NaN;
         }
 
         private TSNEProjectionModel(SKhynix.TAS.Analysis.Tsne.Tsne.Result result)
@@ -169,9 +167,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             Iterations = result.Iterations;
             LearningRate = result.LearningRate;
             RandomSeed = result.RandomSeed;
-            NumberOfThreads = result.NumberOfThreads;
-            KullbackLeiblerDivergence = result.KullbackLeiblerDivergence;
-            Theta = result.Theta;
             ElapsedMilliseconds = result.ElapsedMilliseconds;
             OptimizationMilliseconds = result.ElapsedMilliseconds;
         }
@@ -185,22 +180,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public double PcaInitializationMilliseconds { get; private set; }
         public double OptimizationMilliseconds { get; private set; }
         public double ElapsedMilliseconds { get; private set; }
-        public double KullbackLeiblerDivergence { get; private set; }
-        public int NumberOfThreads { get; private set; }
-        public double Theta { get; private set; }
+        public double KullbackLeiblerDivergence { get { return double.NaN; } }
         public string EngineName { get { return engineName; } }
 
         public static TSNEProjectionModel FitTransform(double[][] standardizedMatrix, double perplexity,
             int iterations, double learningRate, int randomSeed,
             SKhynix.TAS.Analysis.Tsne.Tsne.Engine? libraryEngine)
-        {
-            return FitTransform(standardizedMatrix, perplexity, iterations, learningRate, randomSeed,
-                libraryEngine, Math.Min(4, Environment.ProcessorCount), 0.5);
-        }
-
-        public static TSNEProjectionModel FitTransform(double[][] standardizedMatrix, double perplexity,
-            int iterations, double learningRate, int randomSeed,
-            SKhynix.TAS.Analysis.Tsne.Tsne.Engine? libraryEngine, int numberOfThreads, double theta)
         {
             if (!libraryEngine.HasValue)
                 return FitTransform(standardizedMatrix, perplexity, iterations, learningRate, randomSeed);
@@ -214,9 +199,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                     Perplexity = perplexity,
                     Iterations = iterations,
                     LearningRate = learningRate,
-                    RandomSeed = randomSeed,
-                    NumberOfThreads = numberOfThreads,
-                    Theta = theta
+                    RandomSeed = randomSeed
                 });
             return new TSNEProjectionModel(result);
         }

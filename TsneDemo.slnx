@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SKhynix.TAS.Analysis.Tsne/SKhynix.TAS.Analysis.Tsne.csproj" Id="6d989560-7201-4aa3-9775-ef9dbbdceb17" />
+  <Project Path="SKhynix.TAS.UI.Report.Pccb.ReportMaker/SKhynix.TAS.UI.Report.Pccb.ReportMaker.csproj" Id="c4be4f25-9a0d-4d06-8b7e-1b2a9f4d5b01" />
+  <Project Path="SKhynix.TAS.UI.Report.Pccb/SKhynix.TAS.UI.Report.Pccb.csproj" Id="8d2a5c90-7a7b-4d0e-9d10-31f3b21b0c22" />
+  <Project Path="diagnostics/tsne-alternatives/TsneVerification.csproj" Id="b2fae043-c64b-4da5-ae25-97e8c1a97363" />
+</Solution>

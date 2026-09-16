@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="diagnostics/tsne-alternatives/TsneVerification.csproj" Id="b2fae043-c64b-4da5-ae25-97e8c1a97363" />
   <Project Path="SKhynix.TAS.Analysis.Tsne/SKhynix.TAS.Analysis.Tsne.csproj" Id="6d989560-7201-4aa3-9775-ef9dbbdceb17" />
   <Project Path="hynixTas/hynixTas.csproj" Id="8649b65c-1bfc-415d-9396-23ea4f257f78" />
   <Project Path="LightingChartSamples/LightingChartSamples.csproj" Id="1f03fc25-a770-4b71-bdd5-e268a934480f" />

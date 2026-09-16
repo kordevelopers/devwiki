@@ -16,11 +16,11 @@ internal static class TsnePerformanceVerification
     private static readonly List<object> Measurements = new List<object>();
     private static readonly Dictionary<string, object> Cases = new Dictionary<string, object>();
 
-    private static int Main(string[] args)
+    public static int Run(string[] args)
     {
         try
         {
-            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+            System.Threading.Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             if (args.Length == 3 && args[0] == "--compare") return Compare(args[1], args[2]);
             if (args.Length != 1) throw new ArgumentException("Expected result JSON path or --compare baseline current.");
             Run();

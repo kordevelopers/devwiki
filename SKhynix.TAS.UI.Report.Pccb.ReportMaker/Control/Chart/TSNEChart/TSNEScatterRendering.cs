@@ -256,8 +256,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             // learning_rate='auto' property.
             TSNELearningRate = 200d;
             TSNERandomSeed = 42;
-            TSNENumberOfThreads = Math.Min(4, Environment.ProcessorCount);
-            TSNETheta = 0.5;
         }
 
         public double ConstantVarianceThreshold { get; set; }
@@ -273,8 +271,6 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public int TSNEIterations { get; set; }
         public double TSNELearningRate { get; set; }
         public int TSNERandomSeed { get; set; }
-        public int TSNENumberOfThreads { get; set; }
-        public double TSNETheta { get; set; }
         public SKhynix.TAS.Analysis.Tsne.Tsne.Engine? TSNELibraryEngine { get; set; }
 
         internal TSNEAnalysisOptions ToPipelineOptions()
@@ -294,9 +290,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 TSNEIterations = TSNEIterations,
                 TSNELearningRate = TSNELearningRate,
                 TSNERandomSeed = TSNERandomSeed,
-                TSNELibraryEngine = TSNELibraryEngine,
-                TSNENumberOfThreads = TSNENumberOfThreads,
-                TSNETheta = TSNETheta
+                TSNELibraryEngine = TSNELibraryEngine
             };
         }
 

@@ -1,0 +1,125 @@
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using Alternative = SKhynix.TAS.Analysis.Tsne.Tsne;
+
+internal static class AlternativeTsneVerification
+{
+    private static int assertions;
+    public static int Run(string[] args)
+    {
+        try
+        {
+            Check(Environment.Is64BitProcess, "x64 harness required");
+            Check(!typeof(Alternative).Assembly.GetReferencedAssemblies().Any(a => a.Name.StartsWith("Accord", StringComparison.Ordinal)), "standalone DLL references Accord");
+            if (args.Length > 0 && args[0] == "--defaults")
+            {
+                foreach (Alternative.Engine engine in new[] { Alternative.Engine.CSharp, Alternative.Engine.Hybrid })
+                {
+                    var input = Matrix(96);
+                    var original = Copy(input);
+                    var result = Alternative.FitTransform(input, new Alternative.Options { Engine = engine });
+                    Finite2D(result.Coordinates, 96);
+                    Equal(input, original, "default run mutated input");
+                    Check(result.Iterations == 1000 && result.EffectivePerplexity == 30, "default schedule/perplexity mismatch");
+                    Check(result.LearningRate == (engine == Alternative.Engine.CSharp ? 500 : 200) && result.RandomSeed == (engine == Alternative.Engine.CSharp ? 1 : 42), "default effective settings mismatch");
+                    Console.WriteLine(engine + " default rows=96 iterations=1000 p=30 finite 2D; elapsed ms=" + result.ElapsedMilliseconds.ToString("F1"));
+                }
+                Console.WriteLine("PASS: production defaults across exaggeration schedules; " + assertions + " assertions.");
+                return 0;
+            }
+            if (args.Length > 0 && args[0] == "--duplicates")
+            {
+                foreach (int perplexity in new[] { 1, 30 })
+                {
+                    var repeated = Enumerable.Range(0, 40).Select(i => new[] { (double)(i % 4), (i % 4) * (i % 4) + 0.3 }).ToArray();
+                    var original = Copy(repeated);
+                    var result = Alternative.FitTransform(repeated, new Alternative.Options { Engine = Alternative.Engine.Hybrid, Perplexity = perplexity, Iterations = 80, LearningRate = 50 });
+                    Finite2D(result.Coordinates, 40);
+                    Equal(repeated, original, "Hybrid duplicated-input mutation");
+                    Console.WriteLine("Hybrid duplicate rows=40 distinct=4 requested p=" + perplexity + " finite 2D");
+                }
+                Console.WriteLine("PASS: duplicate-row LSH partition termination; " + assertions + " assertions.");
+                return 0;
+            }
+            if (args.Length > 0 && args[0] == "--csharp-only")
+            {
+                VerifyCSharp(12);
+                Check(!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name.StartsWith("Hybrid") || a.GetName().Name.StartsWith("MathNet") || a.GetName().Name.StartsWith("Accord")), "CSharp loaded another engine");
+                Console.WriteLine("PASS: CSharp runs with only TsneCSharp and standalone DLLs; " + assertions + " assertions.");
+                return 0;
+            }
+            foreach (int rows in new[] { 3, 4, 12, 40 }) VerifyCSharp(rows);
+            foreach (int rows in new[] { 4, 12, 40 }) VerifyHybrid(rows);
+            ValidateFailures();
+            var native = Process.GetCurrentProcess().Modules.Cast<ProcessModule>().FirstOrDefault(m => string.Equals(m.ModuleName, "MathNet.Numerics.MKL.dll", StringComparison.OrdinalIgnoreCase));
+            Check(native != null, "Hybrid did not load native MathNet MKL");
+            Check(!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name.StartsWith("Accord", StringComparison.Ordinal)), "standalone engine run loaded Accord");
+            Console.WriteLine("Native MKL: " + native.FileName);
+            Console.WriteLine("PASS: standalone engines, source parity, input/result isolation and validation; " + assertions + " assertions.");
+            return 0;
+        }
+        catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
+    }
+
+    private static void VerifyCSharp(int count)
+    {
+        var input = Matrix(count);
+        var original = Copy(input);
+        var options = new Alternative.Options { Engine = Alternative.Engine.CSharp, Iterations = 80, Perplexity = 30, LearningRate = 17, RandomSeed = 97 };
+        var result = Alternative.FitTransform(input, options);
+        var again = Alternative.FitTransform(Copy(input), options);
+        var direct = TSNE.TSNE.Reduce(Copy(input), options.Iterations, (int)result.EffectivePerplexity);
+        Finite2D(result.Coordinates, count);
+        Equal(input, original, "CSharp mutated caller input");
+        Equal(result.Coordinates, again.Coordinates, "CSharp seed-1 repeat differs");
+        Equal(result.Coordinates, direct, "CSharp wrapper differs from pinned upstream Reduce");
+        Check(result.Engine == Alternative.Engine.CSharp && result.LearningRate == 500 && result.RandomSeed == 1 && result.Iterations == 80, "CSharp effective metadata mismatch");
+        Check(result.EffectivePerplexity == Math.Max(1, (count - 1) / 3), "CSharp perplexity cap mismatch");
+        var exposed = result.Coordinates;
+        exposed[0][0] = 123456;
+        Equal(result.Coordinates, direct, "result Coordinates exposes mutable backing storage");
+        Console.WriteLine("CSharp rows=" + count + " p=" + result.EffectivePerplexity + " source parity=exact");
+    }
+
+    private static void VerifyHybrid(int count)
+    {
+        var input = Matrix(count);
+        var original = Copy(input);
+        var result = Alternative.FitTransform(input, new Alternative.Options { Engine = Alternative.Engine.Hybrid, Iterations = 80, Perplexity = 30, LearningRate = 50, RandomSeed = 19 });
+        Finite2D(result.Coordinates, count);
+        Equal(input, original, "Hybrid mutated caller input");
+        Check(result.Engine == Alternative.Engine.Hybrid && result.Iterations == 80 && result.LearningRate == 50 && result.RandomSeed == 19, "Hybrid metadata mismatch");
+        Check(result.EngineName.Contains("auto") && result.EffectivePerplexity == (count - 1) / 3, "Hybrid configuration mismatch");
+        Console.WriteLine("Hybrid auto rows=" + count + " p=" + result.EffectivePerplexity + " finite 2D; elapsed ms=" + result.ElapsedMilliseconds.ToString("F1"));
+    }
+
+    private static void ValidateFailures()
+    {
+        Reject("null", () => Alternative.FitTransform(null));
+        Reject("two rows", () => Alternative.FitTransform(Matrix(2)));
+        Reject("ragged", () => Alternative.FitTransform(new[] { new[] { 1d, 2d }, new[] { 3d }, new[] { 4d, 5d } }));
+        Reject("null row", () => Alternative.FitTransform(new[] { new[] { 1d, 2d }, null, new[] { 4d, 5d } }));
+        var invalid = Matrix(4); invalid[1][2] = double.NaN;
+        Reject("NaN", () => Alternative.FitTransform(invalid));
+        invalid[1][2] = double.PositiveInfinity;
+        Reject("infinity", () => Alternative.FitTransform(invalid));
+        Reject("unknown engine", () => Alternative.FitTransform(Matrix(4), new Alternative.Options { Engine = (Alternative.Engine)123 }));
+        Reject("zero iterations", () => Alternative.FitTransform(Matrix(4), new Alternative.Options { Iterations = 0 }));
+        Reject("invalid perplexity", () => Alternative.FitTransform(Matrix(4), new Alternative.Options { Perplexity = double.NaN }));
+        Reject("CSharp size cap", () => Alternative.FitTransform(Matrix(12), new Alternative.Options { MaximumCSharpRows = 11 }));
+        Reject("Hybrid three rows", () => Alternative.FitTransform(Matrix(3), new Alternative.Options { Engine = Alternative.Engine.Hybrid }));
+        Reject("Hybrid zero learning rate", () => Alternative.FitTransform(Matrix(4), new Alternative.Options { Engine = Alternative.Engine.Hybrid, LearningRate = 0 }));
+        Reject("Hybrid identical rows", () => Alternative.FitTransform(Enumerable.Range(0, 4).Select(i => new[] { 1d, 2d }).ToArray(), new Alternative.Options { Engine = Alternative.Engine.Hybrid }));
+        invalid = Matrix(4); invalid[1][2] = double.MaxValue;
+        Reject("Hybrid float overflow", () => Alternative.FitTransform(invalid, new Alternative.Options { Engine = Alternative.Engine.Hybrid }));
+    }
+
+    private static double[][] Matrix(int count) { return Enumerable.Range(0, count).Select(i => Enumerable.Range(0, 5).Select(j => Math.Sin((i + 1) * (j + 2) * 0.17) + (i % 3) * 0.71 + i * 0.013).ToArray()).ToArray(); }
+    private static double[][] Copy(double[][] input) { return input.Select(row => (double[])row.Clone()).ToArray(); }
+    private static void Equal(double[][] a, double[][] b, string message) { Check(a.Length == b.Length && a.Zip(b, (x, y) => x.SequenceEqual(y)).All(equal => equal), message); }
+    private static void Finite2D(double[][] values, int count) { Check(values.Length == count && values.All(row => row.Length == 2 && row.All(x => !double.IsNaN(x) && !double.IsInfinity(x))), "invalid 2D output"); }
+    private static void Reject(string label, Action action) { try { action(); } catch (ArgumentException) { assertions++; return; } throw new Exception("Expected input rejection: " + label); }
+    private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); assertions++; }
+}
