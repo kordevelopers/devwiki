@@ -41,6 +41,8 @@ namespace SKhynix.TAS.UI.Report.Pccb
         private DimensionalityReductionMethod projectionMethod;
         private Tsne.Engine? tsneLibraryEngine = Tsne.Engine.CSharp;
         private ComboBox engineComboBox;
+        private NumericUpDown threadCountInput;
+        private int tsneNumberOfThreads = Math.Min(4, Environment.ProcessorCount);
         private Button virtualDataButton;
         private Label engineSettingsLabel;
         private bool analysisInProgress;
@@ -66,6 +68,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             // Hybrid uses this learning rate; tsne-csharp uses its fixed rate of 500.
             TSNELearningRate = 200d;
             TSNERandomSeed = 42;
+            TSNETheta = 0.5;
             currentSamples = new List<TSNEPointData>();
             currentRecords = new List<TSNEExperimentRecord>();
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime)
@@ -135,6 +138,21 @@ namespace SKhynix.TAS.UI.Report.Pccb
         public int TSNEIterations { get; set; }
         public double TSNELearningRate { get; set; }
         public int TSNERandomSeed { get; set; }
+        public double TSNETheta { get; set; }
+
+        public int TSNENumberOfThreads
+        {
+            get { return tsneNumberOfThreads; }
+            set
+            {
+                if (value < 1 || value > Environment.ProcessorCount) throw new ArgumentOutOfRangeException("value");
+                if (value == tsneNumberOfThreads) return;
+                if (analysisInProgress) throw new InvalidOperationException("Wait for the current analysis before changing threads.");
+                tsneNumberOfThreads = value;
+                if (threadCountInput != null) threadCountInput.Value = value;
+                if (tsneLibraryEngine == Tsne.Engine.Multicore) ClearProjectionResult();
+            }
+        }
 
         /// <summary>
         /// t-SNE 구현을 선택한다. 기본값은 tsne-csharp이며 null은 기존 Accord.NET 비교용이다.
@@ -161,7 +179,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 tsneLibraryEngine = value;
                 if (engineComboBox != null)
                 {
-                    engineComboBox.SelectedIndex = value == Tsne.Engine.CSharp ? 0 : value == Tsne.Engine.Hybrid ? 1 : 2;
+                    engineComboBox.SelectedIndex = value == Tsne.Engine.CSharp ? 0 : value == Tsne.Engine.Hybrid ? 1 : value == Tsne.Engine.Multicore ? 2 : 3;
                     UpdateEngineSettingsText();
                 }
                 ApplyProjectionUiText();
@@ -211,7 +229,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 AccessibleDescription = "Select the t-SNE implementation, then draw the same data again.",
                 TabIndex = 1
             };
-            engineComboBox.Items.AddRange(new object[] { "tsne-csharp", "Hybrid t-SNE", "Accord.NET (comparison)" });
+            engineComboBox.Items.AddRange(new object[] { "tsne-csharp", "Hybrid t-SNE", "Multicore-TSNE (C++)", "Accord.NET (comparison)" });
             engineComboBox.SelectedIndex = 0;
             engineComboBox.SelectedIndexChanged += EngineComboBox_SelectedIndexChanged;
             virtualDataButton = new Button
@@ -233,7 +251,16 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 ForeColor = Color.FromArgb(80, 80, 80),
                 TabIndex = 3
             };
-            enginePanel.Controls.AddRange(new Control[] { engineLabel, engineComboBox, virtualDataButton, engineSettingsLabel });
+            var threadLabel = new Label { Text = "&Threads", AutoSize = true, Margin = new Padding(0, 7, 6, 0), TabIndex = 3 };
+            threadCountInput = new NumericUpDown
+            {
+                Name = "threadCountInput", Minimum = 1, Maximum = Environment.ProcessorCount,
+                Value = TSNENumberOfThreads, Width = 55, Margin = new Padding(0, 3, 12, 3),
+                AccessibleName = "Multicore t-SNE OpenMP threads", TabIndex = 4, Enabled = false
+            };
+            threadCountInput.ValueChanged += delegate { TSNENumberOfThreads = (int)threadCountInput.Value; };
+            engineSettingsLabel.TabIndex = 5;
+            enginePanel.Controls.AddRange(new Control[] { engineLabel, engineComboBox, virtualDataButton, threadLabel, threadCountInput, engineSettingsLabel });
 
             toolbarLayout.SuspendLayout();
             toolbarLayout.RowCount = 3;
@@ -259,22 +286,26 @@ namespace SKhynix.TAS.UI.Report.Pccb
         {
             TSNELibraryEngine = engineComboBox.SelectedIndex == 0
                 ? Tsne.Engine.CSharp
-                : engineComboBox.SelectedIndex == 1 ? Tsne.Engine.Hybrid : (Tsne.Engine?)null;
+                : engineComboBox.SelectedIndex == 1 ? Tsne.Engine.Hybrid
+                : engineComboBox.SelectedIndex == 2 ? Tsne.Engine.Multicore : (Tsne.Engine?)null;
         }
 
         private void UpdateEngineSettingsText()
         {
+            if (threadCountInput != null) threadCountInput.Enabled = !analysisInProgress && tsneLibraryEngine == Tsne.Engine.Multicore;
             engineSettingsLabel.Text = tsneLibraryEngine == Tsne.Engine.CSharp
                 ? "Learning rate 500 / seed 1 (fixed)"
                 : tsneLibraryEngine == Tsne.Engine.Hybrid
                     ? "Uses configured iterations, learning rate and seed"
+                    : tsneLibraryEngine == Tsne.Engine.Multicore ? "OpenMP / configurable rate and seed"
                     : "1,000 iterations / learning rate 200 (fixed)";
         }
 
         private string GetEngineDisplayName()
         {
             return tsneLibraryEngine == Tsne.Engine.CSharp ? "tsne-csharp"
-                : tsneLibraryEngine == Tsne.Engine.Hybrid ? "Hybrid t-SNE" : "Accord.NET";
+                : tsneLibraryEngine == Tsne.Engine.Hybrid ? "Hybrid t-SNE"
+                : tsneLibraryEngine == Tsne.Engine.Multicore ? "Multicore-TSNE" : "Accord.NET";
         }
 
         private void ClearProjectionResult()
@@ -1111,6 +1142,10 @@ namespace SKhynix.TAS.UI.Report.Pccb
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture,
                 "Effective settings: perplexity={0:0.###}, iterations={1}, learning rate={2:0.###}, random seed={3}",
                 model.EffectivePerplexity, model.Iterations, model.LearningRate, model.RandomSeed));
+            if (model.NumberOfThreads > 0)
+                builder.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                    "OpenMP threads={0}, theta={1:0.###}, final approximate KL={2:0.######}",
+                    model.NumberOfThreads, model.Theta, model.KullbackLeiblerDivergence));
             builder.AppendLine("PCA component weights and explained variance do not describe t-SNE axes.");
             builder.AppendLine();
         }
@@ -1553,6 +1588,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         {
             analysisInProgress = !enabled;
             parameterChangeEnabled = enabled;
+            if (threadCountInput != null) threadCountInput.Enabled = enabled && tsneLibraryEngine == Tsne.Engine.Multicore;
             if (engineComboBox != null)
             {
                 engineComboBox.Enabled = enabled;
@@ -1681,6 +1717,8 @@ namespace SKhynix.TAS.UI.Report.Pccb
             options.Analysis.TSNEIterations = TSNEIterations;
             options.Analysis.TSNELearningRate = TSNELearningRate;
             options.Analysis.TSNERandomSeed = TSNERandomSeed;
+            options.Analysis.TSNENumberOfThreads = TSNENumberOfThreads;
+            options.Analysis.TSNETheta = TSNETheta;
             options.Analysis.MinimumNumericFeatureCoverageRatio =
                 ConvertCoveragePercentToRatio(MinimumNumericCoveragePercent);
             options.Series.PassColor = projectionMethod == DimensionalityReductionMethod.TSNE

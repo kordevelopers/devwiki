@@ -1,17 +1,20 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace SKhynix.TAS.Analysis.Tsne
 {
     /// <summary>
     /// Single-file, Accord-free adapters for Orlinski/Hybrid_t-SNE and
-    /// jdmccaffrey/tsne-csharp. Pass the same standardized matrix to compare engines.
+    /// jdmccaffrey/tsne-csharp and DmitryUlyanov/Multicore-TSNE (C++ P/Invoke).
+    /// Pass the same standardized matrix to compare engines.
     /// Run scripts/Restore-AlternativeTsne.ps1 to build the pinned upstream DLLs.
     /// </summary>
     public static class Tsne
     {
-        public enum Engine { Hybrid, CSharp }
+        public enum Engine { Hybrid, CSharp, Multicore }
 
         public sealed class Options
         {
@@ -23,17 +26,23 @@ namespace SKhynix.TAS.Analysis.Tsne
                 LearningRate = 200;
                 RandomSeed = 42;
                 MaximumCSharpRows = 2000;
+                NumberOfThreads = Math.Min(4, Environment.ProcessorCount);
+                Theta = 0.5;
             }
 
             public Engine Engine { get; set; }
             public double Perplexity { get; set; }
             public int Iterations { get; set; }
-            /// <summary>Hybrid only. Unmodified tsne-csharp fixes its rate at 500.</summary>
+            /// <summary>Hybrid/Multicore. Unmodified tsne-csharp fixes its rate at 500.</summary>
             public double LearningRate { get; set; }
-            /// <summary>Hybrid only. Unmodified tsne-csharp fixes its seed at 1.</summary>
+            /// <summary>Hybrid/Multicore. Unmodified tsne-csharp fixes its seed at 1.</summary>
             public int RandomSeed { get; set; }
             /// <summary>Bounds the dense C# engine's quadratic allocations; increase explicitly if needed.</summary>
             public int MaximumCSharpRows { get; set; }
+            /// <summary>Multicore only: positive OpenMP thread count, up to the available processors.</summary>
+            public int NumberOfThreads { get; set; }
+            /// <summary>Multicore only: Barnes-Hut approximation angle in (0,1].</summary>
+            public double Theta { get; set; }
         }
 
         public sealed class Result
@@ -41,7 +50,8 @@ namespace SKhynix.TAS.Analysis.Tsne
             private readonly double[][] coordinates;
 
             internal Result(double[][] coordinates, Engine engine, int perplexity,
-                int iterations, double learningRate, int randomSeed, double elapsed)
+                int iterations, double learningRate, int randomSeed, double elapsed,
+                int numberOfThreads = 0, double klDivergence = double.NaN, double theta = double.NaN)
             {
                 this.coordinates = Clone(coordinates);
                 Engine = engine;
@@ -50,19 +60,28 @@ namespace SKhynix.TAS.Analysis.Tsne
                 LearningRate = learningRate;
                 RandomSeed = randomSeed;
                 ElapsedMilliseconds = elapsed;
+                NumberOfThreads = numberOfThreads;
+                KullbackLeiblerDivergence = klDivergence;
+                Theta = theta;
             }
 
             public double[][] Coordinates { get { return Clone(coordinates); } }
             public Engine Engine { get; private set; }
             public string EngineName
             {
-                get { return Engine == Tsne.Engine.Hybrid ? "Hybrid_t-SNE (auto: Barnes-Hut / FFT)" : "tsne-csharp (exact)"; }
+                get { return Engine == Tsne.Engine.Hybrid ? "Hybrid_t-SNE (auto: Barnes-Hut / FFT)"
+                    : Engine == Tsne.Engine.Multicore ? "Multicore-TSNE (C++ / OpenMP / Barnes-Hut)" : "tsne-csharp (exact)"; }
             }
             public double EffectivePerplexity { get; private set; }
             public int Iterations { get; private set; }
             public double LearningRate { get; private set; }
             public int RandomSeed { get; private set; }
             public double ElapsedMilliseconds { get; private set; }
+            /// <summary>Actual OpenMP team size for Multicore; 0 means unavailable for other engines.</summary>
+            public int NumberOfThreads { get; private set; }
+            /// <summary>Native final approximate KL for Multicore; NaN for other engines.</summary>
+            public double KullbackLeiblerDivergence { get; private set; }
+            public double Theta { get; private set; }
         }
 
         // Hybrid initializes MathNet's process-wide native provider. Serialize its
@@ -79,8 +98,10 @@ namespace SKhynix.TAS.Analysis.Tsne
             double requestedPerplexity = settings.Perplexity;
             double learningRate = engine == Engine.CSharp ? 500 : settings.LearningRate;
             int seed = engine == Engine.CSharp ? 1 : settings.RandomSeed;
+            int threads = settings.NumberOfThreads;
+            double theta = settings.Theta;
             ValidateMatrix(standardizedMatrix);
-            if (engine != Engine.Hybrid && engine != Engine.CSharp)
+            if (engine != Engine.Hybrid && engine != Engine.CSharp && engine != Engine.Multicore)
                 throw new ArgumentOutOfRangeException("options", "Unknown t-SNE engine.");
             if (!Finite(requestedPerplexity) || requestedPerplexity < 1)
                 throw new ArgumentOutOfRangeException("options", "Perplexity must be finite and at least 1.");
@@ -89,8 +110,11 @@ namespace SKhynix.TAS.Analysis.Tsne
             if (!Finite(learningRate) || learningRate <= 0)
                 throw new ArgumentOutOfRangeException("options", "Learning rate must be finite and positive.");
             int count = standardizedMatrix.Length;
-            if (engine == Engine.Hybrid && count < 4)
-                throw new ArgumentException("Hybrid_t-SNE requires at least four rows.", "standardizedMatrix");
+            if ((engine == Engine.Hybrid || engine == Engine.Multicore) && count < 4)
+                throw new ArgumentException("Hybrid and Multicore t-SNE require at least four rows.", "standardizedMatrix");
+            if (engine == Engine.Multicore && (threads < 1 || threads > Environment.ProcessorCount ||
+                !Finite(theta) || theta <= 0 || theta > 1 || seed < 0))
+                throw new ArgumentOutOfRangeException("options", "Multicore requires 1..ProcessorCount threads, theta in (0,1], and a nonnegative seed.");
             if (engine == Engine.CSharp && (settings.MaximumCSharpRows < 3 || count > settings.MaximumCSharpRows))
                 throw new ArgumentException("tsne-csharp uses dense quadratic matrices. Reduce the sample count, select Hybrid, or explicitly increase MaximumCSharpRows.", "standardizedMatrix");
 
@@ -99,6 +123,8 @@ namespace SKhynix.TAS.Analysis.Tsne
             int perplexity = (int)Math.Min(requestedPerplexity, Math.Max(1, (count - 1) / 3));
             double[][] input = Clone(standardizedMatrix);
             double[][] coordinates;
+            int actualThreads = 0;
+            double kl = double.NaN;
             if (engine == Engine.Hybrid)
             {
                 if (!Environment.Is64BitProcess)
@@ -106,12 +132,65 @@ namespace SKhynix.TAS.Analysis.Tsne
                 lock (HybridLock)
                     coordinates = RunHybrid(input, perplexity, iterations, learningRate, seed);
             }
+            else if (engine == Engine.Multicore)
+            {
+                if (!Environment.Is64BitProcess)
+                    throw new PlatformNotSupportedException("Multicore-TSNE requires an x64 Windows process.");
+                coordinates = RunMulticore(input, perplexity, iterations, learningRate, seed, threads, theta, out kl, out actualThreads);
+            }
             else
             {
                 coordinates = RunCSharp(input, iterations, perplexity);
             }
             ValidateCoordinates(coordinates, count);
-            return new Result(coordinates, engine, perplexity, iterations, learningRate, seed, watch.Elapsed.TotalMilliseconds);
+            return new Result(coordinates, engine, perplexity, iterations, learningRate, seed, watch.Elapsed.TotalMilliseconds,
+                actualThreads, kl, engine == Engine.Multicore ? theta : double.NaN);
+        }
+
+        [DllImport("MulticoreTsne.Native.dll", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true)]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.AssemblyDirectory | DllImportSearchPath.SafeDirectories)]
+        private static extern int tas_tsne_abi_version();
+
+        [DllImport("MulticoreTsne.Native.dll", CallingConvention = CallingConvention.Cdecl, ExactSpelling = true, CharSet = CharSet.Ansi)]
+        [DefaultDllImportSearchPaths(DllImportSearchPath.AssemblyDirectory | DllImportSearchPath.SafeDirectories)]
+        private static extern int tas_tsne_run([In, Out] double[] input, int inputLength, int rows, int columns,
+            [Out] double[] output, int outputLength, double perplexity, double theta, int threads, int iterations,
+            int seed, double learningRate, out double kl, out int actualThreads, StringBuilder error, int errorCapacity);
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static double[][] RunMulticore(double[][] input, int perplexity, int iterations, double learningRate,
+            int seed, int threads, double theta, out double kl, out int actualThreads)
+        {
+            int rows = input.Length, columns = input[0].Length;
+            // The upstream C API mutates X. Flatten our private copy in row-major
+            // order; lengths are explicit on the ABI boundary and checked twice.
+            var flat = new double[checked(rows * columns)];
+            var output = new double[checked(rows * 2)];
+            for (int row = 0; row < rows; row++) Array.Copy(input[row], 0, flat, row * columns, columns);
+            var error = new StringBuilder(1024);
+            try
+            {
+                if (tas_tsne_abi_version() != 1)
+                    throw new InvalidOperationException("Multicore-TSNE ABI mismatch. Rebuild with scripts/Restore-MulticoreTsne.ps1.");
+                int status = tas_tsne_run(flat, flat.Length, rows, columns, output, output.Length, perplexity, theta,
+                    threads, iterations, seed, learningRate, out kl, out actualThreads, error, error.Capacity);
+                if (status != 0) throw new InvalidOperationException("Multicore-TSNE: " + error);
+            }
+            catch (DllNotFoundException ex)
+            {
+                throw new InvalidOperationException("Restore Multicore-TSNE and copy MulticoreTsne.Native.dll plus vcomp140.dll beside the application. Run scripts/Restore-MulticoreTsne.ps1.", ex);
+            }
+            catch (BadImageFormatException ex)
+            {
+                throw new InvalidOperationException("Multicore-TSNE native DLL must match the x64 host architecture.", ex);
+            }
+            catch (EntryPointNotFoundException ex)
+            {
+                throw new InvalidOperationException("Multicore-TSNE native DLL is incompatible. Run scripts/Restore-MulticoreTsne.ps1 and rebuild the host.", ex);
+            }
+            var result = new double[rows][];
+            for (int row = 0; row < rows; row++) result[row] = new[] { output[2 * row], output[2 * row + 1] };
+            return result;
         }
 
         // Keep dependency loading local to the chosen engine. CSharp can run

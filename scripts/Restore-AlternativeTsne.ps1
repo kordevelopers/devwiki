@@ -212,3 +212,4 @@ $manifest = [ordered]@{
 [IO.File]::WriteAllText((Join-Path $dependencyRoot 'manifest.json'), ($manifest | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
 Write-Host ('Managed dependencies: ' + $libRoot)
 Write-Host ('Native x64 dependencies: ' + $nativeRoot)
+& (Join-Path $PSScriptRoot 'Restore-MulticoreTsne.ps1') -SkipValidation:$SkipValidation

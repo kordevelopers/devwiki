@@ -13,7 +13,7 @@ if ($outputRoot.TrimEnd('\', '/') -eq $repoRoot.TrimEnd('\', '/') -or
 }
 if (Test-Path -LiteralPath $outputRoot) { throw 'OutputDirectory must be a new directory.' }
 $packageRoot = Join-Path $repoRoot 'packages'
-foreach ($dependency in 'lib/HybridTsne.dll', 'lib/TsneCSharp.dll', 'lib/MathNet.Numerics.dll', 'native/MathNet.Numerics.MKL.dll', 'native/libiomp5md.dll') {
+foreach ($dependency in 'lib/HybridTsne.dll', 'lib/TsneCSharp.dll', 'lib/MathNet.Numerics.dll', 'native/MathNet.Numerics.MKL.dll', 'native/libiomp5md.dll', 'native/MulticoreTsne.Native.dll', 'native/vcomp140.dll') {
     if (-not (Test-Path -LiteralPath (Join-Path $packageRoot ('AlternativeTsne/' + $dependency)))) {
         throw 'Restore dependencies first with scripts/Restore-AlternativeTsne.ps1.'
     }
@@ -61,12 +61,40 @@ if ($LASTEXITCODE -ne 0) { throw 'Isolated host/library build failed.' }
 $standaloneRoot = Join-Path $sourceRoot ($projects[0] + '/bin/Release')
 $hostRoot = Join-Path $sourceRoot ($projects[2] + '/bin/Release')
 
+# Direct Process ownership keeps ExitCode reliable on Windows PowerShell 5.1,
+# where Start-Process -PassThru can lose it after a very fast process exits.
+function Invoke-BoundedHarness([string]$Executable, [string]$Argument, [string]$LogName, [int]$Timeout = 60000) {
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $process.StartInfo.FileName = $Executable
+    $process.StartInfo.Arguments = $Argument
+    $process.StartInfo.UseShellExecute = $false
+    $process.StartInfo.CreateNoWindow = $true
+    $process.StartInfo.RedirectStandardOutput = $true
+    $process.StartInfo.RedirectStandardError = $true
+    try {
+        [void]$process.Start()
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        if (-not $process.WaitForExit($Timeout)) { $process.Kill(); throw "$LogName exceeded its time limit." }
+        $process.WaitForExit()
+        [IO.File]::WriteAllText((Join-Path $outputRoot ($LogName + '.log')), $stdout.Result + $stderr.Result)
+        Write-Output $stdout.Result
+        if ($stderr.Result) { Write-Output $stderr.Result }
+        if ($process.ExitCode -ne 0) { throw "$LogName failed with exit code $($process.ExitCode)." }
+    }
+    finally { $process.Dispose() }
+}
+
 # Keep verification C# inside this script, so the experiment has only Tsne.cs.
 $standaloneSource = @'
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
 using Alternative = SKhynix.TAS.Analysis.Tsne.Tsne;
 
 internal static class AlternativeTsneVerification
@@ -78,6 +106,16 @@ internal static class AlternativeTsneVerification
         {
             Check(Environment.Is64BitProcess, "x64 harness required");
             Check(!typeof(Alternative).Assembly.GetReferencedAssemblies().Any(a => a.Name.StartsWith("Accord", StringComparison.Ordinal)), "standalone DLL references Accord");
+            if (args.Length > 0 && args[0] == "--multicore") { VerifyMulticore(); return 0; }
+            if (args.Length > 0 && args[0] == "--missing-multicore")
+            {
+                try { Alternative.FitTransform(Matrix(12), new Alternative.Options { Engine = Alternative.Engine.Multicore }); }
+                catch (InvalidOperationException ex) {
+                    Check(ex.InnerException is DllNotFoundException && ex.Message.Contains("Restore-MulticoreTsne.ps1"), "Missing native DLL error was not actionable");
+                    Console.WriteLine("PASS: missing native DLL gives a restore instruction."); return 0;
+                }
+                throw new Exception("Missing native DLL unexpectedly succeeded.");
+            }
             if (args.Length > 0 && args[0] == "--defaults")
             {
                 foreach (Alternative.Engine engine in new[] { Alternative.Engine.CSharp, Alternative.Engine.Hybrid })
@@ -148,6 +186,62 @@ internal static class AlternativeTsneVerification
         Console.WriteLine("CSharp rows=" + count + " p=" + result.EffectivePerplexity + " source parity=exact");
     }
 
+    [DllImport("MulticoreTsne.Native.dll", CallingConvention=CallingConvention.Cdecl)]
+    private static extern void tsne_run_double([In,Out] double[] x, int n, int d, [Out] double[] y, int dimensions,
+        double perplexity, double theta, int threads, int iterations, int earlyIterations, int seed,
+        [MarshalAs(UnmanagedType.I1)] bool initFromY, int verbose, double exaggeration, double rate, out double kl, int distance);
+
+    [DllImport("MulticoreTsne.Native.dll", CallingConvention=CallingConvention.Cdecl, CharSet=CharSet.Ansi)]
+    private static extern int tas_tsne_run([In,Out] double[] x, int length, int n, int d, [Out] double[] y,
+        int outputLength, double p, double theta, int threads, int iterations, int seed, double rate,
+        out double kl, out int actual, StringBuilder error, int capacity);
+
+    private static void VerifyMulticore()
+    {
+        foreach (int threads in new[] { 1, Math.Min(2, Environment.ProcessorCount), Math.Min(4, Environment.ProcessorCount) }.Distinct())
+        {
+            var input = Matrix(96); var original = Copy(input);
+            var options = new Alternative.Options { Engine=Alternative.Engine.Multicore, NumberOfThreads=threads };
+            var result = Alternative.FitTransform(input, options);
+            Finite2D(result.Coordinates, 96); Equal(input, original, "Multicore mutated input");
+            Check(result.NumberOfThreads==threads && result.Iterations==1000 && result.LearningRate==200 && result.RandomSeed==42 && result.Theta==.5, "Multicore settings lost");
+            Check(!double.IsNaN(result.KullbackLeiblerDivergence) && !double.IsInfinity(result.KullbackLeiblerDivergence), "Invalid final KL");
+            var again = Alternative.FitTransform(input, options);
+            Equal(result.Coordinates, again.Coordinates, "Same Multicore settings changed coordinates");
+            double kl; var direct=new double[192];
+            tsne_run_double(original.SelectMany(row=>row).ToArray(),96,5,direct,2,30,.5,threads,1000,250,42,false,0,12,200,out kl,1);
+            Check(result.Coordinates.SelectMany(row=>row).SequenceEqual(direct), "PInvoke wrapper differs from original native entry point");
+            Check(Math.Abs(result.KullbackLeiblerDivergence-kl)<1e-10, "Wrapper KL differs from native");
+            Console.WriteLine("Multicore: rows=96, iterations=1000, actual threads="+result.NumberOfThreads+", raw native parity=exact, KL="+kl.ToString("F6")+", ms="+result.ElapsedMilliseconds.ToString("F1"));
+        }
+        foreach(int count in new[]{4,12}) {
+            var result=Alternative.FitTransform(Matrix(count),new Alternative.Options { Engine=Alternative.Engine.Multicore, Iterations=300, NumberOfThreads=1 });
+            Finite2D(result.Coordinates,count); Check(result.EffectivePerplexity==(count-1)/3,"Multicore small perplexity cap");
+        }
+        var repeated=Enumerable.Range(0,40).Select(i=>Matrix(4)[i%4]).ToArray();
+        Finite2D(Alternative.FitTransform(repeated,new Alternative.Options { Engine=Alternative.Engine.Multicore, Iterations=300 }).Coordinates,40);
+        var lowTheta=new Alternative.Options { Engine=Alternative.Engine.Multicore, Iterations=300, Theta=.2, NumberOfThreads=1 };
+        Check(Alternative.FitTransform(Matrix(24),lowTheta).Theta==.2,"Theta ignored");
+        var jobs=Enumerable.Range(0,2).Select(i=>Task.Run(()=>Alternative.FitTransform(Matrix(24),new Alternative.Options {Engine=Alternative.Engine.Multicore,Iterations=300,RandomSeed=20+i,NumberOfThreads=1}))).ToArray();
+        Task.WaitAll(jobs);
+        for(int i=0;i<jobs.Length;i++) Equal(jobs[i].Result.Coordinates,Alternative.FitTransform(Matrix(24),new Alternative.Options {Engine=Alternative.Engine.Multicore,Iterations=300,RandomSeed=20+i,NumberOfThreads=1}).Coordinates,"Concurrent native calls corrupted seed state");
+        Reject("Multicore 3 rows",()=>Alternative.FitTransform(Matrix(3),new Alternative.Options {Engine=Alternative.Engine.Multicore}));
+        Reject("Multicore zero threads",()=>Alternative.FitTransform(Matrix(12),new Alternative.Options {Engine=Alternative.Engine.Multicore,NumberOfThreads=0}));
+        Reject("Multicore too many threads",()=>Alternative.FitTransform(Matrix(12),new Alternative.Options {Engine=Alternative.Engine.Multicore,NumberOfThreads=Environment.ProcessorCount+1}));
+        Reject("Multicore theta",()=>Alternative.FitTransform(Matrix(12),new Alternative.Options {Engine=Alternative.Engine.Multicore,Theta=double.NaN}));
+        Reject("Multicore seed",()=>Alternative.FitTransform(Matrix(12),new Alternative.Options {Engine=Alternative.Engine.Multicore,RandomSeed=-1}));
+        try {
+            Alternative.FitTransform(Enumerable.Range(0,12).Select(i=>new[]{1d,2d}).ToArray(),new Alternative.Options {Engine=Alternative.Engine.Multicore});
+            throw new Exception("Constant native data accepted");
+        } catch(InvalidOperationException ex) { Check(ex.Message.Contains("variation"),"Native error text lost"); }
+        var err=new StringBuilder(1024); double invalidKl; int invalidThreads;
+        int status=tas_tsne_run(new double[24],-1,12,2,new double[24],24,3,.5,1,300,42,200,out invalidKl,out invalidThreads,err,1024);
+        Check(status==1 && err.Length>0,"Native ABI length validation failed");
+        Check(!AppDomain.CurrentDomain.GetAssemblies().Any(a=>a.GetName().Name.StartsWith("Accord")||a.GetName().Name.StartsWith("Hybrid")||a.GetName().Name.StartsWith("MathNet")||a.GetName().Name=="TsneCSharp"),"Multicore loaded another engine");
+        Check(Process.GetCurrentProcess().Modules.Cast<ProcessModule>().Any(m=>string.Equals(m.ModuleName,"vcomp140.dll",StringComparison.OrdinalIgnoreCase)),"OpenMP runtime not loaded");
+        Console.WriteLine("PASS: standalone Multicore native isolation/parity/OpenMP/errors/concurrency; "+assertions+" assertions.");
+    }
+
     private static void VerifyHybrid(int count)
     {
         var input = Matrix(count);
@@ -208,32 +302,17 @@ if ($LASTEXITCODE -ne 0) { throw 'Standalone engine verification failed.' }
 # The pinned upstream LSH partitioner can recurse indefinitely on duplicate rows
 # without the adapter's minimum per-tree neighbor count. Bound this regression
 # case in its own process so a native crash or stack overflow cannot hang checks.
-$duplicateLog = Join-Path $outputRoot 'duplicates.log'
-$duplicateErrorLog = Join-Path $outputRoot 'duplicates-errors.log'
-$duplicateProcess = Start-Process -FilePath $standaloneHarness -ArgumentList '--duplicates' -WindowStyle Hidden -PassThru `
-    -RedirectStandardOutput $duplicateLog -RedirectStandardError $duplicateErrorLog
-if (-not $duplicateProcess.WaitForExit(30000)) {
-    $duplicateProcess.Kill()
-    throw 'Hybrid duplicate-row verification exceeded 30 seconds.'
-}
-$duplicateProcess.WaitForExit()
-Get-Content -LiteralPath $duplicateLog
-Get-Content -LiteralPath $duplicateErrorLog
-if ($duplicateProcess.ExitCode -ne 0) { throw 'Hybrid duplicate-row verification failed.' }
+Invoke-BoundedHarness $standaloneHarness '--duplicates' 'duplicates' 30000
 
 # Cross the upstream early-exaggeration transitions with the actual defaults.
-$defaultLog = Join-Path $outputRoot 'defaults.log'
-$defaultErrorLog = Join-Path $outputRoot 'defaults-errors.log'
-$defaultProcess = Start-Process -FilePath $standaloneHarness -ArgumentList '--defaults' -WindowStyle Hidden -PassThru `
-    -RedirectStandardOutput $defaultLog -RedirectStandardError $defaultErrorLog
-if (-not $defaultProcess.WaitForExit(60000)) {
-    $defaultProcess.Kill()
-    throw 'Default 1000-iteration engine verification exceeded 60 seconds.'
+Invoke-BoundedHarness $standaloneHarness '--defaults' 'defaults'
+$multicoreOnlyRoot = Join-Path $outputRoot 'multicore-only'
+New-Item -ItemType Directory -Path $multicoreOnlyRoot | Out-Null
+foreach ($name in 'AlternativeTsneVerification.exe', 'SKhynix.TAS.Analysis.Tsne.dll', 'MulticoreTsne.Native.dll', 'vcomp140.dll', 'Multicore-TSNE.LICENSE.txt') {
+    Copy-Item -LiteralPath (Join-Path $standaloneRoot $name) -Destination $multicoreOnlyRoot
 }
-$defaultProcess.WaitForExit()
-Get-Content -LiteralPath $defaultLog
-Get-Content -LiteralPath $defaultErrorLog
-if ($defaultProcess.ExitCode -ne 0) { throw 'Default 1000-iteration engine verification failed.' }
+Invoke-BoundedHarness (Join-Path $multicoreOnlyRoot 'AlternativeTsneVerification.exe') '--multicore' 'multicore'
+Invoke-BoundedHarness (Join-Path $csharpOnlyRoot 'AlternativeTsneVerification.exe') '--missing-multicore' 'missing-multicore'
 
 $integrationSource = @'
 using System;
@@ -264,15 +343,16 @@ internal static class AlternativeTsneIntegrationVerification
             var snapshot = service.SetDataTable(table);
             TSNEAnalysisResult reference = null;
             double[][] firstCSharp = null;
-            foreach (Alternative.Engine? engine in new Alternative.Engine?[] { null, Alternative.Engine.CSharp, Alternative.Engine.Hybrid, Alternative.Engine.CSharp })
+            foreach (Alternative.Engine? engine in new Alternative.Engine?[] { null, Alternative.Engine.CSharp, Alternative.Engine.Hybrid, Alternative.Engine.Multicore, Alternative.Engine.CSharp })
             {
                 var options = new TSNEScatterAnalysisOptions { TSNELibraryEngine = engine, TSNEIterations = 80, TSNEPerplexity = 30, TSNELearningRate = 50, TSNERandomSeed = 19, NeighborCount = 7 };
                 Check(options.Clone().TSNELibraryEngine == engine, "Clone lost selected engine");
                 var result = service.AnalyzeSnapshot(snapshot, TSNEParameterType.Response, options);
                 var analysis = result.AnalysisResult;
                 var coordinates = analysis.TSNEModel.Coordinates;
-                string expectedEngine = !engine.HasValue ? "Accord" : (engine.Value == Alternative.Engine.CSharp ? "tsne-csharp" : "Hybrid");
+                string expectedEngine = !engine.HasValue ? "Accord" : (engine.Value == Alternative.Engine.CSharp ? "tsne-csharp" : engine.Value == Alternative.Engine.Multicore ? "Multicore" : "Hybrid");
                 Check(analysis.TSNEModel.EngineName.Contains(expectedEngine), "selected engine ignored: " + expectedEngine);
+                if (engine == Alternative.Engine.Multicore) Check(analysis.TSNEModel.NumberOfThreads==options.TSNENumberOfThreads && analysis.TSNEModel.Theta==options.TSNETheta && !double.IsNaN(analysis.TSNEModel.KullbackLeiblerDivergence),"Pipeline lost native settings/diagnostics");
                 Check(result.Records.Count == 24 && result.MissingExperimentCount == 1, "population filtering mismatch");
                 Check(analysis.Verification.AllScoresFinite && analysis.Verification.SharedScalerInstance && analysis.Verification.KnnResultValid, "pipeline verification failed");
                 var exported = result.CreateSurvivingPopulationDataTable();
@@ -302,7 +382,7 @@ internal static class AlternativeTsneIntegrationVerification
                 Console.WriteLine("Integration " + analysis.TSNEModel.EngineName + ": 24 aligned rows; standardization and KNN preserved.");
             }
             Check(JsonConvert.SerializeObject(table) == originalTable, "analysis mutated source DataTable");
-            Console.WriteLine("PASS: Accord/CSharp/Hybrid/CSharp DataTable integration; " + assertions + " assertions.");
+            Console.WriteLine("PASS: Accord/CSharp/Hybrid/Multicore/CSharp DataTable integration; " + assertions + " assertions.");
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }

@@ -12,6 +12,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             Application.SetCompatibleTextRenderingDefault(false);
             var form = new TSNEChartForm
             {
+                TSNELibraryEngine = SKhynix.TAS.Analysis.Tsne.Tsne.Engine.Multicore,
                 ShowVirtualDataButton = true,
                 ShowAnalysisSummaryText = true,
                 ShowAnalysisLogButton = true,

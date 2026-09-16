@@ -1,12 +1,14 @@
 # Accord 없는 t-SNE 비교 라이브러리
 
-새 라이브러리의 C# 코드는 **`Tsne.cs` 한 파일**이다. `Options`, `Result`, 엔진 선택과 두 GitHub 구현의 호출부를 이 파일에 모았다. `.NET Framework 4.5.1` 클래스 라이브러리이며 Accord, Newtonsoft.Json, LightningChart를 참조하지 않는다. 외부 엔진 DLL은 별도로 필요하다.
+새 라이브러리의 C# 코드는 **`Tsne.cs` 한 파일**이다. `Options`, `Result`, 엔진 선택과 세 GitHub 구현의 호출부를 이 파일에 모았다. `.NET Framework 4.5.1` 클래스 라이브러리이며 Accord, Newtonsoft.Json, LightningChart를 참조하지 않는다. 외부 엔진 DLL은 별도로 필요하다. Multicore-TSNE의 C++ 연결부는 `native/MulticoreTsne/MulticoreTsneInterop.cpp`에 있다.
+
+Multicore-TSNE의 구조 분석, 빌드 및 P/Invoke 상세는 [Multicore-TSNE Interop 안내](../docs/Multicore_TSNE_Interop.md)를 참고한다.
 
 기존 `SKhynix.TAS.UI.Report.Pccb` 테스트 폼에 엔진 선택을 연결했다. 기존 DataTable/JSON 파싱, 수치 feature 선택, 평균 대치, 표준화, DRAFT_NO 검색, 원본 feature 공간의 KNN, LightningChart를 그대로 사용한다.
 
 ## 실행
 
-저장소 루트에서 최초 한 번 실행한다. Windows, Visual Studio Roslyn 컴파일러, .NET Framework 4.5.1 targeting pack이 필요하다.
+저장소 루트에서 최초 한 번 실행한다. Windows, Visual Studio Roslyn 컴파일러, .NET Framework 4.5.1 targeting pack과 **Desktop development with C++ / Windows SDK**가 필요하다.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\Restore-AlternativeTsne.ps1
@@ -16,12 +18,12 @@ powershell -ExecutionPolicy Bypass -File scripts\Restore-AlternativeTsne.ps1
 
 Visual Studio에서 `SKhynix.TAS.UI.Report.Pccb`를 시작 프로젝트로 실행한다. 호스트는 `x64`로 설정되어 있고 필요한 DLL은 빌드 시 출력 폴더에 복사된다.
 
-1. 시작하면 RESPONSE/DEFECT 각각 96행인 가상 데이터가 로드되고 `tsne-csharp` 차트를 그린다.
-2. 상단 `Library`에서 `Hybrid t-SNE`를 선택하고 `Draw Chart`를 누른다.
+1. 시작하면 RESPONSE/DEFECT 각각 96행인 가상 데이터가 로드되고 `Multicore-TSNE` 차트를 그린다.
+2. 상단 `Library`에서 `Hybrid t-SNE`, `tsne-csharp` 또는 `Multicore-TSNE (C++)`를 선택하고 `Draw Chart`를 누른다. Multicore에서는 `Threads`로 OpenMP 스레드 수를 선택한다.
 3. 같은 원본 데이터로 결과를 비교하고 `Analysis Log`에서 실제 엔진, perplexity, 반복 횟수, 학습률, 시드와 소요 시간을 확인한다.
 4. DRAFT_NO 검색과 KNN 그리드는 기존 방식으로 사용한다. 엔진 변경 시 이전 차트·그리드 결과는 지워진다.
 
-`Accord.NET (comparison)`은 기존 기준 결과를 확인하는 선택 항목이다. 새 라이브러리의 두 엔진 실행은 Accord를 호출하지 않는다. 대체 엔진은 매번 계산하며 Accord 결과 캐시를 사용하지 않는다.
+`Accord.NET (comparison)`은 기존 기준 결과를 확인하는 선택 항목이다. 새 라이브러리의 세 엔진 실행은 Accord를 호출하지 않는다. 대체 엔진은 매번 계산하며 Accord 결과 캐시를 사용하지 않는다.
 
 ## 기존 DataTable로 폼 사용
 
@@ -44,7 +46,7 @@ await form.LoadConvExperimentDataTableAsync(table);
 using (form) form.ShowDialog(owner);
 ```
 
-엔진 값만 `TsneRunner.Engine.CSharp`로 바꾸면 같은 폼에서 tsne-csharp를 사용한다. `TSNEScatterAnalysisOptions.TSNELibraryEngine`과 `TSNEAnalysisOptions.TSNELibraryEngine`으로 폼 없는 기존 분석 파이프라인에도 전달할 수 있다. 이 기존 옵션들의 `null` 기본값은 Accord 호출 호환성을 유지한다. 테스트 폼과 새 `Tsne.Options` 기본값은 CSharp다.
+엔진 값만 `TsneRunner.Engine.CSharp` 또는 `TsneRunner.Engine.Multicore`로 바꾸면 같은 폼에서 해당 구현을 사용한다. Multicore의 `TSNENumberOfThreads`, `TSNETheta`도 설정할 수 있다. `TSNEScatterAnalysisOptions.TSNELibraryEngine`과 `TSNEAnalysisOptions.TSNELibraryEngine`으로 폼 없는 기존 분석 파이프라인에도 전달할 수 있다. 이 기존 옵션들의 `null` 기본값은 Accord 호출 호환성을 유지한다. 폼 클래스와 새 `Tsne.Options` 기본값은 CSharp이며, 테스트 실행 프로그램 `Program.cs`에서는 Multicore를 선택한다.
 
 ## 클래스 라이브러리 직접 호출
 
@@ -66,7 +68,7 @@ double[][] xy = result.Coordinates; // 원본 행 순서 그대로 [N][2]
 
 입력 배열은 복사하여 원본이 변하지 않는다. `Coordinates`도 복사본을 반환한다. 독립 API는 행렬만 받으며 표준화는 호출자가 수행한다. 기존 폼/파이프라인은 이미 표준화를 수행한다.
 
-## 엔진별 실제 동작
+## 기존 두 엔진의 실제 동작
 
 | 항목 | Hybrid t-SNE | tsne-csharp |
 |---|---|---|
@@ -95,6 +97,9 @@ TsneCSharp.dll
 MathNet.Numerics.dll
 MathNet.Numerics.MKL.dll
 libiomp5md.dll
+MulticoreTsne.Native.dll
+vcomp140.dll
+Multicore-TSNE.LICENSE.txt
 ```
 
 기존 폼·데이터 처리·차트 코드는 기존 프로젝트에서 재사용한다. “한 파일”은 새 엔진 래퍼의 소스 파일 수이며 외부 DLL이나 기존 폼 전체를 한 파일에 합친다는 뜻은 아니다.
@@ -107,6 +112,6 @@ libiomp5md.dll
 powershell -ExecutionPolicy Bypass -File diagnostics\tsne-alternatives\Verify-AlternativeTsne.ps1
 ```
 
-빌드와 실행 검증은 새 임시 디렉터리에서 수행하여 기존 checkout의 `bin/obj`를 건드리지 않는다. 실제 두 엔진 실행, 입력 보존, 유한한 N×2 결과, CSharp 원본 호출과의 일치, 엔진별 적용값, 잘못된 입력, 중복 행, 기존 DataTable/KNN 연결을 확인한다. 기존 `diagnostics/tsne-performance/Verify-TsnePerformance.ps1 -WorkingTree`의 Accord 회귀 검증도 통과했다.
+빌드와 실행 검증은 새 임시 디렉터리에서 수행하여 기존 checkout의 `bin/obj`를 건드리지 않는다. 세 엔진 실행, 입력 보존, 유한한 N×2 결과, CSharp/C++ 원본 호출과의 일치, 엔진별 적용값, 잘못된 입력, 중복 행, 기존 DataTable/KNN 연결을 확인한다. Multicore는 1/2/4개 스레드, 기본 1,000회 반복, 동시 요청, 네이티브 DLL 누락 안내까지 검증한다. 기존 `diagnostics/tsne-performance/Verify-TsnePerformance.ps1 -WorkingTree`로 Accord 회귀도 확인할 수 있다.
 
 화면 자동 조작은 이 세션의 데스크톱 도구 접근 권한 오류로 확인하지 못했다. 폼 프로젝트 빌드와 실제 계산·데이터 연결 검증은 완료했으며, 화면 확인은 위 실행 절차로 진행한다.

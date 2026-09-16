@@ -52,6 +52,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             // learning_rate='auto' property.
             TSNELearningRate = 200d;
             TSNERandomSeed = 42;
+            TSNENumberOfThreads = Math.Min(4, Environment.ProcessorCount);
+            TSNETheta = 0.5;
         }
 
         public double ConstantVarianceThreshold { get; set; }
@@ -67,6 +69,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public int TSNEIterations { get; set; }
         public double TSNELearningRate { get; set; }
         public int TSNERandomSeed { get; set; }
+        public int TSNENumberOfThreads { get; set; }
+        public double TSNETheta { get; set; }
         /// <summary>Null preserves the existing Accord baseline; select a value for the standalone Accord-free library.</summary>
         public SKhynix.TAS.Analysis.Tsne.Tsne.Engine? TSNELibraryEngine { get; set; }
     }
@@ -768,7 +772,9 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 options.TSNEIterations,
                 options.TSNELearningRate,
                 options.TSNERandomSeed,
-                options.TSNELibraryEngine);
+                options.TSNELibraryEngine,
+                options.TSNENumberOfThreads,
+                options.TSNETheta);
             scores = tsne.Coordinates;
             timings.ProjectionMilliseconds = stageWatch.Elapsed.TotalMilliseconds;
             stageWatch.Restart();
