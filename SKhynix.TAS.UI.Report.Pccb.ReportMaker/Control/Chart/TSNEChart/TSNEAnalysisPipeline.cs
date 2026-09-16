@@ -67,6 +67,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public int TSNEIterations { get; set; }
         public double TSNELearningRate { get; set; }
         public int TSNERandomSeed { get; set; }
+        /// <summary>Null preserves the existing Accord baseline; select a value for the standalone Accord-free library.</summary>
+        public SKhynix.TAS.Analysis.Tsne.Tsne.Engine? TSNELibraryEngine { get; set; }
     }
 
     public sealed class KnnNeighbor
@@ -765,7 +767,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 options.TSNEPerplexity,
                 options.TSNEIterations,
                 options.TSNELearningRate,
-                options.TSNERandomSeed);
+                options.TSNERandomSeed,
+                options.TSNELibraryEngine);
             scores = tsne.Coordinates;
             timings.ProjectionMilliseconds = stageWatch.Elapsed.TotalMilliseconds;
             stageWatch.Restart();
@@ -1752,10 +1755,10 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 KnnResultValid = knnValid,
                 SharedScalerInstance = sharedScaler,
                 Message = valid
-                    ? "Accord.NET t-SNE returned finite coordinates and shares the StandardScaler with KNN."
+                    ? "t-SNE returned finite coordinates and shares the StandardScaler with KNN."
                     : string.Format(
                         CultureInfo.InvariantCulture,
-                        "Accord.NET t-SNE validation failed (finite={0}, sharedScaler={1}, knn={2}, mean={3:0.####}, stdError={4:0.####}).",
+                        "t-SNE validation failed (finite={0}, sharedScaler={1}, knn={2}, mean={3:0.####}, stdError={4:0.####}).",
                         finiteCoordinates,
                         sharedScaler,
                         knnValid,

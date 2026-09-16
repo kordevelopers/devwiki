@@ -135,12 +135,18 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         // Accord.NET 3.8 exposes random initialization through Transform only.
         // This version-pinned internal overload keeps Accord's optimizer while
         // preserving the PCA coordinates supplied by this adapter.
-        private static readonly MethodInfo AccordPcaInitializedRunMethod = ResolveAccordPcaInitializedRunMethod();
+        // Resolve Accord only when its baseline is actually selected. Alternative
+        // engines must not load or call Accord, including through a type initializer.
+        private static class AccordMethods
+        {
+            internal static readonly MethodInfo PcaInitializedRun = ResolveAccordPcaInitializedRunMethod();
+        }
         private static readonly object ProjectionCacheLock = new object();
         // Keep only the most recent embedding and its fingerprint, not another
         // potentially large copy of the high-dimensional input matrix.
         private static ProjectionCacheEntry lastProjection;
         private readonly double[][] coordinates;
+        private readonly string engineName = "Accord.NET TSNE (Barnes-Hut)";
 
         private TSNEProjectionModel(double[][] coordinates, double effectivePerplexity, int randomSeed)
         {
@@ -153,6 +159,18 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             RandomSeed = randomSeed;
         }
 
+        private TSNEProjectionModel(SKhynix.TAS.Analysis.Tsne.Tsne.Result result)
+        {
+            coordinates = result.Coordinates;
+            engineName = result.EngineName;
+            EffectivePerplexity = result.EffectivePerplexity;
+            Iterations = result.Iterations;
+            LearningRate = result.LearningRate;
+            RandomSeed = result.RandomSeed;
+            ElapsedMilliseconds = result.ElapsedMilliseconds;
+            OptimizationMilliseconds = result.ElapsedMilliseconds;
+        }
+
         public double[][] Coordinates { get { return CloneMatrix(coordinates); } }
         public double EffectivePerplexity { get; private set; }
         public int Iterations { get; private set; }
@@ -163,7 +181,28 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public double OptimizationMilliseconds { get; private set; }
         public double ElapsedMilliseconds { get; private set; }
         public double KullbackLeiblerDivergence { get { return double.NaN; } }
-        public string EngineName { get { return "Accord.NET TSNE (Barnes-Hut)"; } }
+        public string EngineName { get { return engineName; } }
+
+        public static TSNEProjectionModel FitTransform(double[][] standardizedMatrix, double perplexity,
+            int iterations, double learningRate, int randomSeed,
+            SKhynix.TAS.Analysis.Tsne.Tsne.Engine? libraryEngine)
+        {
+            if (!libraryEngine.HasValue)
+                return FitTransform(standardizedMatrix, perplexity, iterations, learningRate, randomSeed);
+
+            // Experiments always execute the selected library, with no embedding
+            // cache or fallback to another engine that could distort comparisons.
+            var result = SKhynix.TAS.Analysis.Tsne.Tsne.FitTransform(standardizedMatrix,
+                new SKhynix.TAS.Analysis.Tsne.Tsne.Options
+                {
+                    Engine = libraryEngine.Value,
+                    Perplexity = perplexity,
+                    Iterations = iterations,
+                    LearningRate = learningRate,
+                    RandomSeed = randomSeed
+                });
+            return new TSNEProjectionModel(result);
+        }
 
         public static TSNEProjectionModel FitTransform(double[][] standardizedMatrix, double perplexity, int iterations, double learningRate, int randomSeed)
         {
@@ -405,7 +444,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             double[][] initializedCoordinates,
             double perplexity)
         {
-            if (AccordPcaInitializedRunMethod == null)
+            MethodInfo accordRun = AccordMethods.PcaInitializedRun;
+            if (accordRun == null)
             {
                 throw new NotSupportedException(
                     "The installed Accord.NET version does not provide the PCA-initialized t-SNE execution path required by this component.");
@@ -413,7 +453,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
             try
             {
-                AccordPcaInitializedRunMethod.Invoke(
+                accordRun.Invoke(
                     null,
                     new object[] { input, initializedCoordinates, perplexity, BarnesHutTheta, true });
             }

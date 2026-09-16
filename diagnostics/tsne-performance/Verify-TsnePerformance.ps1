@@ -19,7 +19,7 @@ New-Item -ItemType Directory -Path $outputRoot | Out-Null
 $sourceRoot = Join-Path $outputRoot 'source'
 New-Item -ItemType Directory -Path $sourceRoot | Out-Null
 if ($WorkingTree) {
-    foreach ($projectName in $projects) {
+    foreach ($projectName in ($projects + 'SKhynix.TAS.Analysis.Tsne')) {
         $projectRoot = Join-Path $repoRoot $projectName
         Get-ChildItem -LiteralPath $projectRoot -Recurse -File | Where-Object {
             $_.Extension -in '.cs', '.csproj', '.resx', '.config' -and $_.FullName -notmatch '[\\/](bin|obj)[\\/]'
@@ -30,9 +30,17 @@ if ($WorkingTree) {
             Copy-Item -LiteralPath $_.FullName -Destination $destination
         }
     }
+    $temporaryScripts = Join-Path $sourceRoot 'scripts'
+    New-Item -ItemType Directory -Path $temporaryScripts | Out-Null
+    Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts/AlternativeTsne.Dependencies.targets') -Destination $temporaryScripts
 } else {
     $archivePath = Join-Path $outputRoot 'source.zip'
-    & git -C $repoRoot archive --format=zip "--output=$archivePath" $Revision -- @projects
+    # Historical revisions predate the alternative engine project. Include its
+    # files when present without making older Accord baseline archives fail.
+    $archiveCandidates = $projects + @('SKhynix.TAS.Analysis.Tsne', 'scripts/AlternativeTsne.Dependencies.targets')
+    $archivePaths = @(& git -C $repoRoot ls-tree --name-only $Revision -- @archiveCandidates)
+    if ($LASTEXITCODE -ne 0 -or $archivePaths.Count -eq 0) { throw 'Could not resolve revision source paths.' }
+    & git -C $repoRoot archive --format=zip "--output=$archivePath" $Revision -- @archivePaths
     if ($LASTEXITCODE -ne 0) { throw 'git archive failed.' }
     Expand-Archive -LiteralPath $archivePath -DestinationPath $sourceRoot
 }
@@ -54,7 +62,7 @@ if (-not $MsBuildPath) {
 }
 if (-not $MsBuildPath) { throw 'Visual Studio MSBuild is required.' }
 $hostProject = Join-Path $sourceRoot ($projects[1] + '/' + $projects[1] + '.csproj')
-& $MsBuildPath $hostProject /nologo /v:minimal /p:Configuration=Release
+& $MsBuildPath $hostProject /nologo /v:minimal /p:Configuration=Release "/p:AlternativeTsnePackageRoot=$(Join-Path $packageRoot 'AlternativeTsne')"
 if ($LASTEXITCODE -ne 0) { throw 'Isolated project build failed.' }
 $binaryRoot = Join-Path $sourceRoot ($projects[0] + '/bin/Release')
 $compilerPath = Join-Path (Split-Path $MsBuildPath -Parent) 'Roslyn/csc.exe'

@@ -271,6 +271,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public int TSNEIterations { get; set; }
         public double TSNELearningRate { get; set; }
         public int TSNERandomSeed { get; set; }
+        public SKhynix.TAS.Analysis.Tsne.Tsne.Engine? TSNELibraryEngine { get; set; }
 
         internal TSNEAnalysisOptions ToPipelineOptions()
         {
@@ -288,7 +289,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
                 TSNEPerplexity = TSNEPerplexity,
                 TSNEIterations = TSNEIterations,
                 TSNELearningRate = TSNELearningRate,
-                TSNERandomSeed = TSNERandomSeed
+                TSNERandomSeed = TSNERandomSeed,
+                TSNELibraryEngine = TSNELibraryEngine
             };
         }
 

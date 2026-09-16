@@ -1,0 +1,15 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <AlternativeTsnePackageRoot Condition="'$(AlternativeTsnePackageRoot)' == ''">$(MSBuildThisFileDirectory)..\packages\AlternativeTsne</AlternativeTsnePackageRoot>
+  </PropertyGroup>
+  <Target Name="CheckAlternativeTsneDependencies" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(AlternativeTsnePackageRoot)\lib\HybridTsne.dll') Or !Exists('$(AlternativeTsnePackageRoot)\lib\TsneCSharp.dll') Or !Exists('$(AlternativeTsnePackageRoot)\lib\MathNet.Numerics.dll') Or !Exists('$(AlternativeTsnePackageRoot)\native\MathNet.Numerics.MKL.dll') Or !Exists('$(AlternativeTsnePackageRoot)\native\libiomp5md.dll')"
+           Text="Restore the t-SNE experiment dependencies first: powershell -ExecutionPolicy Bypass -File scripts\Restore-AlternativeTsne.ps1" />
+  </Target>
+  <Target Name="CopyAlternativeTsneDependencies" AfterTargets="Build">
+    <ItemGroup>
+      <AlternativeTsneRuntime Include="$(AlternativeTsnePackageRoot)\lib\*.dll;$(AlternativeTsnePackageRoot)\native\*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(AlternativeTsneRuntime)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

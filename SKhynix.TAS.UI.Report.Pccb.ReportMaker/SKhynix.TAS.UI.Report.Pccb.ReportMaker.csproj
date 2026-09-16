@@ -46,6 +46,13 @@
     <Compile Include="Control\Chart\TSNEChart\TSNEScatterRendering.cs" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SKhynix.TAS.Analysis.Tsne\SKhynix.TAS.Analysis.Tsne.csproj">
+      <Project>{6D989560-7201-4AA3-9775-EF9DBBDCEB17}</Project>
+      <Name>SKhynix.TAS.Analysis.Tsne</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\scripts\AlternativeTsne.Dependencies.targets" />
 </Project>
 

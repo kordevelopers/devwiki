@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart;
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.Common;
+using Tsne = SKhynix.TAS.Analysis.Tsne.Tsne;
 
 namespace SKhynix.TAS.UI.Report.Pccb
 {
@@ -38,6 +39,12 @@ namespace SKhynix.TAS.UI.Report.Pccb
         private bool showPreferMemoryOption;
         private bool showFeatureAuditMessageBox;
         private DimensionalityReductionMethod projectionMethod;
+        private Tsne.Engine? tsneLibraryEngine = Tsne.Engine.CSharp;
+        private ComboBox engineComboBox;
+        private Button virtualDataButton;
+        private Label engineSettingsLabel;
+        private bool analysisInProgress;
+        private bool showVirtualDataButton;
 
         public TSNEChartForm()
             : this(null)
@@ -56,7 +63,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             // The effective perplexity is resolved from the input row count.
             TSNEPerplexity = 30d;
             TSNEIterations = 1000;
-            // Accord.NET 3.8 uses its built-in learning rate (eta=200).
+            // Hybrid uses this learning rate; tsne-csharp uses its fixed rate of 500.
             TSNELearningRate = 200d;
             TSNERandomSeed = 42;
             currentSamples = new List<TSNEPointData>();
@@ -73,6 +80,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 TSNEScatterExadataOptions.CreateDefault().ToQueryOptions());
             exadataService = new TSNEExadataService(exadataRepository);
 
+            ConfigureEngineToolbar();
             ConfigureNearestNeighborGrid();
             BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
             tsneChart = TSNEChart.Create(chartHost, CreateChartOptions());
@@ -81,6 +89,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             tsneChart.AnalysisFailed += TSNEChart_AnalysisFailed;
             tsneChart.Clear();
             projectionMethod = DimensionalityReductionMethod.TSNE;
+            ApplyProjectionUiText();
             lastFeatureAuditLogPath = GetFeatureSelectionAuditLogPath();
             summaryLabel.Text = "Operation message.";
             ApplyOptionalUiVisibility();
@@ -126,6 +135,212 @@ namespace SKhynix.TAS.UI.Report.Pccb
         public int TSNEIterations { get; set; }
         public double TSNELearningRate { get; set; }
         public int TSNERandomSeed { get; set; }
+
+        /// <summary>
+        /// t-SNE 구현을 선택한다. 기본값은 tsne-csharp이며 null은 기존 Accord.NET 비교용이다.
+        /// 엔진을 바꾸면 이전 결과를 지우고 같은 원본 데이터로 다시 그릴 수 있다.
+        /// </summary>
+        public Tsne.Engine? TSNELibraryEngine
+        {
+            get { return tsneLibraryEngine; }
+            set
+            {
+                if (value.HasValue && !Enum.IsDefined(typeof(Tsne.Engine), value.Value))
+                {
+                    throw new ArgumentOutOfRangeException("value");
+                }
+                if (tsneLibraryEngine == value)
+                {
+                    return;
+                }
+                if (analysisInProgress)
+                {
+                    throw new InvalidOperationException("Wait for the current analysis before changing the t-SNE library.");
+                }
+
+                tsneLibraryEngine = value;
+                if (engineComboBox != null)
+                {
+                    engineComboBox.SelectedIndex = value == Tsne.Engine.CSharp ? 0 : value == Tsne.Engine.Hybrid ? 1 : 2;
+                    UpdateEngineSettingsText();
+                }
+                ApplyProjectionUiText();
+                ClearProjectionResult();
+            }
+        }
+
+        /// <summary>DB 연결 없이 재현 가능한 가상 데이터로 시험하는 버튼을 표시한다.</summary>
+        public bool ShowVirtualDataButton
+        {
+            get { return showVirtualDataButton; }
+            set
+            {
+                showVirtualDataButton = value;
+                if (virtualDataButton != null)
+                {
+                    virtualDataButton.Visible = value;
+                    virtualDataButton.Enabled = value && !analysisInProgress;
+                }
+            }
+        }
+
+        private void ConfigureEngineToolbar()
+        {
+            var enginePanel = new FlowLayoutPanel
+            {
+                Name = "enginePanel",
+                Dock = DockStyle.Fill,
+                Margin = Padding.Empty,
+                WrapContents = false,
+                TabIndex = 2
+            };
+            var engineLabel = new Label
+            {
+                AutoSize = true,
+                Text = "t-SNE &Library",
+                Margin = new Padding(0, 7, 8, 0),
+                TabIndex = 0
+            };
+            engineComboBox = new ComboBox
+            {
+                Name = "engineComboBox",
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 230,
+                Margin = new Padding(0, 3, 12, 3),
+                AccessibleName = "t-SNE library",
+                AccessibleDescription = "Select the t-SNE implementation, then draw the same data again.",
+                TabIndex = 1
+            };
+            engineComboBox.Items.AddRange(new object[] { "tsne-csharp", "Hybrid t-SNE", "Accord.NET (comparison)" });
+            engineComboBox.SelectedIndex = 0;
+            engineComboBox.SelectedIndexChanged += EngineComboBox_SelectedIndexChanged;
+            virtualDataButton = new Button
+            {
+                Name = "virtualDataButton",
+                Text = "&Virtual Data",
+                AccessibleName = "Load virtual test data",
+                Size = new Size(108, 28),
+                Margin = new Padding(0, 1, 12, 1),
+                Visible = showVirtualDataButton,
+                TabIndex = 2
+            };
+            virtualDataButton.Click += VirtualDataButton_Click;
+            engineSettingsLabel = new Label
+            {
+                Name = "engineSettingsLabel",
+                AutoSize = true,
+                Margin = new Padding(0, 7, 0, 0),
+                ForeColor = Color.FromArgb(80, 80, 80),
+                TabIndex = 3
+            };
+            enginePanel.Controls.AddRange(new Control[] { engineLabel, engineComboBox, virtualDataButton, engineSettingsLabel });
+
+            toolbarLayout.SuspendLayout();
+            toolbarLayout.RowCount = 3;
+            toolbarLayout.RowStyles.Insert(1, new RowStyle(SizeType.Absolute, 36f));
+            toolbarLayout.SetRow(commandPanel, 2);
+            toolbarLayout.Controls.Add(enginePanel, 0, 1);
+            toolbarLayout.SetColumnSpan(enginePanel, 2);
+            toolbarLayout.ColumnStyles[0].Width = 300f;
+            rootLayout.RowStyles[0].Height = 156f;
+            toolbarLayout.RowStyles[2].Height = 74f;
+            commandPanel.WrapContents = true;
+            commandPanel.TabIndex = 3;
+            searchButton.Text = "&Search";
+            drawChartButton.Text = "&Draw Chart";
+            refreshAllButton.Text = "&Refresh All";
+            analysisLogButton.Text = "Analysis &Log";
+            preferMemoryCheckBox.Text = "Prefer Memory";
+            toolbarLayout.ResumeLayout(true);
+            UpdateEngineSettingsText();
+        }
+
+        private void EngineComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            TSNELibraryEngine = engineComboBox.SelectedIndex == 0
+                ? Tsne.Engine.CSharp
+                : engineComboBox.SelectedIndex == 1 ? Tsne.Engine.Hybrid : (Tsne.Engine?)null;
+        }
+
+        private void UpdateEngineSettingsText()
+        {
+            engineSettingsLabel.Text = tsneLibraryEngine == Tsne.Engine.CSharp
+                ? "Learning rate 500 / seed 1 (fixed)"
+                : tsneLibraryEngine == Tsne.Engine.Hybrid
+                    ? "Uses configured iterations, learning rate and seed"
+                    : "1,000 iterations / learning rate 200 (fixed)";
+        }
+
+        private string GetEngineDisplayName()
+        {
+            return tsneLibraryEngine == Tsne.Engine.CSharp ? "tsne-csharp"
+                : tsneLibraryEngine == Tsne.Engine.Hybrid ? "Hybrid t-SNE" : "Accord.NET";
+        }
+
+        private void ClearProjectionResult()
+        {
+            analysisResult = null;
+            exadataAnalysis = null;
+            currentSamples = new List<TSNEPointData>();
+            currentRecords = new List<TSNEExperimentRecord>();
+            if (tsneChart == null)
+            {
+                return;
+            }
+            tsneChart.Clear();
+            BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
+            summaryLabel.Text = GetEngineDisplayName() + " selected. Draw Chart to calculate the current data.";
+            UpdateAnalysisLogButtonState();
+        }
+
+        /// <summary>같은 입력으로 두 엔진을 비교할 수 있도록 고정된 가상 데이터를 준비한다.</summary>
+        public Task LoadVirtualDataAsync()
+        {
+            if (analysisInProgress)
+            {
+                throw new InvalidOperationException("Wait for the current analysis before loading data.");
+            }
+            var table = new DataTable("VirtualTsneExperiments");
+            foreach (string column in new[] { "DRAFT_NO", "PARAM_TYP", "AI_RSLT_VAL", "ENGR_RSLT_VAL", "CONV_EXPER_CTN" })
+            {
+                table.Columns.Add(column, typeof(string));
+            }
+            var random = new Random(20260916);
+            for (int type = 0; type < 2; type++)
+            {
+                for (int row = 0; row < 96; row++)
+                {
+                    int cluster = row / 32;
+                    string draft = string.Format(CultureInfo.InvariantCulture, "SAMPLE-{0:000}", row + 1);
+                    var experiment = new Dictionary<string, object> { { "PUB_NO", draft } };
+                    for (int feature = 0; feature < 12; feature++)
+                    {
+                        experiment["FEATURE_" + (feature + 1).ToString("00", CultureInfo.InvariantCulture)] =
+                            Math.Round(40d + feature * 0.4d
+                                + cluster * Math.Sin((feature + 1) * 0.7d + type) * 5d
+                                + (random.NextDouble() - 0.5d) * 1.4d, 6);
+                    }
+                    string label = cluster == 0 ? "PASS" : cluster == 1 ? "REVIEW" : "FAIL";
+                    table.Rows.Add(draft, type == 0 ? "RESPONSE" : "DEFECT", label, label,
+                        TSNEJsonUtility.SerializeObject(new[] { experiment }));
+                }
+            }
+            draftNoTextBox.Text = "SAMPLE-001";
+            return LoadConvExperimentDataTableAsync(table);
+        }
+
+        private async void VirtualDataButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                await LoadVirtualDataAsync();
+                await DrawChartAsync();
+            }
+            catch (Exception ex)
+            {
+                ShowOperationError(ex, "Virtual data analysis failed.");
+            }
+        }
 
         /// <summary>
         /// 상단 분석 상태 텍스트 표시 여부다. 기본값은 숨김이다.
@@ -252,6 +467,10 @@ namespace SKhynix.TAS.UI.Report.Pccb
             {
                 throw new ArgumentNullException("sourceTable");
             }
+            if (analysisInProgress)
+            {
+                throw new InvalidOperationException("Wait for the current analysis before loading data.");
+            }
 
             pendingSourceTable = sourceTable;
             exadataRepository.SetSourceTable(sourceTable);
@@ -265,7 +484,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             preferMemoryCheckBox.Checked = true;
             summaryLabel.Text = string.Format(
                 CultureInfo.InvariantCulture,
-                "Operation message: {0}",
+                "Loaded {0:N0} rows. Draw Chart to calculate {1}.",
                 sourceTable.Rows.Count,
                 GetProjectionDisplayName());
             SetToolbarEnabled(true);
@@ -280,13 +499,17 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
         private async Task DrawLoadedDataAsync()
         {
+            if (analysisInProgress)
+            {
+                throw new InvalidOperationException("A t-SNE analysis is already running.");
+            }
             SetToolbarEnabled(false);
-            ShowBusyOverlay("Operation message." + GetProjectionDisplayName() + "Operation message.");
+            ShowBusyOverlay("Calculating " + GetEngineDisplayName() + "...");
             try
             {
                 TSNEExadataSnapshot snapshot = await LoadCurrentSourceSnapshotAsync();
                 preferMemoryCheckBox.Checked = true;
-                UpdateBusyMessage("Operation message." + GetProjectionDisplayName() + "Operation message.");
+                UpdateBusyMessage("Calculating " + GetEngineDisplayName() + "...");
                 await AnalyzeCurrentSnapshotAsync(snapshot, false);
             }
             finally
@@ -353,6 +576,10 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
         private async Task QueryDraftAsync()
         {
+            if (analysisInProgress)
+            {
+                return;
+            }
             string draftNo = (draftNoTextBox.Text ?? string.Empty).Trim();
             if (draftNo.Length == 0)
             {
@@ -366,10 +593,11 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 ? TSNEExadataRefreshMode.PreferMemorySnapshot
                 : TSNEExadataRefreshMode.AlwaysReload;
             summaryLabel.Text = string.Format(
-                "Operation message: {0}",
+                "Finding {1} in {0}...",
                 TSNEParameterTypeParser.ToDatabaseValue(parameterType),
                 draftNo);
 
+            SetToolbarEnabled(false);
             try
             {
                 if (exadataService.CurrentSnapshot == null)
@@ -417,6 +645,10 @@ namespace SKhynix.TAS.UI.Report.Pccb
             {
                 ShowOperationError(ex, "Operation message.");
             }
+            finally
+            {
+                SetToolbarEnabled(true);
+            }
         }
 
         private async Task<TSNEExadataSnapshot> LoadPopupDatabaseSnapshotAsync()
@@ -440,7 +672,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         {
             if (pendingSourceTable != null)
             {
-                UpdateBusyMessage("Operation message.");
+                UpdateBusyMessage("Preparing source data...");
                 exadataRepository.SetSourceTable(pendingSourceTable);
                 TSNEExadataSnapshot snapshot = await exadataService.LoadFromDataTableAsync(pendingSourceTable);
                 preferMemoryCheckBox.Checked = true;
@@ -453,9 +685,9 @@ namespace SKhynix.TAS.UI.Report.Pccb
         private async Task RefreshAllAsync()
         {
             SetToolbarEnabled(false);
-            ShowBusyOverlay("Operation message." + GetProjectionDisplayName() + "Operation message.");
+            ShowBusyOverlay("Calculating " + GetEngineDisplayName() + "...");
             TSNEParameterType parameterType = GetSelectedParameterType();
-            summaryLabel.Text = "Operation message." + GetProjectionDisplayName() + "Operation message.";
+            summaryLabel.Text = "Calculating " + GetEngineDisplayName() + "...";
 
             try
             {
@@ -470,7 +702,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 });
                 ApplyAnalysis(result, chartOptions);
                 BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
-                UpdateSummary(result, string.Format("Operation message: {0}", result.Snapshot.Rows.Count));
+                UpdateSummary(result, "Source refreshed");
             }
             catch (Exception ex)
             {
@@ -492,12 +724,12 @@ namespace SKhynix.TAS.UI.Report.Pccb
             if (manageToolbar)
             {
                 SetToolbarEnabled(false);
-                ShowBusyOverlay("Operation message." + GetProjectionDisplayName() + "Operation message.");
+                ShowBusyOverlay("Calculating " + GetEngineDisplayName() + "...");
             }
 
             TSNEParameterType parameterType = GetSelectedParameterType();
             summaryLabel.Text = TSNEParameterTypeParser.ToDatabaseValue(parameterType)
-                + "Operation message." + GetProjectionDisplayName() + "Operation message.";
+                + ": calculating " + GetEngineDisplayName() + "...";
             try
             {
                 TSNEScatterOptions chartOptions = CreateChartOptions();
@@ -507,7 +739,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 });
                 ApplyAnalysis(result, chartOptions);
                 BindNearestNeighborTable(CreateNearestNeighborTable(null, null));
-                UpdateSummary(result, "Operation message.");
+                UpdateSummary(result, "Analysis complete");
             }
             catch (Exception ex)
             {
@@ -585,6 +817,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "ParameterType: {0}", TSNEParameterTypeParser.ToDatabaseValue(result.ParameterType)));
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture, "LogMode: {0}", includeFullDetails ? "Detailed" : "Summary"));
             builder.AppendLine();
+            AppendTSNEProjectionExplanation(builder, result, chartOptions, includeFullDetails);
             AppendPerformanceTimings(builder, result);
             if (result.Diagnostic != null)
             {
@@ -625,7 +858,6 @@ namespace SKhynix.TAS.UI.Report.Pccb
             {
                 AppendTSNEProcessingOverview(builder, result, chartOptions);
                 AppendPreprocessingAndScalingExplanation(builder, result, chartOptions, true);
-                AppendTSNEProjectionExplanation(builder, result, chartOptions, true);
                 AppendAxisRangeExplanation(builder, result, chartOptions);
                 AppendDistanceExplanation(builder, result, chartOptions, true);
             }
@@ -670,8 +902,15 @@ namespace SKhynix.TAS.UI.Report.Pccb
             {
                 builder.AppendLine("Projection cache: " + (projection.CacheHit ? "Hit" : "Miss"));
                 builder.AppendLine("Projection details below are included in the projection time above.");
-                AppendTiming(builder, "PCA initialization", projection.PcaInitializationMilliseconds);
-                AppendTiming(builder, "t-SNE optimization", projection.OptimizationMilliseconds);
+                if (projection.EngineName.StartsWith("Accord.NET", StringComparison.Ordinal))
+                {
+                    AppendTiming(builder, "PCA initialization", projection.PcaInitializationMilliseconds);
+                    AppendTiming(builder, "t-SNE optimization", projection.OptimizationMilliseconds);
+                }
+                else
+                {
+                    AppendTiming(builder, "Engine total (preparation / initialization / optimization)", projection.OptimizationMilliseconds);
+                }
             }
             AppendTiming(builder, "Chart binding", lastChartBindingMilliseconds);
             builder.AppendLine();
@@ -867,7 +1106,12 @@ namespace SKhynix.TAS.UI.Report.Pccb
             {
                 return;
             }
-            builder.AppendLine("t-SNE projection uses Accord.NET Barnes-Hut optimization; PCA component weights and explained variance are not applicable.");
+            TSNEProjectionModel model = analysis.TSNEModel;
+            builder.AppendLine("t-SNE engine: " + model.EngineName);
+            builder.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                "Effective settings: perplexity={0:0.###}, iterations={1}, learning rate={2:0.###}, random seed={3}",
+                model.EffectivePerplexity, model.Iterations, model.LearningRate, model.RandomSeed));
+            builder.AppendLine("PCA component weights and explained variance do not describe t-SNE axes.");
             builder.AppendLine();
         }
 
@@ -1307,7 +1551,13 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
         private void SetToolbarEnabled(bool enabled)
         {
+            analysisInProgress = !enabled;
             parameterChangeEnabled = enabled;
+            if (engineComboBox != null)
+            {
+                engineComboBox.Enabled = enabled;
+                virtualDataButton.Enabled = enabled && showVirtualDataButton;
+            }
             responseRadioButton.Enabled = enabled;
             defectRadioButton.Enabled = enabled;
             draftNoTextBox.Enabled = enabled;
@@ -1359,7 +1609,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             string path = string.IsNullOrWhiteSpace(lastFeatureAuditLogPath)
                 ? GetFeatureSelectionAuditLogPath()
                 : lastFeatureAuditLogPath;
-            analysisLogButton.Enabled = toolbarEnabled && File.Exists(path);
+            analysisLogButton.Enabled = toolbarEnabled && exadataAnalysis != null && File.Exists(path);
         }
 
         private void OpenLatestAnalysisLog()
@@ -1426,6 +1676,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         {
             TSNEScatterOptions options = TSNEScatterOptions.CreateDefault600x400();
             options.Analysis.ProjectionMethod = projectionMethod;
+            options.Analysis.TSNELibraryEngine = TSNELibraryEngine;
             options.Analysis.TSNEPerplexity = TSNEPerplexity;
             options.Analysis.TSNEIterations = TSNEIterations;
             options.Analysis.TSNELearningRate = TSNELearningRate;
@@ -1466,7 +1717,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             options.Display.FontName = "Segoe UI";
             options.Display.ShowTitle = true;
             options.Display.Title = projectionMethod == DimensionalityReductionMethod.TSNE
-                ? "t-SNE Distribution Chart"
+                ? "t-SNE Distribution Chart - " + GetEngineDisplayName()
                 : "TSNE Distribution Chart";
             options.Display.TitleColor = Color.Black;
             options.Display.BackgroundColor = Color.White;
@@ -1508,11 +1759,11 @@ namespace SKhynix.TAS.UI.Report.Pccb
         {
             if (titleLabel != null)
             {
-                titleLabel.Text = GetProjectionDisplayName() + " Scatter";
+                titleLabel.Text = GetProjectionDisplayName() + " Scatter - " + GetEngineDisplayName();
             }
 
             Text = projectionMethod == DimensionalityReductionMethod.TSNE
-                ? "Manual t-SNE Scatter"
+                ? "Manual t-SNE Scatter - " + GetEngineDisplayName()
                 : "Manual TSNE Scatter";
         }
 
