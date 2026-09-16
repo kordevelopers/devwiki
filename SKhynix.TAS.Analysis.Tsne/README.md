@@ -89,3 +89,7 @@ double[][] xy = result.Coordinates; // 원본 행 순서의 N×2 좌표
 **`TsneVerification`을 시작 프로젝트로 설정하고 Ctrl+F5**를 누르면 모든 검증 그룹을 별도 프로세스로 실행한다. 그룹별 60초 제한이 있으며 로그와 JSON은 표시된 임시 폴더에 저장한다.
 
 두 엔진 실행, 입력 보존, CSharp 원본과의 정확한 좌표 일치, 기본 1,000회 반복, 중복 행, 오류 입력, CSharp 단독 의존성, Accord/CSharp/Hybrid 전환의 DataTable·KNN·export 연결 및 기존 Accord 회귀를 확인한다. 검증 코드는 별도 프로젝트에 있으며 실제 클래스 라이브러리는 계속 `Tsne.cs` 하나만 컴파일한다.
+
+Visual Studio의 솔루션 빌드도 Debug와 Release에서 확인한다. 일반 MSBuild 실행만으로는 Visual Studio가 프로젝트 구성을 인식하는지 검증할 수 없다. 클래스 라이브러리와 검증 프로젝트의 `Debug|AnyCPU`, `Release|AnyCPU` 조건부 PropertyGroup을 유지해야 한다. 검증 실행 파일의 실제 프로세스 대상은 x64다.
+
+이전 버전에서 `TsneVerification`의 프로젝트 참조가 해결되지 않거나 `CS0006`가 발생했다면 수정된 프로젝트를 다시 로드하고 솔루션을 다시 빌드한다. 구성 정의 누락으로 두 프로젝트가 Visual Studio 빌드에서 건너뛰어지던 문제를 수정했다. DLL 파일을 직접 참조로 추가하지 않고 기존 `ProjectReference`를 사용한다.
