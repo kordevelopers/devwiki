@@ -66,11 +66,48 @@ internal static class AlternativeTsneIntegrationVerification
                 Console.WriteLine("Integration " + analysis.TSNEModel.EngineName + ": 24 aligned rows; standardization and KNN preserved.");
             }
             Check(JsonConvert.SerializeObject(table) == originalTable, "analysis mutated source DataTable");
+            VerifyGlobalDefault(service, snapshot, reference.StandardizedMatrix);
             Console.WriteLine("PASS: Accord/CSharp/Hybrid/CSharp DataTable integration; " + assertions + " assertions.");
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
     }
+    private static void VerifyGlobalDefault(TSNEExadataService service, TSNEExadataSnapshot snapshot, double[][] matrix)
+    {
+        var original = Alternative.DefaultEngine;
+        try
+        {
+            Check(original == Alternative.Engine.CSharp, "startup default must be CSharp");
+            foreach (var engine in new[] { Alternative.Engine.Hybrid, Alternative.Engine.CSharp })
+            {
+                Alternative.DefaultEngine = engine;
+                string name = engine == Alternative.Engine.Hybrid ? "Hybrid" : "tsne-csharp";
+                Check(new Alternative.Options().Engine == engine, "standalone options ignored global default");
+                Check(new TSNEAnalysisOptions().TSNELibraryEngine == engine, "pipeline options ignored global default");
+                var chartOptions = new TSNEScatterOptions();
+                Check(chartOptions.Clone().Analysis.TSNELibraryEngine == engine, "chart clone lost global default");
+                var result = service.AnalyzeSnapshot(snapshot, TSNEParameterType.Response, chartOptions.Analysis);
+                Check(result.AnalysisResult.TSNEModel.EngineName.Contains(name), "chart/service ignored global default");
+                Check(service.AnalyzeSnapshot(snapshot, TSNEParameterType.Response, null).AnalysisResult.TSNEModel.EngineName.Contains(name), "null options ignored global default");
+                var docs = matrix.Select((row, i) => JsonConvert.SerializeObject(new { Draft_NO = "G" + i, F0 = row[0], F1 = row[1], F2 = row[2] })).ToArray();
+                Check(new TSNEAnalysisPipeline().Analyze(docs).TSNEModel.EngineName.Contains(name), "parameterless pipeline ignored global default");
+                Check(TSNEScatterDataSource.FromJsonSamples(docs).Analyze(null).TSNEModel.EngineName.Contains(name), "data source ignored global default");
+                Check(service.QueryDraftAsync("D009", TSNEParameterType.Response, TSNEExadataRefreshMode.PreferMemorySnapshot).GetAwaiter().GetResult().AnalysisResult.TSNEModel.EngineName.Contains(name), "draft query ignored global default");
+                Check(TSNEProjectionModel.FitTransform(matrix, 3, 80, 50, 19).EngineName.Contains(name), "five-argument projection ignored global default");
+                Check(Alternative.FitTransform(matrix).Engine == engine, "standalone call ignored global default");
+                Check(Alternative.FitTransform(matrix, new Alternative.Options { Engine = Alternative.Engine.CSharp, Iterations = 80 }).Engine == Alternative.Engine.CSharp, "global default overrode explicit selection");
+                var accord = new TSNEScatterAnalysisOptions { TSNELibraryEngine = null };
+                Check(service.AnalyzeSnapshot(snapshot, TSNEParameterType.Response, accord.Clone()).AnalysisResult.TSNEModel.EngineName.Contains("Accord"), "explicit Accord selection lost");
+                Console.WriteLine("Global default " + name + ": chart, service, pipeline, data source, query and direct calls passed.");
+            }
+            bool rejected = false;
+            try { Alternative.DefaultEngine = (Alternative.Engine)123; }
+            catch (ArgumentOutOfRangeException) { rejected = true; }
+            Check(rejected && Alternative.DefaultEngine == Alternative.Engine.CSharp, "invalid global engine changed configuration");
+        }
+        finally { Alternative.DefaultEngine = original; }
+    }
+
     private static void Equal(double[][] a, double[][] b, string message) { Check(a.Length == b.Length && a.Zip(b, (x, y) => x.SequenceEqual(y)).All(equal => equal), message); }
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); assertions++; }
 }

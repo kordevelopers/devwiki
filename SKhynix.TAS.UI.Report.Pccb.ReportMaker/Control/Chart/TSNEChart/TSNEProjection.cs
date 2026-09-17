@@ -121,7 +121,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 
 namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
 {
-    /// <summary>Accord.NET 3.8 Barnes-Hut t-SNE adapter.</summary>
+    /// <summary>Projection adapter for the configured t-SNE engine and explicit Accord comparisons.</summary>
     public sealed class TSNEProjectionModel
     {
         private const int OutputDimensionCount = 2;
@@ -188,7 +188,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             SKhynix.TAS.Analysis.Tsne.Tsne.Engine? libraryEngine)
         {
             if (!libraryEngine.HasValue)
-                return FitTransform(standardizedMatrix, perplexity, iterations, learningRate, randomSeed);
+                return FitTransformAccord(standardizedMatrix, perplexity, iterations, learningRate, randomSeed);
 
             // Experiments always execute the selected library, with no embedding
             // cache or fallback to another engine that could distort comparisons.
@@ -205,6 +205,12 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
 
         public static TSNEProjectionModel FitTransform(double[][] standardizedMatrix, double perplexity, int iterations, double learningRate, int randomSeed)
+        {
+            return FitTransform(standardizedMatrix, perplexity, iterations, learningRate, randomSeed,
+                SKhynix.TAS.Analysis.Tsne.Tsne.DefaultEngine);
+        }
+
+        private static TSNEProjectionModel FitTransformAccord(double[][] standardizedMatrix, double perplexity, int iterations, double learningRate, int randomSeed)
         {
             Stopwatch elapsed = Stopwatch.StartNew();
             ValidateMatrix(standardizedMatrix);

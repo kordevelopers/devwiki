@@ -28,6 +28,25 @@ Windows, Visual Studio의 .NET 데스크톱 개발 환경과 .NET Framework 4.5.
 
 출처, 고정 커밋, 수동 설정 방법은 [lib/Tsne/README.md](../lib/Tsne/README.md), 해시는 `lib/Tsne/manifest.json`에 기록했다. 라이선스는 `lib/Tsne/licenses`에 포함한다. 고정 Hybrid 커밋에는 LICENSE 파일이 없으므로 테스트용 DLL 제공이 재배포 권한을 부여하는 것은 아니다.
 
+## 엔진을 한 곳에서 한 번만 설정
+
+호스트 프로그램의 `Program.Main()`에서 **폼·서비스·옵션을 만들기 전에** 한 줄만 지정한다. 데모의 설정 위치도 `SKhynix.TAS.UI.Report.Pccb/Program.cs`이다.
+
+```csharp
+using TsneRunner = SKhynix.TAS.Analysis.Tsne.Tsne;
+
+// 프로그램 시작 시 한 번만 설정
+TsneRunner.DefaultEngine = TsneRunner.Engine.Hybrid; // 또는 CSharp
+```
+
+공통 초기값은 **CSharp**이다. `Tsne.Options`, `TSNEAnalysisOptions`, `TSNEScatterAnalysisOptions`, `TSNEScatterOptions.Analysis`, 데모 폼이 이 값을 기본 엔진으로 사용한다. 옵션을 생략한 서비스·파이프라인 호출과 `TSNEProjectionModel.FitTransform`의 5개 인수 호출도 이 설정을 따른다.
+
+설정은 실행 중인 호스트의 공통 기본값이며 파일에 저장되지 않는다. 생성된 폼·옵션은 당시 엔진을 유지하므로 프로그램 시작 시 먼저 지정한다. 개별 `Engine` / `TSNELibraryEngine` 지정이나 데모의 엔진 선택은 비교 테스트용으로 공통 기본값보다 우선한다. 모든 호출에 공통 설정을 적용하려면 기존 호출부의 개별 엔진 대입을 제거한다. 이미 계산한 결과는 새 엔진으로 다시 분석해야 한다.
+
+**변경된 기본 동작:** 옵션을 생략하면 더 이상 Accord로 실행하지 않는다. Accord 비교가 필요할 때만 `TSNELibraryEngine = null`을 명시하거나 `TSNEProjectionModel.FitTransform`의 6번째 인수에 `null`을 전달한다. 옵션 객체 자체를 `null`로 전달하는 것은 공통 기본값 사용이다.
+
+DLL을 수동 배치하는 호스트는 `SKhynix.TAS.Analysis.Tsne.dll`과 `SKhynix.TAS.UI.Report.Pccb.ReportMaker.dll`을 함께 다시 빌드해 교체한다. 클래스 라이브러리의 소스는 계속 `Tsne.cs` 한 파일이다.
+
 ## 기존 폼에서 사용
 
 DataTable 컬럼 `DRAFT_NO`, `PARAM_TYP`, `CONV_EXPER_CTN`, `AI_RSLT_VAL`, `ENGR_RSLT_VAL`의 규칙, 수치 feature 선택, 평균 대치, 표준화, 검색, KNN 및 차트는 기존대로 사용한다.
@@ -37,7 +56,6 @@ using TsneRunner = SKhynix.TAS.Analysis.Tsne.Tsne;
 
 var form = new SKhynix.TAS.UI.Report.Pccb.TSNEChartForm
 {
-    TSNELibraryEngine = TsneRunner.Engine.Hybrid, // 또는 CSharp
     TSNEIterations = 1000,
     TSNEPerplexity = 30,
     TSNELearningRate = 200,
@@ -48,13 +66,13 @@ await form.LoadConvExperimentDataTableAsync(table);
 using (form) form.ShowDialog(owner);
 ```
 
-테이블 준비 후 `Draw Chart`를 누르면 계산한다. 엔진 변경 시 이전 차트와 그리드 결과를 지운다. `Analysis Log`에는 실제 엔진과 적용 설정, 소요 시간을 기록한다. 기존 파이프라인에는 `TSNEScatterAnalysisOptions.TSNELibraryEngine` 또는 `TSNEAnalysisOptions.TSNELibraryEngine`을 전달한다. 해당 옵션의 `null` 값은 기존 Accord 동작을 유지한다.
+테이블 준비 후 `Draw Chart`를 누르면 계산한다. 엔진 변경 시 이전 차트와 그리드 결과를 지운다. `Analysis Log`에는 실제 엔진과 적용 설정, 소요 시간을 기록한다. 기존 파이프라인에는 `TSNEScatterAnalysisOptions.TSNELibraryEngine` 또는 `TSNEAnalysisOptions.TSNELibraryEngine`을 전달한다. 옵션을 생성할 때 공통 기본 엔진이 적용되며, `null`을 명시하면 Accord 비교를 선택한다.
 
 ## 다른 UI에서 엔진 지정
 
-엔진은 폼의 전역 설정이 아니라 **분석 호출에 전달하는 옵션**에서 선택한다. 기존 서비스와 파이프라인의 `TSNELibraryEngine` 기본값은 `null`이므로, 지정하지 않으면 Accord가 실행된다. 데모 폼의 기본값을 바꾸어도 다른 UI에는 적용되지 않는다.
+시작 시 `TsneRunner.DefaultEngine`을 지정했다면 다른 UI에서는 엔진을 다시 지정할 필요가 없다. 아래 예제의 옵션도 공통 엔진을 사용한다.
 
-DataTable을 사용하는 UI에서는 다음처럼 분석 직전에 지정한다.
+DataTable을 사용하는 UI에서는 다음처럼 분석한다.
 
 ```csharp
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart;
@@ -62,17 +80,13 @@ using TsneRunner = SKhynix.TAS.Analysis.Tsne.Tsne;
 
 var service = new TSNEExadataService(table);
 var snapshot = service.SetDataTable(table);
-var options = new TSNEScatterAnalysisOptions
-{
-    TSNELibraryEngine = TsneRunner.Engine.CSharp // Hybrid 사용 시 Engine.Hybrid
-};
+var options = new TSNEScatterAnalysisOptions(); // 공통 기본 엔진 사용
 var result = service.AnalyzeSnapshot(snapshot, TSNEParameterType.Response, options);
 System.Diagnostics.Debug.WriteLine(result.AnalysisResult.TSNEModel.EngineName);
 ```
 
-- `TSNEScatterOptions`를 받는 차트 API: `options.Analysis.TSNELibraryEngine`을 지정하고 그 옵션을 전달한다.
-- `TSNEAnalysisPipeline` 직접 호출: 생성자에 전달하는 `TSNEAnalysisOptions.TSNELibraryEngine`을 지정한다.
-- `TSNEProjectionModel.FitTransform` 직접 호출: 6번째 인수에 `TsneRunner.Engine.CSharp` 또는 `Hybrid`를 전달한다. 기존 5개 인수 오버로드는 Accord를 사용한다.
+- 특정 호출만 다른 엔진으로 비교할 때: `options.TSNELibraryEngine` 또는 `options.Analysis.TSNELibraryEngine`을 명시한다.
+- `TSNEProjectionModel.FitTransform` 직접 호출: 5개 인수는 공통 기본값, 6번째 인수는 해당 호출의 엔진을 선택한다.
 - 이미 계산한 결과를 `TSNEScatterDataSource.FromAnalysisResult`로 전달하는 경우, 렌더링 옵션을 바꾸어도 재계산하지 않는다. 선택한 엔진으로 분석을 다시 실행하고 새 결과를 전달한다.
 
 실제 실행 엔진은 `TSNEModel.EngineName`으로 확인한다. 이전 버전의 진단 요약은 `ENGINE=ACCORD`가 고정되어 있어 다른 엔진도 Accord로 표시했다. 이 표시 오류는 ReportMaker에서 수정했으므로, DLL을 수동 배치하는 UI에서는 `SKhynix.TAS.UI.Report.Pccb.ReportMaker.dll`도 다시 빌드해 교체한다.
@@ -85,7 +99,6 @@ using TsneRunner = SKhynix.TAS.Analysis.Tsne.Tsne;
 var result = TsneRunner.FitTransform(standardizedMatrix,
     new TsneRunner.Options
     {
-        Engine = TsneRunner.Engine.CSharp, // 또는 Hybrid
         Perplexity = 30,
         Iterations = 1000,
         LearningRate = 200,
@@ -116,7 +129,7 @@ double[][] xy = result.Coordinates; // 원본 행 순서의 N×2 좌표
 
 **`TsneVerification`을 시작 프로젝트로 설정하고 Ctrl+F5**를 누르면 모든 검증 그룹을 별도 프로세스로 실행한다. 그룹별 60초 제한이 있으며 로그와 JSON은 표시된 임시 폴더에 저장한다.
 
-두 엔진 실행, 입력 보존, CSharp 원본과의 정확한 좌표 일치, 기본 1,000회 반복, 중복 행, 오류 입력, CSharp 단독 의존성, Accord/CSharp/Hybrid 전환의 DataTable·KNN·export 연결 및 기존 Accord 회귀를 확인한다. 검증 코드는 별도 프로젝트에 있으며 실제 클래스 라이브러리는 계속 `Tsne.cs` 하나만 컴파일한다.
+두 엔진 실행, 입력 보존, CSharp 원본과의 정확한 좌표 일치, 기본 1,000회 반복, 중복 행, 오류 입력, CSharp 단독 의존성, Accord/CSharp/Hybrid 전환의 DataTable·KNN·export 연결, 공통 엔진 설정의 서비스·파이프라인·직접 호출 전파 및 기존 Accord 회귀를 확인한다. 검증 코드는 별도 프로젝트에 있으며 실제 클래스 라이브러리는 계속 `Tsne.cs` 하나만 컴파일한다.
 
 Visual Studio의 솔루션 빌드도 Debug와 Release에서 확인한다. 일반 MSBuild 실행만으로는 Visual Studio가 프로젝트 구성을 인식하는지 검증할 수 없다. 클래스 라이브러리와 검증 프로젝트의 `Debug|AnyCPU`, `Release|AnyCPU` 조건부 PropertyGroup을 유지해야 한다. 검증 실행 파일의 실제 프로세스 대상은 x64다.
 

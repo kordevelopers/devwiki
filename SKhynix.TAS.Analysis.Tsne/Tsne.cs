@@ -13,11 +13,29 @@ namespace SKhynix.TAS.Analysis.Tsne
     {
         public enum Engine { Hybrid, CSharp }
 
+        private static volatile Engine defaultEngine = Engine.CSharp;
+
+        /// <summary>
+        /// Shared default for the standalone library, report pipeline and demo form.
+        /// Set once at application startup, before creating forms or analysis options.
+        /// Existing options and explicit per-call selections retain their engine.
+        /// </summary>
+        public static Engine DefaultEngine
+        {
+            get { return defaultEngine; }
+            set
+            {
+                if (value != Engine.Hybrid && value != Engine.CSharp)
+                    throw new ArgumentOutOfRangeException("value", "Unknown t-SNE engine.");
+                defaultEngine = value;
+            }
+        }
+
         public sealed class Options
         {
             public Options()
             {
-                Engine = Tsne.Engine.CSharp;
+                Engine = Tsne.DefaultEngine;
                 Perplexity = 30;
                 Iterations = 1000;
                 LearningRate = 200;

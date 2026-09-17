@@ -11,6 +11,7 @@ using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart;
 
 // Run against separately built baseline/current assemblies, never in one process.
 // JSON snapshots deliberately select stable output fields and omit timing telemetry.
+// Select Accord explicitly: these regression/cache cases must not depend on the host default.
 internal static class TsnePerformanceVerification
 {
     private static readonly List<object> Measurements = new List<object>();
@@ -45,24 +46,24 @@ internal static class TsnePerformanceVerification
         ErrorCase("duplicate-draft", () => {
             var rows = MakeRows(12, 4, false, false);
             rows[1] = new TSNEExadataSourceRow(1, rows[0].DraftNo, TSNEParameterType.Response, "", rows[1].RawConvExperimentJson);
-            return new TSNEExadataService().AnalyzeSnapshot(Snapshot(rows), TSNEParameterType.Response, null);
+            return new TSNEExadataService().AnalyzeSnapshot(Snapshot(rows), TSNEParameterType.Response, new TSNEScatterAnalysisOptions { TSNELibraryEngine = null });
         });
         ErrorCase("invalid-json", () => {
             var rows = MakeRows(12, 4, false, false);
             rows[0] = new TSNEExadataSourceRow(0, rows[0].DraftNo, TSNEParameterType.Response, "", "{invalid");
-            return new TSNEExadataService().AnalyzeSnapshot(Snapshot(rows), TSNEParameterType.Response, null);
+            return new TSNEExadataService().AnalyzeSnapshot(Snapshot(rows), TSNEParameterType.Response, new TSNEScatterAnalysisOptions { TSNELibraryEngine = null });
         });
         ErrorCase("multiple-experiments", () => {
             var rows = MakeRows(12, 4, false, false);
             rows[0] = new TSNEExadataSourceRow(0, rows[0].DraftNo, TSNEParameterType.Response, "", "[{\"f\":1},{\"f\":2}]");
-            return new TSNEExadataService().AnalyzeSnapshot(Snapshot(rows), TSNEParameterType.Response, null);
+            return new TSNEExadataService().AnalyzeSnapshot(Snapshot(rows), TSNEParameterType.Response, new TSNEScatterAnalysisOptions { TSNELibraryEngine = null });
         });
         ErrorCase("decimal-overflow-string", () => {
             var rows = MakeRows(12, 4, false, false);
             var payload = JObject.Parse(rows[0].RawConvExperimentJson);
             payload["huge"] = "1e100";
             rows[0] = new TSNEExadataSourceRow(0, rows[0].DraftNo, TSNEParameterType.Response, "", payload.ToString(Formatting.None));
-            return new TSNEExadataService().AnalyzeSnapshot(Snapshot(rows), TSNEParameterType.Response, null);
+            return new TSNEExadataService().AnalyzeSnapshot(Snapshot(rows), TSNEParameterType.Response, new TSNEScatterAnalysisOptions { TSNELibraryEngine = null });
         });
         VerifyProjectionCacheWhenAvailable();
     }
@@ -78,7 +79,7 @@ internal static class TsnePerformanceVerification
         var snapshot = service.SetDataTable(table);
         Accord.Math.Random.Generator.Seed = 42;
         var timer = Stopwatch.StartNew();
-        var result = service.AnalyzeSnapshot(snapshot, TSNEParameterType.Response, new TSNEScatterAnalysisOptions());
+        var result = service.AnalyzeSnapshot(snapshot, TSNEParameterType.Response, new TSNEScatterAnalysisOptions { TSNELibraryEngine = null });
         timer.Stop();
         if (timed) RecordTime(name, "initial-analysis", timer.Elapsed.TotalMilliseconds);
         Assert(result.Records.Count == count, name + " row count");
@@ -106,14 +107,14 @@ internal static class TsnePerformanceVerification
         {
             Accord.Math.Random.Generator.Seed = 42;
             timer.Restart();
-            var query = service.QueryDraftAsync(rows[3].DraftNo, TSNEParameterType.Response, TSNEExadataRefreshMode.PreferMemorySnapshot).GetAwaiter().GetResult();
+            var query = service.QueryDraftAsync(rows[3].DraftNo, TSNEParameterType.Response, TSNEExadataRefreshMode.PreferMemorySnapshot, new TSNEScatterAnalysisOptions { TSNELibraryEngine = null }).GetAwaiter().GetResult();
             timer.Stop();
             if (timed) RecordTime(name, "first-draft-query", timer.Elapsed.TotalMilliseconds);
             Assert(query.Target.DraftNo == rows[3].DraftNo, "Draft query target mismatch.");
             Cases[name + "-query"] = new { query.Target.DraftNo, query.Neighbors, Analysis = Describe(query.AnalysisResult) };
             Accord.Math.Random.Generator.Seed = 42;
             timer.Restart();
-            var repeat = service.QueryDraftAsync(rows[4].DraftNo, TSNEParameterType.Response, TSNEExadataRefreshMode.PreferMemorySnapshot).GetAwaiter().GetResult();
+            var repeat = service.QueryDraftAsync(rows[4].DraftNo, TSNEParameterType.Response, TSNEExadataRefreshMode.PreferMemorySnapshot, new TSNEScatterAnalysisOptions { TSNELibraryEngine = null }).GetAwaiter().GetResult();
             timer.Stop();
             if (timed) RecordTime(name, "repeat-draft-query", timer.Elapsed.TotalMilliseconds);
             Assert(repeat.Target.DraftNo == rows[4].DraftNo, "Repeated draft query target mismatch.");
@@ -130,7 +131,7 @@ internal static class TsnePerformanceVerification
             return JsonConvert.SerializeObject(payload);
         }).ToArray();
         Accord.Math.Random.Generator.Seed = 42;
-        var result = new TSNEAnalysisPipeline(new TSNEAnalysisOptions { MeanImputationEnabled = impute }).Analyze(docs);
+        var result = new TSNEAnalysisPipeline(new TSNEAnalysisOptions { MeanImputationEnabled = impute, TSNELibraryEngine = null }).Analyze(docs);
         Assert(result.ScatterData[0].DraftNo == "J000" && result.ScatterData[0].AiResultValue == "Pass", "Identifier/label trim changed.");
         Cases[name] = Describe(result);
     }
@@ -143,7 +144,7 @@ internal static class TsnePerformanceVerification
             return payload;
         }).ToArray();
         Accord.Math.Random.Generator.Seed = 42;
-        Cases["act-data-array"] = Describe(new TSNEAnalysisPipeline().AnalyzeActDataDocuments(new[] { JsonConvert.SerializeObject(objects) }));
+        Cases["act-data-array"] = Describe(new TSNEAnalysisPipeline(new TSNEAnalysisOptions { TSNELibraryEngine = null }).AnalyzeActDataDocuments(new[] { JsonConvert.SerializeObject(objects) }));
     }
 
     private static IList<TSNEExadataSourceRow> MakeRows(int count, int features, bool rich, bool collision)
@@ -199,13 +200,13 @@ internal static class TsnePerformanceVerification
         var input = Enumerable.Range(0, 12).Select(i => Enumerable.Range(0, 5).Select(j =>
             Math.Sin((i + 2) * (j + 3) * 0.17d) + i * 0.03d).ToArray()).ToArray();
         var originalInput = Clone(input);
-        var cold = TSNEProjectionModel.FitTransform(input, 2, 1000, 200, 187);
+        var cold = TSNEProjectionModel.FitTransform(input, 2, 1000, 200, 187, null);
         Assert(!hit(cold), "First projection unexpectedly hit the cache.");
         AssertMatrixEqual(originalInput, input, "Optimizer mutated caller input.");
         var originalCoordinates = cold.Coordinates;
         var exposedCoordinates = cold.Coordinates;
         exposedCoordinates[0][0] = 123456d;
-        var warm = TSNEProjectionModel.FitTransform(Clone(input), 2, 1000, 200, 187);
+        var warm = TSNEProjectionModel.FitTransform(Clone(input), 2, 1000, 200, 187, null);
         Assert(hit(warm), "Equal independently allocated matrix did not reuse projection.");
         AssertMatrixEqual(originalCoordinates, warm.Coordinates, "Returned coordinates changed cached result.");
         Assert(warm.Iterations == 1000, "Cache changed effective iteration count.");
@@ -213,28 +214,28 @@ internal static class TsnePerformanceVerification
             "Cache hit ran the optimizer.");
 
         var changed = Clone(input); changed[11][4] += 0.125d;
-        Assert(!hit(TSNEProjectionModel.FitTransform(changed, 2, 1000, 200, 187)), "Changed value reused stale coordinates.");
-        Assert(!hit(TSNEProjectionModel.FitTransform(changed, 1, 1000, 200, 187)), "Changed effective perplexity reused stale coordinates.");
-        Assert(!hit(TSNEProjectionModel.FitTransform(changed, 1, 1000, 200, 188)), "Changed seed did not invalidate cache.");
+        Assert(!hit(TSNEProjectionModel.FitTransform(changed, 2, 1000, 200, 187, null)), "Changed value reused stale coordinates.");
+        Assert(!hit(TSNEProjectionModel.FitTransform(changed, 1, 1000, 200, 187, null)), "Changed effective perplexity reused stale coordinates.");
+        Assert(!hit(TSNEProjectionModel.FitTransform(changed, 1, 1000, 200, 188, null)), "Changed seed did not invalidate cache.");
         Array.Reverse(changed);
-        Assert(!hit(TSNEProjectionModel.FitTransform(changed, 1, 1000, 200, 188)), "Changed row order reused stale coordinates.");
+        Assert(!hit(TSNEProjectionModel.FitTransform(changed, 1, 1000, 200, 188, null)), "Changed row order reused stale coordinates.");
 
         // A feature row spans multiple hash buffers; changing its tail must miss.
         var wide = Enumerable.Range(0, 8).Select(i => Enumerable.Range(0, 1031).Select(j =>
             Math.Sin((i + 1) * (j + 1) * 0.09d) + i * 0.02d).ToArray()).ToArray();
-        Assert(!hit(TSNEProjectionModel.FitTransform(wide, 1, 1000, 200, 981)), "Wide initial projection unexpectedly cached.");
-        Assert(hit(TSNEProjectionModel.FitTransform(Clone(wide), 1, 1000, 200, 981)), "Wide exact copy did not hit cache.");
+        Assert(!hit(TSNEProjectionModel.FitTransform(wide, 1, 1000, 200, 981, null)), "Wide initial projection unexpectedly cached.");
+        Assert(hit(TSNEProjectionModel.FitTransform(Clone(wide), 1, 1000, 200, 981, null)), "Wide exact copy did not hit cache.");
         wide[7][1030] += 0.1d;
-        Assert(!hit(TSNEProjectionModel.FitTransform(wide, 1, 1000, 200, 981)), "Last value after hash buffer boundary was ignored.");
+        Assert(!hit(TSNEProjectionModel.FitTransform(wide, 1, 1000, 200, 981, null)), "Last value after hash buffer boundary was ignored.");
         wide[0][1024] += 0.2d;
-        Assert(!hit(TSNEProjectionModel.FitTransform(wide, 1, 1000, 200, 981)), "First value after hash buffer boundary was ignored.");
+        Assert(!hit(TSNEProjectionModel.FitTransform(wide, 1, 1000, 200, 981, null)), "First value after hash buffer boundary was ignored.");
 
         var rows = MakeRows(12, 4, false, false);
         var service = new TSNEExadataService();
-        var initial = service.AnalyzeSnapshot(Snapshot(rows), TSNEParameterType.Response, null);
+        var initial = service.AnalyzeSnapshot(Snapshot(rows), TSNEParameterType.Response, new TSNEScatterAnalysisOptions { TSNELibraryEngine = null });
         var renamedRows = rows.Select(r => new TSNEExadataSourceRow(r.SourceRowIndex, "NEW-" + r.DraftNo,
             r.ParameterType, "NEW-AI", "NEW-LABEL", r.RawConvExperimentJson)).ToList();
-        var relabeled = service.AnalyzeSnapshot(Snapshot(renamedRows), TSNEParameterType.Response, null);
+        var relabeled = service.AnalyzeSnapshot(Snapshot(renamedRows), TSNEParameterType.Response, new TSNEScatterAnalysisOptions { TSNELibraryEngine = null });
         Assert(hit(relabeled.AnalysisResult.TSNEModel), "Identifier/label-only change unnecessarily reran projection.");
         Assert(relabeled.Records.All(r => r.DraftNo.StartsWith("NEW-") && r.LabelY == "NEW-LABEL" && r.AiResultValue == "NEW-AI"),
             "Cache returned stale source identifiers or labels.");

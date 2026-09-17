@@ -39,7 +39,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         private bool showPreferMemoryOption;
         private bool showFeatureAuditMessageBox;
         private DimensionalityReductionMethod projectionMethod;
-        private Tsne.Engine? tsneLibraryEngine = Tsne.Engine.CSharp;
+        private Tsne.Engine? tsneLibraryEngine = Tsne.DefaultEngine;
         private ComboBox engineComboBox;
         private Button virtualDataButton;
         private Label engineSettingsLabel;
@@ -137,7 +137,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         public int TSNERandomSeed { get; set; }
 
         /// <summary>
-        /// t-SNE 구현을 선택한다. 기본값은 tsne-csharp이며 null은 기존 Accord.NET 비교용이다.
+        /// t-SNE 구현을 선택한다. 기본값은 Tsne.DefaultEngine이며 null은 기존 Accord.NET 비교용이다.
         /// 엔진을 바꾸면 이전 결과를 지우고 같은 원본 데이터로 다시 그릴 수 있다.
         /// </summary>
         public Tsne.Engine? TSNELibraryEngine
@@ -212,7 +212,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 TabIndex = 1
             };
             engineComboBox.Items.AddRange(new object[] { "tsne-csharp", "Hybrid t-SNE", "Accord.NET (comparison)" });
-            engineComboBox.SelectedIndex = 0;
+            engineComboBox.SelectedIndex = tsneLibraryEngine == Tsne.Engine.CSharp ? 0 : 1;
             engineComboBox.SelectedIndexChanged += EngineComboBox_SelectedIndexChanged;
             virtualDataButton = new Button
             {
@@ -2039,7 +2039,6 @@ namespace SKhynix.TAS.UI.Report.Pccb
         }
     }
 }
-
 
 
 

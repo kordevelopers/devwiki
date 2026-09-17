@@ -256,6 +256,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             // learning_rate='auto' property.
             TSNELearningRate = 200d;
             TSNERandomSeed = 42;
+            TSNELibraryEngine = SKhynix.TAS.Analysis.Tsne.Tsne.DefaultEngine;
         }
 
         public double ConstantVarianceThreshold { get; set; }
@@ -271,6 +272,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public int TSNEIterations { get; set; }
         public double TSNELearningRate { get; set; }
         public int TSNERandomSeed { get; set; }
+        /// <summary>Initialized from Tsne.DefaultEngine. Explicit null selects the Accord comparison baseline.</summary>
         public SKhynix.TAS.Analysis.Tsne.Tsne.Engine? TSNELibraryEngine { get; set; }
 
         internal TSNEAnalysisOptions ToPipelineOptions()
@@ -1122,4 +1124,3 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         }
     }
 }
-
