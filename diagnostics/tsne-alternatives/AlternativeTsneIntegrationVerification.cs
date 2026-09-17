@@ -77,7 +77,7 @@ internal static class AlternativeTsneIntegrationVerification
         var original = Alternative.DefaultEngine;
         try
         {
-            Check(original == Alternative.Engine.CSharp, "startup default must be CSharp");
+            Check(original == Alternative.Engine.Hybrid, "startup default must be Hybrid for larger populations");
             foreach (var engine in new[] { Alternative.Engine.Hybrid, Alternative.Engine.CSharp })
             {
                 Alternative.DefaultEngine = engine;

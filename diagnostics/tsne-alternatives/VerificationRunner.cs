@@ -18,7 +18,7 @@ internal static class VerificationRunner
             string executable = typeof(VerificationRunner).Assembly.Location;
             string artifacts = Path.Combine(Path.GetTempPath(), "tas-tsne-verification-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(artifacts);
-            foreach (string mode in new[] { "--standalone", "--defaults", "--duplicates", "--integration" })
+            foreach (string mode in new[] { "--standalone", "--defaults", "--duplicates", "--large", "--integration" })
                 RunProcess(executable, mode, artifacts);
             string isolated = Path.Combine(artifacts, "csharp-only");
             Directory.CreateDirectory(isolated);

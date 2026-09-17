@@ -13,7 +13,7 @@ namespace SKhynix.TAS.Analysis.Tsne
     {
         public enum Engine { Hybrid, CSharp }
 
-        private static volatile Engine defaultEngine = Engine.CSharp;
+        private static volatile Engine defaultEngine = Engine.Hybrid;
 
         /// <summary>
         /// Shared default for the standalone library, report pipeline and demo form.
@@ -109,8 +109,16 @@ namespace SKhynix.TAS.Analysis.Tsne
             int count = standardizedMatrix.Length;
             if (engine == Engine.Hybrid && count < 4)
                 throw new ArgumentException("Hybrid_t-SNE requires at least four rows.", "standardizedMatrix");
-            if (engine == Engine.CSharp && (settings.MaximumCSharpRows < 3 || count > settings.MaximumCSharpRows))
-                throw new ArgumentException("tsne-csharp uses dense quadratic matrices. Reduce the sample count, select Hybrid, or explicitly increase MaximumCSharpRows.", "standardizedMatrix");
+            if (engine == Engine.CSharp && settings.MaximumCSharpRows < 3)
+                throw new ArgumentOutOfRangeException("options", "MaximumCSharpRows must be at least 3.");
+            if (engine == Engine.CSharp && count > settings.MaximumCSharpRows)
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "tsne-csharp input has {0} rows, exceeding MaximumCSharpRows={1}. " +
+                    "Its dense matrices require quadratic memory and computation. " +
+                    "Set Tsne.DefaultEngine = Tsne.Engine.Hybrid before creating analysis options, " +
+                    "and remove any explicit CSharp selection. For a deliberate CSharp test, " +
+                    "reduce the sample count or explicitly increase Options.MaximumCSharpRows.",
+                    count, settings.MaximumCSharpRows), "standardizedMatrix");
 
             // An integer perplexity is shared across both engines. Hybrid needs
             // 3*p <= N-1; the C# upstream accepts integers only. Report the cap.

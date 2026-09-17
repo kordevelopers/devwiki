@@ -7,8 +7,8 @@
 1. 저장소 루트의 **`TsneDemo.slnx`**를 연다. 폼, 클래스 라이브러리, 검증 프로젝트만 포함한 솔루션이다. 기존 `hynixTas.slnx`에서도 사용할 수 있다.
 2. t-SNE 의존성은 저장소의 **`lib/Tsne`**에 포함되어 있어 바로 빌드할 수 있다. 처음 폼을 빌드할 때는 기존 Accord·LightningChart·Newtonsoft.Json 패키지만 NuGet으로 복원한다.
 3. **`SKhynix.TAS.UI.Report.Pccb`를 시작 프로젝트로 설정**하고 F5를 누른다. 호스트는 프로젝트 내부에서 x64로 설정되어 있다.
-4. 시작 시 RESPONSE/DEFECT 각각 96행인 가상 데이터로 **tsne-csharp** 차트를 그린다.
-5. `Library`에서 **Hybrid t-SNE**를 선택하고 `Draw Chart`를 눌러 같은 데이터로 비교한다.
+4. 시작 시 RESPONSE/DEFECT 각각 96행인 가상 데이터로 **Hybrid t-SNE** 차트를 그린다.
+5. `Library`에서 **tsne-csharp**를 선택하고 `Draw Chart`를 눌러 같은 데이터로 비교한다.
 
 Windows, Visual Studio의 .NET 데스크톱 개발 환경과 .NET Framework 4.5.1 targeting pack이 필요하다. PowerShell 실행과 C++ SDK 설치는 필요 없다. `Accord.NET (comparison)`은 기존 기준 결과를 확인하는 선택 항목이다. 새 두 엔진은 Accord를 호출하지 않는다.
 
@@ -39,7 +39,7 @@ using TsneRunner = SKhynix.TAS.Analysis.Tsne.Tsne;
 TsneRunner.DefaultEngine = TsneRunner.Engine.Hybrid; // 또는 CSharp
 ```
 
-공통 초기값은 **CSharp**이다. `Tsne.Options`, `TSNEAnalysisOptions`, `TSNEScatterAnalysisOptions`, `TSNEScatterOptions.Analysis`, 데모 폼이 이 값을 기본 엔진으로 사용한다. 옵션을 생략한 서비스·파이프라인 호출과 `TSNEProjectionModel.FitTransform`의 5개 인수 호출도 이 설정을 따른다.
+공통 초기값은 **Hybrid**이다. CSharp의 기본 2,000행 제한으로 큰 데이터 분석이 중단되지 않도록 변경했다. Hybrid 실행에는 x64 호스트와 위 MKL 런타임이 필요하다. `Tsne.Options`, `TSNEAnalysisOptions`, `TSNEScatterAnalysisOptions`, `TSNEScatterOptions.Analysis`, 데모 폼이 이 값을 기본 엔진으로 사용한다. 옵션을 생략한 서비스·파이프라인 호출과 `TSNEProjectionModel.FitTransform`의 5개 인수 호출도 이 설정을 따른다.
 
 설정은 실행 중인 호스트의 공통 기본값이며 파일에 저장되지 않는다. 생성된 폼·옵션은 당시 엔진을 유지하므로 프로그램 시작 시 먼저 지정한다. 개별 `Engine` / `TSNELibraryEngine` 지정이나 데모의 엔진 선택은 비교 테스트용으로 공통 기본값보다 우선한다. 모든 호출에 공통 설정을 적용하려면 기존 호출부의 개별 엔진 대입을 제거한다. 이미 계산한 결과는 새 엔진으로 다시 분석해야 한다.
 
@@ -125,11 +125,19 @@ double[][] xy = result.Coordinates; // 원본 행 순서의 N×2 좌표
 
 초기화와 최적화가 달라 두 엔진의 좌표가 같을 필요는 없다. Hybrid는 auto 모드의 실행 시간 측정도 사용하므로 같은 seed에서 완전히 동일한 좌표를 보장하지 않는다.
 
+## MaximumCSharpRows 예외가 발생할 때
+
+`MaximumCSharpRows`는 CSharp 엔진의 기본 2,000행 제한이다. 예외는 이 한도를 초과했음을 뜻하며 데이터 값이 잘못되었다는 뜻은 아니다. 오류 메시지에 실제 행 수와 제한값이 표시된다.
+
+기본 엔진은 Hybrid로 변경했다. 기존 호스트에서 `Tsne.DefaultEngine = Tsne.Engine.CSharp`를 사용했다면 시작 코드의 한 줄을 `Hybrid`로 변경하고, 개별 `Engine = CSharp` 또는 `TSNELibraryEngine = CSharp` 지정도 제거한다. 옵션과 폼은 설정 후 새로 만든다. 수동 DLL 참조 환경에서는 수정된 `SKhynix.TAS.Analysis.Tsne.dll`을 교체하고 Hybrid 의존성 및 `x64` 런타임 폴더를 배치한다.
+
+CSharp를 명시적으로 선택한 경우에는 메모리 보호를 위해 제한을 유지한다. 작은 데이터로 비교하거나, 필요한 메모리와 실행 시간을 확인한 테스트에 한해 직접 호출의 `Tsne.Options.MaximumCSharpRows`를 늘릴 수 있다. 큰 입력에서 엔진을 몰래 바꾸거나 행을 잘라내지는 않는다.
+
 ## 검증
 
 **`TsneVerification`을 시작 프로젝트로 설정하고 Ctrl+F5**를 누르면 모든 검증 그룹을 별도 프로세스로 실행한다. 그룹별 60초 제한이 있으며 로그와 JSON은 표시된 임시 폴더에 저장한다.
 
-두 엔진 실행, 입력 보존, CSharp 원본과의 정확한 좌표 일치, 기본 1,000회 반복, 중복 행, 오류 입력, CSharp 단독 의존성, Accord/CSharp/Hybrid 전환의 DataTable·KNN·export 연결, 공통 엔진 설정의 서비스·파이프라인·직접 호출 전파 및 기존 Accord 회귀를 확인한다. 검증 코드는 별도 프로젝트에 있으며 실제 클래스 라이브러리는 계속 `Tsne.cs` 하나만 컴파일한다.
+두 엔진 실행, 기본 Hybrid의 2,001행 처리와 CSharp 제한 오류, 입력 보존, CSharp 원본과의 정확한 좌표 일치, 기본 1,000회 반복, 중복 행, 오류 입력, CSharp 단독 의존성, Accord/CSharp/Hybrid 전환의 DataTable·KNN·export 연결, 공통 엔진 설정의 서비스·파이프라인·직접 호출 전파 및 기존 Accord 회귀를 확인한다. 검증 코드는 별도 프로젝트에 있으며 실제 클래스 라이브러리는 계속 `Tsne.cs` 하나만 컴파일한다.
 
 Visual Studio의 솔루션 빌드도 Debug와 Release에서 확인한다. 일반 MSBuild 실행만으로는 Visual Studio가 프로젝트 구성을 인식하는지 검증할 수 없다. 클래스 라이브러리와 검증 프로젝트의 `Debug|AnyCPU`, `Release|AnyCPU` 조건부 PropertyGroup을 유지해야 한다. 검증 실행 파일의 실제 프로세스 대상은 x64다.
 
