@@ -1,6 +1,6 @@
 # t-SNE performance and regression verification
 
-Open `TsneDemo.slnx`, restore NuGet packages, and run the `TsneVerification` console project. It includes this regression harness alongside standalone engine and DataTable integration checks. No PowerShell script is required.
+Open `TsneDemo.slnx`, restore the existing Accord/LightningChart/JSON NuGet packages, and run the `TsneVerification` console project. It includes this regression harness alongside standalone engine and DataTable integration checks. No PowerShell script is required.
 
 To save or compare snapshots explicitly, run the built executable from a command prompt:
 

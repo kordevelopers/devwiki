@@ -1,0 +1,23 @@
+{
+  "TargetFramework": ".NETFramework,Version=v4.5.1",
+  "Hybrid": {
+    "Repository": "https://github.com/Orlinski/Hybrid_t-SNE",
+    "Commit": "8a19f4e19ffc0b8e5b142533401e157972e2cdbf",
+    "ManagedArchitecture": "AnyCPU",
+    "NativeRuntime": "x64 MKL required",
+    "AlgorithmPatched": false
+  },
+  "CSharp": {
+    "Repository": "https://github.com/jdmccaffrey/tsne-csharp",
+    "Commit": "7739a9ded14ff004b1b213146858ce25f8a97386",
+    "ManagedArchitecture": "AnyCPU"
+  },
+  "MathNet": "4.7.0",
+  "MKL": "2.3.0",
+  "SHA256": {
+    "HybridTsne.dll": "13CA75B82987A30828A7F27CADF374E5390BA119DB637F25E3F9A1A19FB40867",
+    "TsneCSharp.dll": "7B9AABB0AA5263BC179BF3057F8FB7D4100EDD1BBFE3DC171092E5CC4B449B3E",
+    "MathNet.Numerics.dll": "22852BF3F8E6BEDF839BB0E352A46825C5414A6845C0E32AED59CD511F705CFA",
+    "MathNet.MKL.x64.zip": "88EE3915E893867DB8F6881346F7050E6B9EE571D85883029F09108D7853F719"
+  }
+}

@@ -31,7 +31,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="TsneCSharp"><HintPath>..\..\packages\TAS.Experimental.TsneCSharp.1.0.0\lib\net451\TsneCSharp.dll</HintPath></Reference>
+    <Reference Include="TsneCSharp"><HintPath>..\..\lib\Tsne\TsneCSharp.dll</HintPath></Reference>
     <Reference Include="Newtonsoft.Json"><HintPath>..\..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath></Reference>
     <Reference Include="Accord.Math"><HintPath>..\..\packages\Accord.Math.3.8.0\lib\net45\Accord.Math.dll</HintPath></Reference>
     <ProjectReference Include="..\..\SKhynix.TAS.Analysis.Tsne\SKhynix.TAS.Analysis.Tsne.csproj">
@@ -47,5 +47,5 @@
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="..\..\packages\MathNet.Numerics.MKL.Win-x64.2.3.0\build\MathNet.Numerics.MKL.Win-x64.targets" Condition="Exists('..\..\packages\MathNet.Numerics.MKL.Win-x64.2.3.0\build\MathNet.Numerics.MKL.Win-x64.targets')" />
+  <Import Project="..\..\lib\Tsne\Tsne.Runtime.targets" />
 </Project>

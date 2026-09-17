@@ -7,7 +7,7 @@ namespace SKhynix.TAS.Analysis.Tsne
     /// <summary>
     /// Single-file, Accord-free adapters for Orlinski/Hybrid_t-SNE and
     /// jdmccaffrey/tsne-csharp. Pass the same standardized matrix to compare engines.
-    /// Restore this project's NuGet packages before building.
+    /// Reference the managed assemblies in lib/Tsne; no t-SNE NuGet restore is needed.
     /// </summary>
     public static class Tsne
     {

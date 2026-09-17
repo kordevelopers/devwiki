@@ -5,27 +5,28 @@
 ## Visual Studio에서 실행
 
 1. 저장소 루트의 **`TsneDemo.slnx`**를 연다. 폼, 클래스 라이브러리, 검증 프로젝트만 포함한 솔루션이다. 기존 `hynixTas.slnx`에서도 사용할 수 있다.
-2. 솔루션을 오른쪽 클릭하여 **NuGet 패키지 복원**을 실행한다.
+2. t-SNE 의존성은 저장소의 **`lib/Tsne`**에 포함되어 있어 바로 빌드할 수 있다. 처음 폼을 빌드할 때는 기존 Accord·LightningChart·Newtonsoft.Json 패키지만 NuGet으로 복원한다.
 3. **`SKhynix.TAS.UI.Report.Pccb`를 시작 프로젝트로 설정**하고 F5를 누른다. 호스트는 프로젝트 내부에서 x64로 설정되어 있다.
 4. 시작 시 RESPONSE/DEFECT 각각 96행인 가상 데이터로 **tsne-csharp** 차트를 그린다.
 5. `Library`에서 **Hybrid t-SNE**를 선택하고 `Draw Chart`를 눌러 같은 데이터로 비교한다.
 
 Windows, Visual Studio의 .NET 데스크톱 개발 환경과 .NET Framework 4.5.1 targeting pack이 필요하다. PowerShell 실행과 C++ SDK 설치는 필요 없다. `Accord.NET (comparison)`은 기존 기준 결과를 확인하는 선택 항목이다. 새 두 엔진은 Accord를 호출하지 않는다.
 
-## NuGet 구성
+## DLL 직접 참조
 
-| 패키지 | 버전 | 복원 위치 |
+| 파일 | 용도 | C# 참조 추가 |
 |---|---|---|
-| `TAS.Experimental.HybridTsne` | 1.0.0 | 저장소 `.nuget/local` |
-| `TAS.Experimental.TsneCSharp` | 1.0.0 | 저장소 `.nuget/local` |
-| `MathNet.Numerics` | 4.7.0 | NuGet.org |
-| `MathNet.Numerics.MKL.Win-x64` | 2.3.0 | NuGet.org |
+| `lib/Tsne/HybridTsne.dll` | Hybrid 계산 엔진, Any CPU | 필요 |
+| `lib/Tsne/TsneCSharp.dll` | tsne-csharp 계산 엔진, Any CPU | 필요 |
+| `lib/Tsne/MathNet.Numerics.dll` | Hybrid 수치 계산, 4.7.0 | 필요 |
+| `MathNet.Numerics.MKL.dll` | x64 네이티브 런타임 | 참조 대신 파일 복사 |
+| `libiomp5md.dll` | x64 네이티브 런타임 | 참조 대신 파일 복사 |
 
-두 GitHub 구현은 공식 NuGet 패키지가 확인되지 않아 고정 커밋을 컴파일한 **프로젝트 전용 로컬 패키지**로 묶었다. 별도 원격 피드에 게시하지 않는다. `NuGet.Config`가 로컬 피드와 NuGet.org를 등록하며 `packages.config`와 프로젝트 참조로 복원한다. MathNet/MKL 버전은 원본 Hybrid와 검증한 조합을 유지했다.
+`SKhynix.TAS.Analysis.Tsne`의 `packages.config`, 로컬 NuGet 패키지 및 복원 강제 검사를 제거했다. 프로젝트의 `HintPath`는 위 세 관리 DLL을 직접 가리킨다. DLL 자체는 이미 컴파일되어 있으므로 별도 엔진 프로젝트를 빌드할 필요가 없다. 기존 버전의 NuGet 참조와 수동 참조를 중복해서 남기지 않는다.
 
-기존 `packages/AlternativeTsne` 폴더는 사용하지 않는다. 네이티브 MKL 파일은 공식 패키지의 MSBuild targets가 출력 폴더의 `x64` 하위 디렉터리에 복사한다. 직접 파일을 옮기거나 스크립트를 실행할 필요가 없다.
+네이티브 파일은 `lib/Tsne/MathNet.MKL.x64.zip`에 포함된다. `Tsne.Runtime.targets`가 빌드 시 로컬 ZIP을 출력 폴더에 풀어 `bin/Debug/x64` 또는 `bin/Release/x64`에 배치한다. 다운로드나 PowerShell 실행은 하지 않는다. 압축 해제에는 MSBuild 15.8 이상이 필요하다.
 
-출처와 고정 커밋은 [.nuget/README.md](../.nuget/README.md), DLL 해시는 각 패키지의 `UPSTREAM.txt`에 기록했다. tsne-csharp 패키지는 MIT 라이선스를 포함한다. 고정 Hybrid 커밋에는 LICENSE 파일이 없으므로 로컬 테스트용 패키징이 재배포 권한을 부여하는 것은 아니다.
+출처, 고정 커밋, 수동 설정 방법은 [lib/Tsne/README.md](../lib/Tsne/README.md), 해시는 `lib/Tsne/manifest.json`에 기록했다. 라이선스는 `lib/Tsne/licenses`에 포함한다. 고정 Hybrid 커밋에는 LICENSE 파일이 없으므로 테스트용 DLL 제공이 재배포 권한을 부여하는 것은 아니다.
 
 ## 기존 폼에서 사용
 
@@ -66,7 +67,7 @@ var result = TsneRunner.FitTransform(standardizedMatrix,
 double[][] xy = result.Coordinates; // 원본 행 순서의 N×2 좌표
 ```
 
-입력 배열을 복사하여 원본을 보존하고 `Coordinates`도 복사본을 반환한다. 이 API의 표준화는 호출자가 수행하며 기존 폼과 파이프라인은 이미 표준화를 수행한다. 다른 프로젝트에서는 `Tsne.cs` 한 파일 또는 빌드된 DLL과 해당 NuGet 의존성을 사용한다. Hybrid 호스트에는 MKL 패키지의 targets도 적용한다.
+입력 배열을 복사하여 원본을 보존하고 `Coordinates`도 복사본을 반환한다. 이 API의 표준화는 호출자가 수행하며 기존 폼과 파이프라인은 이미 표준화를 수행한다. 다른 프로젝트에서는 `Tsne.cs` 한 파일 또는 빌드된 DLL과 위 의존성 DLL을 사용한다. Hybrid 호스트에는 `Tsne.Runtime.targets`를 적용하거나 네이티브 ZIP을 직접 풀어 배치한다.
 
 ## 엔진 차이
 

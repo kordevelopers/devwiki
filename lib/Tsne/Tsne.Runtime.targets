@@ -1,0 +1,21 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <TsneBinaryRoot>$(MSBuildThisFileDirectory)</TsneBinaryRoot>
+  </PropertyGroup>
+  <Target Name="CheckTsneFiles" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(TsneBinaryRoot)HybridTsne.dll') Or !Exists('$(TsneBinaryRoot)TsneCSharp.dll') Or !Exists('$(TsneBinaryRoot)MathNet.Numerics.dll') Or !Exists('$(TsneBinaryRoot)MathNet.MKL.x64.zip')"
+           Text="The t-SNE dependency files are missing. Copy the complete lib/Tsne folder from the repository, including MathNet.MKL.x64.zip. NuGet restore is not required for these files." />
+  </Target>
+  <Target Name="CopyTsneRuntime" AfterTargets="Build">
+    <ItemGroup>
+      <TsneManagedFiles Include="$(TsneBinaryRoot)HybridTsne.dll;$(TsneBinaryRoot)TsneCSharp.dll;$(TsneBinaryRoot)MathNet.Numerics.dll" />
+      <TsneLicenseFiles Include="$(TsneBinaryRoot)licenses\*.txt" />
+    </ItemGroup>
+    <Copy SourceFiles="@(TsneManagedFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <Unzip SourceFiles="$(TsneBinaryRoot)MathNet.MKL.x64.zip" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(TsneLicenseFiles)" DestinationFolder="$(TargetDir)licenses\Tsne" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <FileWrites Include="@(TsneManagedFiles->'$(TargetDir)%(Filename)%(Extension)');$(TargetDir)x64\MathNet.Numerics.MKL.dll;$(TargetDir)x64\libiomp5md.dll;@(TsneLicenseFiles->'$(TargetDir)licenses\Tsne\%(Filename)%(Extension)')" />
+    </ItemGroup>
+  </Target>
+</Project>
