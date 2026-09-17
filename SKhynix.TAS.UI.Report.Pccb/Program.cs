@@ -12,27 +12,14 @@ namespace SKhynix.TAS.UI.Report.Pccb
             SKhynix.TAS.Analysis.Tsne.Tsne.DefaultEngine = SKhynix.TAS.Analysis.Tsne.Tsne.Engine.Hybrid;
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            var form = new TSNEChartForm
+            var form = new TSNEChartForm(new OracleTsneDataProvider())
             {
                 ShowVirtualDataButton = true,
                 ShowAnalysisSummaryText = true,
                 ShowAnalysisLogButton = true,
                 ShowRefreshAllButton = true
             };
-            form.Shown += async delegate
-            {
-                try
-                {
-                    await form.LoadVirtualDataAsync();
-                    await form.DrawChartAsync();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(form, ex.Message, "t-SNE test", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            };
             Application.Run(form);
         }
     }
 }
-

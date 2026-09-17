@@ -9,6 +9,7 @@ internal static class VerificationRunner
     {
         if (args.Length > 0)
         {
+            if (args[0] == "--oracle" || args[0] == "--oracle-live") return OracleSourceVerification.Run(args[0] == "--oracle-live");
             if (args[0] == "--integration") return AlternativeTsneIntegrationVerification.Run();
             if (args[0] == "--performance") return TsnePerformanceVerification.Run(args.Skip(1).ToArray());
             return AlternativeTsneVerification.Run(args);
@@ -18,7 +19,7 @@ internal static class VerificationRunner
             string executable = typeof(VerificationRunner).Assembly.Location;
             string artifacts = Path.Combine(Path.GetTempPath(), "tas-tsne-verification-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(artifacts);
-            foreach (string mode in new[] { "--standalone", "--defaults", "--duplicates", "--settings", "--large", "--integration" })
+            foreach (string mode in new[] { "--standalone", "--defaults", "--duplicates", "--settings", "--large", "--integration", "--oracle" })
                 RunProcess(executable, mode, artifacts);
             string isolated = Path.Combine(artifacts, "csharp-only");
             Directory.CreateDirectory(isolated);

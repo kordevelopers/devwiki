@@ -1,0 +1,9 @@
+{
+  "package": "Oracle.ManagedDataAccess",
+  "version": "19.13.0",
+  "framework": "net40",
+  "source": "https://api.nuget.org/v3-flatcontainer/oracle.manageddataaccess/19.13.0/oracle.manageddataaccess.19.13.0.nupkg",
+  "packageSha256": "71a1f86788bb29023791a6ceff3a5a5f4ac87c9798f93bda1990780f2f6f1850",
+  "dllSha256": "e0ee87f33e82f376b41b10520b901d042f1d5dc2cef13ffded651af6595469b5",
+  "license": "https://www.oracle.com/downloads/licenses/distribution-license.html"
+}

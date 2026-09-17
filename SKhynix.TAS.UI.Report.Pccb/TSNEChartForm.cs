@@ -91,7 +91,9 @@ namespace SKhynix.TAS.UI.Report.Pccb
             projectionMethod = DimensionalityReductionMethod.TSNE;
             ApplyProjectionUiText();
             lastFeatureAuditLogPath = GetFeatureSelectionAuditLogPath();
-            summaryLabel.Text = "Operation message.";
+            summaryLabel.Text = popupDataProvider is OracleTsneDataProvider
+                ? "Oracle 조회로 데이터를 가져온 뒤 Draw Chart를 누르세요. 접속 설정: python_tsne/.env"
+                : "데이터를 준비한 뒤 Draw Chart를 누르세요.";
             ApplyOptionalUiVisibility();
             parameterChangeEnabled = true;
             SetToolbarEnabled(true);
@@ -248,7 +250,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             commandPanel.TabIndex = 3;
             searchButton.Text = "&Search";
             drawChartButton.Text = "&Draw Chart";
-            refreshAllButton.Text = "&Refresh All";
+            refreshAllButton.Text = popupDataProvider is OracleTsneDataProvider ? "&Oracle 조회" : "&Refresh All";
             analysisLogButton.Text = "Analysis &Log";
             preferMemoryCheckBox.Text = "Prefer Memory";
             toolbarLayout.ResumeLayout(true);
@@ -537,7 +539,33 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
         private async void RefreshAllButton_Click(object sender, EventArgs e)
         {
+            if (popupDataProvider is OracleTsneDataProvider)
+            {
+                try { await LoadOracleDataAsync(); }
+                catch (Exception error) { ShowOperationError(error, "Oracle 조회 실패"); }
+                return;
+            }
             await RefreshAllAsync();
+        }
+
+        public async Task LoadOracleDataAsync()
+        {
+            if (!(popupDataProvider is OracleTsneDataProvider)) throw new InvalidOperationException("Oracle 데이터 공급자가 설정되지 않았습니다.");
+            if (analysisInProgress) throw new InvalidOperationException("진행 중인 조회 또는 분석이 완료될 때까지 기다려 주세요.");
+            summaryLabel.Text = "Oracle에 접속하여 데이터를 조회하는 중입니다...";
+            SetToolbarEnabled(false);
+            try
+            {
+                DataTable table = await popupDataProvider.LoadAllAsync();
+                if (IsDisposed || Disposing) return;
+                // Re-enable before handing the result to the existing DataTable flow.
+                SetToolbarEnabled(true);
+                await LoadConvExperimentDataTableAsync(table);
+                BindNearestNeighborTable(table);
+                summaryLabel.Text = string.Format(CultureInfo.InvariantCulture,
+                    "Oracle 조회 완료: {0:N0}행. 아래 원본 데이터를 확인하고 Draw Chart를 누르세요.", table.Rows.Count);
+            }
+            finally { if (!IsDisposed && !Disposing) SetToolbarEnabled(true); }
         }
 
         private void AnalysisLogButton_Click(object sender, EventArgs e)
@@ -658,10 +686,11 @@ namespace SKhynix.TAS.UI.Report.Pccb
                 throw new InvalidOperationException("TSNE popup data provider is not configured.");
             }
 
-            summaryLabel.Text = popupDataProvider.SourceDescription + "Operation message.";
+            summaryLabel.Text = popupDataProvider.SourceDescription + " 데이터를 조회하는 중입니다...";
             UpdateBusyMessage(summaryLabel.Text);
             DataTable sourceTable = await popupDataProvider.LoadAllAsync();
-            UpdateBusyMessage("Operation message.");
+            UpdateBusyMessage("조회 결과를 준비하는 중입니다...");
+            pendingSourceTable = sourceTable;
             exadataRepository.SetSourceTable(sourceTable);
             TSNEExadataSnapshot snapshot = await exadataService.LoadFromDataTableAsync(sourceTable);
             preferMemoryCheckBox.Checked = true;
@@ -2041,5 +2070,4 @@ namespace SKhynix.TAS.UI.Report.Pccb
         }
     }
 }
-
 

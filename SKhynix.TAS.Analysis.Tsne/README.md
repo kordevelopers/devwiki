@@ -7,8 +7,10 @@
 1. 저장소 루트의 **`TsneDemo.slnx`**를 연다. 폼, 클래스 라이브러리, 검증 프로젝트만 포함한 솔루션이다. 기존 `hynixTas.slnx`에서도 사용할 수 있다.
 2. t-SNE 의존성은 저장소의 **`lib/Tsne`**에 포함되어 있어 바로 빌드할 수 있다. 처음 폼을 빌드할 때는 기존 Accord·LightningChart·Newtonsoft.Json 패키지만 NuGet으로 복원한다.
 3. **`SKhynix.TAS.UI.Report.Pccb`를 시작 프로젝트로 설정**하고 F5를 누른다. 호스트는 프로젝트 내부에서 x64로 설정되어 있다.
-4. 시작 시 RESPONSE/DEFECT 각각 96행인 가상 데이터로 **Hybrid t-SNE** 차트를 그린다.
-5. `Library`에서 **tsne-csharp**를 선택하고 `Draw Chart`를 눌러 같은 데이터로 비교한다.
+4. Python과 공유하는 `python_tsne/.env`에 실제 Oracle 접속정보를 입력하고 **Oracle 조회**를 누른다. 하단 그리드에 원본 행을 표시한다.
+5. RESPONSE/DEFECT를 선택하고 `Draw Chart`를 눌러 **Hybrid t-SNE**로 분석한다. `Library`에서 **tsne-csharp**를 선택해 비교할 수 있다. DB 없는 테스트에는 `Virtual Data` 버튼을 사용한다.
+
+실제 프로젝트에 코드를 옮기지 않고 단독 실행할 수 있다. Oracle 설정·기본 SQL·DLL 배치는 [Oracle WinForms 실행 안내](../docs/TSNE_Oracle_WinForms.md)를 참고한다. Oracle 드라이버는 로컬 DLL 수동 참조를 우선하고, 없으면 첫 빌드에서 공식 패키지로부터 자동 준비한다.
 
 Windows, Visual Studio의 .NET 데스크톱 개발 환경과 .NET Framework 4.5.1 targeting pack이 필요하다. PowerShell 실행과 C++ SDK 설치는 필요 없다. `Accord.NET (comparison)`은 기존 기준 결과를 확인하는 선택 항목이다. 새 두 엔진은 Accord를 호출하지 않는다.
 

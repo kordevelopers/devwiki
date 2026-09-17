@@ -1,0 +1,20 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <OracleBinaryRoot>$(MSBuildThisFileDirectory)</OracleBinaryRoot>
+    <OracleRestoreRoot>$(MSBuildProjectDirectory)\$(BaseIntermediateOutputPath)oracle-driver\19.13.0\</OracleRestoreRoot>
+    <OracleManagedAssembly Condition="Exists('$(OracleBinaryRoot)Oracle.ManagedDataAccess.dll')">$(OracleBinaryRoot)Oracle.ManagedDataAccess.dll</OracleManagedAssembly>
+    <OracleManagedAssembly Condition="'$(OracleManagedAssembly)' == ''">$(OracleRestoreRoot)lib\net40\Oracle.ManagedDataAccess.dll</OracleManagedAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Oracle.ManagedDataAccess"><HintPath>$(OracleManagedAssembly)</HintPath><Private>True</Private></Reference>
+  </ItemGroup>
+  <Target Name="PrepareOracleManagedDriver" BeforeTargets="ResolveAssemblyReferences" Condition="!Exists('$(OracleManagedAssembly)')">
+    <MakeDir Directories="$(OracleRestoreRoot)" />
+    <DownloadFile SourceUrl="https://api.nuget.org/v3-flatcontainer/oracle.manageddataaccess/19.13.0/oracle.manageddataaccess.19.13.0.nupkg" DestinationFolder="$(OracleRestoreRoot)" DestinationFileName="driver.nupkg" />
+    <VerifyFileHash File="$(OracleRestoreRoot)driver.nupkg" Hash="71a1f86788bb29023791a6ceff3a5a5f4ac87c9798f93bda1990780f2f6f1850" Algorithm="SHA256" />
+    <Unzip SourceFiles="$(OracleRestoreRoot)driver.nupkg" DestinationFolder="$(OracleRestoreRoot)" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="CopyOracleNotices" AfterTargets="Build">
+    <Copy SourceFiles="$(OracleBinaryRoot)info.txt;$(OracleBinaryRoot)README.md" DestinationFolder="$(TargetDir)licenses\Oracle" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

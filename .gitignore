@@ -10,6 +10,8 @@
 *.userosscache
 *.sln.docstates
 *.env
+# Oracle driver is acquired from Oracle/NuGet or supplied locally, not republished in Git.
+lib/Oracle/Oracle.ManagedDataAccess.dll
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
