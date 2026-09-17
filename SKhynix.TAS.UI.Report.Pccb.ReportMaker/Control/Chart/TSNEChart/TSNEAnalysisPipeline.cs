@@ -132,14 +132,15 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             string compactText = isTSNE
                 ? string.Format(
                     CultureInfo.InvariantCulture,
-                    "DIAG R={0} F={1} X={2} M={3} TSNE PERP={4:0.##} ENGINE=ACCORD SHAPE={5} KNN={6}",
+                    "DIAG R={0} F={1} X={2} M={3} TSNE PERP={4:0.##} ENGINE={7} SHAPE={5} KNN={6}",
                     rowCount,
                     featureCount,
                     excludedCount,
                     missingExperimentCount,
                     analysisResult.TSNEModel == null ? 0d : analysisResult.TSNEModel.EffectivePerplexity,
                     shapeCode,
-                    knnAlgorithm)
+                    knnAlgorithm,
+                    analysisResult.TSNEModel == null ? "UNKNOWN" : analysisResult.TSNEModel.EngineName)
                 : string.Format(
                     CultureInfo.InvariantCulture,
                     "DIAG R={0} F={1} X={2} M={3} PC1={4:0.0} PC2={5:0.0} SUM={6:0.0} SHAPE={7} KNN={8}",

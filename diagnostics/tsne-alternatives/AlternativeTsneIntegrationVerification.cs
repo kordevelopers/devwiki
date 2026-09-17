@@ -35,6 +35,8 @@ internal static class AlternativeTsneIntegrationVerification
                 var coordinates = analysis.TSNEModel.Coordinates;
                 string expectedEngine = !engine.HasValue ? "Accord" : (engine.Value == Alternative.Engine.CSharp ? "tsne-csharp" : "Hybrid");
                 Check(analysis.TSNEModel.EngineName.Contains(expectedEngine), "selected engine ignored: " + expectedEngine);
+                var diagnostic = result.Diagnostic;
+                Check(diagnostic.CompactText.Contains("ENGINE=" + analysis.TSNEModel.EngineName + " SHAPE="), "diagnostic misreported actual engine: " + diagnostic.CompactText);
                 Check(result.Records.Count == 24 && result.MissingExperimentCount == 1, "population filtering mismatch");
                 Check(analysis.Verification.AllScoresFinite && analysis.Verification.SharedScalerInstance && analysis.Verification.KnnResultValid, "pipeline verification failed");
                 var exported = result.CreateSurvivingPopulationDataTable();

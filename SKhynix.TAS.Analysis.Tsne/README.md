@@ -50,6 +50,33 @@ using (form) form.ShowDialog(owner);
 
 테이블 준비 후 `Draw Chart`를 누르면 계산한다. 엔진 변경 시 이전 차트와 그리드 결과를 지운다. `Analysis Log`에는 실제 엔진과 적용 설정, 소요 시간을 기록한다. 기존 파이프라인에는 `TSNEScatterAnalysisOptions.TSNELibraryEngine` 또는 `TSNEAnalysisOptions.TSNELibraryEngine`을 전달한다. 해당 옵션의 `null` 값은 기존 Accord 동작을 유지한다.
 
+## 다른 UI에서 엔진 지정
+
+엔진은 폼의 전역 설정이 아니라 **분석 호출에 전달하는 옵션**에서 선택한다. 기존 서비스와 파이프라인의 `TSNELibraryEngine` 기본값은 `null`이므로, 지정하지 않으면 Accord가 실행된다. 데모 폼의 기본값을 바꾸어도 다른 UI에는 적용되지 않는다.
+
+DataTable을 사용하는 UI에서는 다음처럼 분석 직전에 지정한다.
+
+```csharp
+using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart;
+using TsneRunner = SKhynix.TAS.Analysis.Tsne.Tsne;
+
+var service = new TSNEExadataService(table);
+var snapshot = service.SetDataTable(table);
+var options = new TSNEScatterAnalysisOptions
+{
+    TSNELibraryEngine = TsneRunner.Engine.CSharp // Hybrid 사용 시 Engine.Hybrid
+};
+var result = service.AnalyzeSnapshot(snapshot, TSNEParameterType.Response, options);
+System.Diagnostics.Debug.WriteLine(result.AnalysisResult.TSNEModel.EngineName);
+```
+
+- `TSNEScatterOptions`를 받는 차트 API: `options.Analysis.TSNELibraryEngine`을 지정하고 그 옵션을 전달한다.
+- `TSNEAnalysisPipeline` 직접 호출: 생성자에 전달하는 `TSNEAnalysisOptions.TSNELibraryEngine`을 지정한다.
+- `TSNEProjectionModel.FitTransform` 직접 호출: 6번째 인수에 `TsneRunner.Engine.CSharp` 또는 `Hybrid`를 전달한다. 기존 5개 인수 오버로드는 Accord를 사용한다.
+- 이미 계산한 결과를 `TSNEScatterDataSource.FromAnalysisResult`로 전달하는 경우, 렌더링 옵션을 바꾸어도 재계산하지 않는다. 선택한 엔진으로 분석을 다시 실행하고 새 결과를 전달한다.
+
+실제 실행 엔진은 `TSNEModel.EngineName`으로 확인한다. 이전 버전의 진단 요약은 `ENGINE=ACCORD`가 고정되어 있어 다른 엔진도 Accord로 표시했다. 이 표시 오류는 ReportMaker에서 수정했으므로, DLL을 수동 배치하는 UI에서는 `SKhynix.TAS.UI.Report.Pccb.ReportMaker.dll`도 다시 빌드해 교체한다.
+
 ## 클래스 라이브러리 직접 호출
 
 ```csharp
