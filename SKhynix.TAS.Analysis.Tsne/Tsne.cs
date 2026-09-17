@@ -110,14 +110,14 @@ namespace SKhynix.TAS.Analysis.Tsne
             bool fallbackToHybrid = settings.FallbackToHybridForLargeInputs;
             ValidateMatrix(standardizedMatrix);
             if (engine != Engine.Hybrid && engine != Engine.CSharp)
-                throw new ArgumentOutOfRangeException("options", "Unknown t-SNE engine.");
+                throw new ArgumentOutOfRangeException("Engine", engine, "Unknown t-SNE engine.");
             if (!Finite(requestedPerplexity) || requestedPerplexity < 1)
-                throw new ArgumentOutOfRangeException("options", "Perplexity must be finite and at least 1.");
+                throw new ArgumentOutOfRangeException("Perplexity", requestedPerplexity, "Perplexity must be finite and at least 1.");
             if (iterations < 1)
-                throw new ArgumentOutOfRangeException("options", "Iterations must be positive.");
+                throw new ArgumentOutOfRangeException("Iterations", iterations, "Iterations must be positive.");
             int count = standardizedMatrix.Length;
             if (engine == Engine.CSharp && maximumCSharpRows < 3)
-                throw new ArgumentOutOfRangeException("options", "MaximumCSharpRows must be at least 3.");
+                throw new ArgumentOutOfRangeException("MaximumCSharpRows", maximumCSharpRows, "MaximumCSharpRows must be at least 3.");
             if (engine == Engine.CSharp && count > maximumCSharpRows && fallbackToHybrid)
             {
                 engine = Engine.Hybrid;
@@ -137,7 +137,12 @@ namespace SKhynix.TAS.Analysis.Tsne
             double learningRate = engine == Engine.CSharp ? 500 : requestedLearningRate;
             int seed = engine == Engine.CSharp ? 1 : requestedSeed;
             if (!Finite(learningRate) || learningRate <= 0)
-                throw new ArgumentOutOfRangeException("options", "Learning rate must be finite and positive.");
+                throw new ArgumentOutOfRangeException("LearningRate", requestedLearningRate,
+                    string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                        "LearningRate must be finite and greater than 0. RequestedEngine={0}; ActualEngine={1}; Rows={2}; RandomSeed={3}. " +
+                        "Set Options.LearningRate (or TSNELearningRate in the report pipeline) to a positive value, for example 200. " +
+                        "Hybrid uses the supplied learning rate; CSharp uses a fixed 500 and ignores this option.",
+                        requestedEngine, engine, count, requestedSeed));
             if (engine == Engine.Hybrid && count < 4)
                 throw new ArgumentException("Hybrid_t-SNE requires at least four rows.", "standardizedMatrix");
 

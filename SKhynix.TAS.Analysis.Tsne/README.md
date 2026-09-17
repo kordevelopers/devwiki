@@ -137,11 +137,33 @@ double[][] xy = result.Coordinates; // 원본 행 순서의 N×2 좌표
 
 수정된 `Tsne.cs` 또는 DLL을 실제 호스트에 반영해야 한다. 기존 UI가 이전 DLL을 계속 로드하면 같은 예외가 발생한다. 수동 DLL 배치는 `SKhynix.TAS.Analysis.Tsne.dll`과 `SKhynix.TAS.UI.Report.Pccb.ReportMaker.dll`을 함께 교체하고 Hybrid 의존성과 `x64` 런타임 폴더를 포함한다.
 
+## seed 대입문 근처에서 ArgumentOutOfRangeException이 표시될 때
+
+`int seed = engine == Engine.CSharp ? 1 : requestedSeed;`는 정수 대입이므로 범위 예외를 던지지 않는다. 표시된 줄 번호만으로 원인을 판단하지 말고 예외의 `Message`, `ParamName`, `ActualValue`, 호출 스택을 확인한다. 최적화된 코드나 실제 DLL과 다른 소스·PDB를 사용할 때 표시 위치가 달라질 수 있다.
+
+바로 다음 검사는 Hybrid의 학습률이다. 5,610행에서 `LearningRate = 0`을 전달하면 여기서 예외가 재현된다. CSharp는 학습률을 500으로 고정해 입력값을 무시하지만, Hybrid로 직접 실행하거나 자동 전환되면 전달한 학습률이 유한한 양수여야 한다. 래퍼 기본값은 200이므로 다른 UI가 `TSNELearningRate` / `LearningRate`에 0을 다시 대입하는지 확인한다. 실행할 옵션에 200 등 양수를 전달한다.
+
+현재 범위 예외에는 `options` 대신 정확한 항목명과 실제 값을 기록한다. 학습률 오류에는 요청 엔진, 실제 엔진, 행 수, 시드도 포함한다. 이 정보로 실제 잘못된 설정을 확인한 다음 수정한다. 시드 0, -1, `int.MinValue`, `int.MaxValue`는 로컬 Hybrid 실행 검증을 통과했다.
+
+다른 UI의 예외 처리부에서는 다음 정보를 확인할 수 있다.
+
+```csharp
+catch (ArgumentOutOfRangeException ex)
+{
+    System.Diagnostics.Debug.WriteLine(ex.ToString());
+    System.Diagnostics.Debug.WriteLine("ParamName=" + ex.ParamName + "; ActualValue=" + ex.ActualValue);
+    System.Diagnostics.Debug.WriteLine(typeof(TsneRunner).Assembly.Location);
+    throw;
+}
+```
+
+`ParamName=LearningRate`이면 학습률 설정을 수정한다. 다른 항목이나 라이브러리 내부에서 던진 예외라면 해당 메시지와 호출 스택으로 별도 진단해야 한다. DLL을 교체할 때에는 같은 빌드의 PDB도 함께 배치하고 실행 중인 호스트를 다시 시작한다.
+
 ## 검증
 
 **`TsneVerification`을 시작 프로젝트로 설정하고 Ctrl+F5**를 누르면 모든 검증 그룹을 별도 프로세스로 실행한다. 그룹별 60초 제한이 있으며 로그와 JSON은 표시된 임시 폴더에 저장한다.
 
-두 엔진 실행, 기본 Hybrid 및 CSharp 자동 전환의 5,610행 처리, 기존 CSharp DataTable 호출의 전체 행 보존과 진단 정보, 엄격 비교 모드의 제한 오류, 입력 보존, CSharp 원본과의 정확한 좌표 일치, 기본 1,000회 반복, 중복 행, 오류 입력, CSharp 단독 의존성, Accord/CSharp/Hybrid 전환의 DataTable·KNN·export 연결, 공통 엔진 설정의 서비스·파이프라인·직접 호출 전파 및 기존 Accord 회귀를 확인한다. 검증 코드는 별도 프로젝트에 있으며 실제 클래스 라이브러리는 계속 `Tsne.cs` 하나만 컴파일한다.
+두 엔진 실행, 기본 Hybrid 및 CSharp 자동 전환의 5,610행 처리, 기존 CSharp DataTable 호출의 전체 행 보존과 진단 정보, 엄격 비교 모드의 제한 오류, 잘못된 학습률과 시드 경계값 진단, 입력 보존, CSharp 원본과의 정확한 좌표 일치, 기본 1,000회 반복, 중복 행, 오류 입력, CSharp 단독 의존성, Accord/CSharp/Hybrid 전환의 DataTable·KNN·export 연결, 공통 엔진 설정의 서비스·파이프라인·직접 호출 전파 및 기존 Accord 회귀를 확인한다. 검증 코드는 별도 프로젝트에 있으며 실제 클래스 라이브러리는 계속 `Tsne.cs` 하나만 컴파일한다.
 
 Visual Studio의 솔루션 빌드도 Debug와 Release에서 확인한다. 일반 MSBuild 실행만으로는 Visual Studio가 프로젝트 구성을 인식하는지 검증할 수 없다. 클래스 라이브러리와 검증 프로젝트의 `Debug|AnyCPU`, `Release|AnyCPU` 조건부 PropertyGroup을 유지해야 한다. 검증 실행 파일의 실제 프로세스 대상은 x64다.
 

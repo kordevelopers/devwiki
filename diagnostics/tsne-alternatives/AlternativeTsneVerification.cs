@@ -13,6 +13,12 @@ internal static class AlternativeTsneVerification
         {
             Check(Environment.Is64BitProcess, "x64 harness required");
             Check(!typeof(Alternative).Assembly.GetReferencedAssemblies().Any(a => a.Name.StartsWith("Accord", StringComparison.Ordinal)), "standalone DLL references Accord");
+            if (args.Length > 0 && args[0] == "--settings")
+            {
+                VerifySettingDiagnostics();
+                Console.WriteLine("PASS: exact setting names/values, 5610-row invalid learning rates and Hybrid seed boundaries; " + assertions + " assertions.");
+                return 0;
+            }
             if (args.Length > 0 && args[0] == "--large")
             {
                 var input = Matrix(5610);
@@ -123,6 +129,40 @@ internal static class AlternativeTsneVerification
         Check(result.Engine == Alternative.Engine.Hybrid && result.Iterations == 80 && result.LearningRate == 50 && result.RandomSeed == 19, "Hybrid metadata mismatch");
         Check(result.EngineName.Contains("auto") && result.EffectivePerplexity == (count - 1) / 3, "Hybrid configuration mismatch");
         Console.WriteLine("Hybrid auto rows=" + count + " p=" + result.EffectivePerplexity + " finite 2D; elapsed ms=" + result.ElapsedMilliseconds.ToString("F1"));
+    }
+
+    private static void VerifySettingDiagnostics()
+    {
+        var input = Matrix(5610);
+        foreach (var engine in new[] { Alternative.Engine.CSharp, Alternative.Engine.Hybrid })
+            foreach (double rate in new[] { 0d, -1d, double.NaN, double.PositiveInfinity })
+            {
+                var error = ExpectRange("LearningRate", rate,
+                    () => Alternative.FitTransform(input, new Alternative.Options { Engine = engine, LearningRate = rate }));
+                Check(error.Message.Contains("RequestedEngine=" + engine) && error.Message.Contains("ActualEngine=Hybrid")
+                    && error.Message.Contains("Rows=5610") && error.Message.Contains("RandomSeed=42"), "missing execution context");
+            }
+        ExpectRange("Iterations", 0, () => Alternative.FitTransform(input, new Alternative.Options { Iterations = 0 }));
+        ExpectRange("Perplexity", double.NaN, () => Alternative.FitTransform(input, new Alternative.Options { Perplexity = double.NaN }));
+        ExpectRange("MaximumCSharpRows", 2, () => Alternative.FitTransform(input, new Alternative.Options { Engine = Alternative.Engine.CSharp, MaximumCSharpRows = 2 }));
+        ExpectRange("Engine", (Alternative.Engine)123, () => Alternative.FitTransform(input, new Alternative.Options { Engine = (Alternative.Engine)123 }));
+        foreach (int seed in new[] { 0, -1, int.MinValue, int.MaxValue })
+        {
+            var result = Alternative.FitTransform(Matrix(12), new Alternative.Options { Engine = Alternative.Engine.Hybrid, RandomSeed = seed, Iterations = 80 });
+            Finite2D(result.Coordinates, 12);
+            Check(result.RandomSeed == seed && result.LearningRate == 200, "valid seed or learning rate changed");
+        }
+    }
+
+    private static ArgumentOutOfRangeException ExpectRange(string parameter, object value, Action action)
+    {
+        try { action(); }
+        catch (ArgumentOutOfRangeException error)
+        {
+            Check(error.ParamName == parameter && object.Equals(error.ActualValue, value), "wrong setting diagnostic: " + error);
+            return error;
+        }
+        throw new Exception("Expected range error for " + parameter);
     }
 
     private static void ValidateFailures()
