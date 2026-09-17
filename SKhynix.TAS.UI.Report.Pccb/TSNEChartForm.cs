@@ -1108,6 +1108,8 @@ namespace SKhynix.TAS.UI.Report.Pccb
             }
             TSNEProjectionModel model = analysis.TSNEModel;
             builder.AppendLine("t-SNE engine: " + model.EngineName);
+            if (!string.IsNullOrEmpty(model.EngineSelectionReason))
+                builder.AppendLine("Engine selection: " + model.EngineSelectionReason);
             builder.AppendLine(string.Format(CultureInfo.InvariantCulture,
                 "Effective settings: perplexity={0:0.###}, iterations={1}, learning rate={2:0.###}, random seed={3}",
                 model.EffectivePerplexity, model.Iterations, model.LearningRate, model.RandomSeed));
@@ -2039,6 +2041,5 @@ namespace SKhynix.TAS.UI.Report.Pccb
         }
     }
 }
-
 
 

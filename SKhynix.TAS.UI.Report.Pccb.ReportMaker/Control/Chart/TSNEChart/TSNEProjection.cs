@@ -163,6 +163,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         {
             coordinates = result.Coordinates;
             engineName = result.EngineName;
+            EngineSelectionReason = result.EngineSelectionReason;
             EffectivePerplexity = result.EffectivePerplexity;
             Iterations = result.Iterations;
             LearningRate = result.LearningRate;
@@ -182,6 +183,7 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
         public double ElapsedMilliseconds { get; private set; }
         public double KullbackLeiblerDivergence { get { return double.NaN; } }
         public string EngineName { get { return engineName; } }
+        public string EngineSelectionReason { get; private set; }
 
         public static TSNEProjectionModel FitTransform(double[][] standardizedMatrix, double perplexity,
             int iterations, double learningRate, int randomSeed,
@@ -190,8 +192,8 @@ namespace SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart
             if (!libraryEngine.HasValue)
                 return FitTransformAccord(standardizedMatrix, perplexity, iterations, learningRate, randomSeed);
 
-            // Experiments always execute the selected library, with no embedding
-            // cache or fallback to another engine that could distort comparisons.
+            // The adapter resolves the CSharp row limit before computing. Always
+            // propagate its actual engine and selection reason to the caller.
             var result = SKhynix.TAS.Analysis.Tsne.Tsne.FitTransform(standardizedMatrix,
                 new SKhynix.TAS.Analysis.Tsne.Tsne.Options
                 {

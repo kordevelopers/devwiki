@@ -67,11 +67,33 @@ internal static class AlternativeTsneIntegrationVerification
             }
             Check(JsonConvert.SerializeObject(table) == originalTable, "analysis mutated source DataTable");
             VerifyGlobalDefault(service, snapshot, reference.StandardizedMatrix);
+            VerifyLargeLegacyCaller();
             Console.WriteLine("PASS: Accord/CSharp/Hybrid/CSharp DataTable integration; " + assertions + " assertions.");
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
     }
+    private static void VerifyLargeLegacyCaller()
+    {
+        var table = new DataTable();
+        foreach (string name in new[] { "DRAFT_NO", "PARAM_TYP", "CONV_EXPER_CTN", "AI_RSLT_VAL" }) table.Columns.Add(name);
+        for (int i = 0; i < 5610; i++)
+            table.Rows.Add("L" + i, "Response", JsonConvert.SerializeObject(new { F0 = Math.Sin(i * 0.4), F1 = Math.Cos(i * 0.17), F2 = i * 0.01 }), "");
+        var service = new TSNEExadataService(table);
+        var snapshot = service.SetDataTable(table);
+        // Reproduce a different UI that still explicitly passes CSharp despite the global Hybrid default.
+        var options = new TSNEScatterAnalysisOptions { TSNELibraryEngine = Alternative.Engine.CSharp, TSNEIterations = 80 };
+        var result = service.AnalyzeSnapshot(snapshot, TSNEParameterType.Response, options);
+        Check(result.Records.Count == 5610 && result.AnalysisResult.TSNEModel.Coordinates.Length == 5610, "large UI call dropped rows");
+        Check(result.AnalysisResult.TSNEModel.EngineName.Contains("Hybrid"), "legacy CSharp caller did not switch to Hybrid");
+        Check(result.AnalysisResult.TSNEModel.EngineSelectionReason.Contains("5610"), "pipeline lost fallback reason");
+        Check(result.Diagnostic.CompactText.Contains("ENGINE=Hybrid"), "diagnostic misreported fallback engine");
+        Check(result.Records[5609].DraftNo == "L5609" && result.Records[5609].SourceRowIndex == 5609, "large UI call lost source alignment");
+        Check(result.AnalysisResult.Verification.AllScoresFinite, "large UI call returned invalid coordinates");
+        Check(options.TSNELibraryEngine == Alternative.Engine.CSharp, "pipeline mutated caller engine");
+        Console.WriteLine("PASS: legacy CSharp DataTable call processed all 5610 rows using Hybrid; engine and reason propagated.");
+    }
+
     private static void VerifyGlobalDefault(TSNEExadataService service, TSNEExadataSnapshot snapshot, double[][] matrix)
     {
         var original = Alternative.DefaultEngine;

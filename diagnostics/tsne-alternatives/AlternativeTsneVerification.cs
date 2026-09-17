@@ -15,24 +15,32 @@ internal static class AlternativeTsneVerification
             Check(!typeof(Alternative).Assembly.GetReferencedAssemblies().Any(a => a.Name.StartsWith("Accord", StringComparison.Ordinal)), "standalone DLL references Accord");
             if (args.Length > 0 && args[0] == "--large")
             {
-                var input = Matrix(2001);
+                var input = Matrix(5610);
                 var original = Copy(input);
-                var settings = new Alternative.Options { Iterations = 80 };
+                var settings = new Alternative.Options();
                 Check(settings.Engine == Alternative.Engine.Hybrid, "large population default must be Hybrid");
                 Check(settings.MaximumCSharpRows == 2000, "CSharp memory guard was removed");
                 var result = Alternative.FitTransform(input, settings);
-                Finite2D(result.Coordinates, 2001);
+                Finite2D(result.Coordinates, 5610);
                 Equal(input, original, "large default run mutated input");
                 Check(result.Engine == Alternative.Engine.Hybrid, "large default run used another engine");
                 bool rejected = false;
-                try { Alternative.FitTransform(input, new Alternative.Options { Engine = Alternative.Engine.CSharp }); }
+                try { Alternative.FitTransform(input, new Alternative.Options { Engine = Alternative.Engine.CSharp, FallbackToHybridForLargeInputs = false }); }
                 catch (ArgumentException ex)
                 {
-                    rejected = ex.ParamName == "standardizedMatrix" && ex.Message.Contains("2001")
+                    rejected = ex.ParamName == "standardizedMatrix" && ex.Message.Contains("5610")
                         && ex.Message.Contains("MaximumCSharpRows=2000") && ex.Message.Contains("Tsne.Engine.Hybrid");
                 }
-                Check(rejected, "explicit CSharp must report actual row count, limit and remedy");
-                Console.WriteLine("PASS: default Hybrid processed all 2001 rows; explicit CSharp retained its guard; " + assertions + " assertions.");
+                Check(rejected, "strict CSharp must report actual row count, limit and remedy");
+                var fallbackOptions = new Alternative.Options { Engine = Alternative.Engine.CSharp, LearningRate = 73, RandomSeed = 17 };
+                var fallback = Alternative.FitTransform(input, fallbackOptions);
+                Finite2D(fallback.Coordinates, 5610);
+                Equal(input, original, "fallback mutated input");
+                Check(fallback.RequestedEngine == Alternative.Engine.CSharp && fallback.Engine == Alternative.Engine.Hybrid, "CSharp did not switch to Hybrid");
+                Check(fallback.EngineSelectionReason.Contains("5610") && fallback.EngineSelectionReason.Contains("2000"), "missing fallback reason");
+                Check(fallback.LearningRate == 73 && fallback.RandomSeed == 17 && fallback.Iterations == 1000, "fallback used fixed CSharp parameters");
+                Check(fallbackOptions.Engine == Alternative.Engine.CSharp, "fallback mutated caller options");
+                Console.WriteLine("PASS: default Hybrid and CSharp-to-Hybrid processed all 5610 rows; strict CSharp retained its guard; " + assertions + " assertions.");
                 return 0;
             }
             if (args.Length > 0 && args[0] == "--defaults")
@@ -89,7 +97,7 @@ internal static class AlternativeTsneVerification
     {
         var input = Matrix(count);
         var original = Copy(input);
-        var options = new Alternative.Options { Engine = Alternative.Engine.CSharp, Iterations = 80, Perplexity = 30, LearningRate = 17, RandomSeed = 97 };
+        var options = new Alternative.Options { Engine = Alternative.Engine.CSharp, MaximumCSharpRows = count, Iterations = 80, Perplexity = 30, LearningRate = 17, RandomSeed = 97 };
         var result = Alternative.FitTransform(input, options);
         var again = Alternative.FitTransform(Copy(input), options);
         var direct = TSNE.TSNE.Reduce(Copy(input), options.Iterations, (int)result.EffectivePerplexity);
@@ -130,7 +138,7 @@ internal static class AlternativeTsneVerification
         Reject("unknown engine", () => Alternative.FitTransform(Matrix(4), new Alternative.Options { Engine = (Alternative.Engine)123 }));
         Reject("zero iterations", () => Alternative.FitTransform(Matrix(4), new Alternative.Options { Iterations = 0 }));
         Reject("invalid perplexity", () => Alternative.FitTransform(Matrix(4), new Alternative.Options { Perplexity = double.NaN }));
-        Reject("CSharp size cap", () => Alternative.FitTransform(Matrix(12), new Alternative.Options { Engine = Alternative.Engine.CSharp, MaximumCSharpRows = 11 }));
+        Reject("CSharp size cap", () => Alternative.FitTransform(Matrix(12), new Alternative.Options { Engine = Alternative.Engine.CSharp, MaximumCSharpRows = 11, FallbackToHybridForLargeInputs = false }));
         Reject("invalid CSharp size cap", () => Alternative.FitTransform(Matrix(4), new Alternative.Options { Engine = Alternative.Engine.CSharp, MaximumCSharpRows = 2 }));
         Reject("Hybrid three rows", () => Alternative.FitTransform(Matrix(3), new Alternative.Options { Engine = Alternative.Engine.Hybrid }));
         Reject("Hybrid zero learning rate", () => Alternative.FitTransform(Matrix(4), new Alternative.Options { Engine = Alternative.Engine.Hybrid, LearningRate = 0 }));

@@ -127,17 +127,21 @@ double[][] xy = result.Coordinates; // 원본 행 순서의 N×2 좌표
 
 ## MaximumCSharpRows 예외가 발생할 때
 
-`MaximumCSharpRows`는 CSharp 엔진의 기본 2,000행 제한이다. 예외는 이 한도를 초과했음을 뜻하며 데이터 값이 잘못되었다는 뜻은 아니다. 오류 메시지에 실제 행 수와 제한값이 표시된다.
+`MaximumCSharpRows`는 CSharp 엔진의 기본 2,000행 제한이다. 이전 버전에서는 CSharp를 명시한 호출이 이 한도를 초과하면 예외가 발생했다. 현재는 **CSharp로 요청해도 제한을 초과하면 Hybrid로 전환하여 전체 행을 계산한다.** 5,610행의 기존 CSharp 호출도 같은 경로로 처리한다.
 
 기본 엔진은 Hybrid로 변경했다. 기존 호스트에서 `Tsne.DefaultEngine = Tsne.Engine.CSharp`를 사용했다면 시작 코드의 한 줄을 `Hybrid`로 변경하고, 개별 `Engine = CSharp` 또는 `TSNELibraryEngine = CSharp` 지정도 제거한다. 옵션과 폼은 설정 후 새로 만든다. 수동 DLL 참조 환경에서는 수정된 `SKhynix.TAS.Analysis.Tsne.dll`을 교체하고 Hybrid 의존성 및 `x64` 런타임 폴더를 배치한다.
 
-CSharp를 명시적으로 선택한 경우에는 메모리 보호를 위해 제한을 유지한다. 작은 데이터로 비교하거나, 필요한 메모리와 실행 시간을 확인한 테스트에 한해 직접 호출의 `Tsne.Options.MaximumCSharpRows`를 늘릴 수 있다. 큰 입력에서 엔진을 몰래 바꾸거나 행을 잘라내지는 않는다.
+전환 여부는 `Tsne.Result.RequestedEngine`과 `Engine`으로 확인한다. `EngineSelectionReason`에 입력 행 수와 전환 사유가 기록되며, ReportMaker의 `TSNEModel.EngineSelectionReason`과 데모 `Analysis Log`에도 전달한다. `EngineName`과 진단 요약은 실제 계산 엔진을 표시한다. 전환 시 Hybrid에 요청한 학습률과 시드를 적용한다.
+
+엔진 비교에서 자동 전환을 금지하려면 직접 호출의 `Tsne.Options.FallbackToHybridForLargeInputs = false`를 지정한다. 이 경우에는 기존 제한 초과 예외가 발생한다. CSharp를 반드시 사용해야 하는 테스트에서는 입력을 줄이거나 필요한 메모리와 실행 시간을 확인한 후 `MaximumCSharpRows`를 늘릴 수 있다.
+
+수정된 `Tsne.cs` 또는 DLL을 실제 호스트에 반영해야 한다. 기존 UI가 이전 DLL을 계속 로드하면 같은 예외가 발생한다. 수동 DLL 배치는 `SKhynix.TAS.Analysis.Tsne.dll`과 `SKhynix.TAS.UI.Report.Pccb.ReportMaker.dll`을 함께 교체하고 Hybrid 의존성과 `x64` 런타임 폴더를 포함한다.
 
 ## 검증
 
 **`TsneVerification`을 시작 프로젝트로 설정하고 Ctrl+F5**를 누르면 모든 검증 그룹을 별도 프로세스로 실행한다. 그룹별 60초 제한이 있으며 로그와 JSON은 표시된 임시 폴더에 저장한다.
 
-두 엔진 실행, 기본 Hybrid의 2,001행 처리와 CSharp 제한 오류, 입력 보존, CSharp 원본과의 정확한 좌표 일치, 기본 1,000회 반복, 중복 행, 오류 입력, CSharp 단독 의존성, Accord/CSharp/Hybrid 전환의 DataTable·KNN·export 연결, 공통 엔진 설정의 서비스·파이프라인·직접 호출 전파 및 기존 Accord 회귀를 확인한다. 검증 코드는 별도 프로젝트에 있으며 실제 클래스 라이브러리는 계속 `Tsne.cs` 하나만 컴파일한다.
+두 엔진 실행, 기본 Hybrid 및 CSharp 자동 전환의 5,610행 처리, 기존 CSharp DataTable 호출의 전체 행 보존과 진단 정보, 엄격 비교 모드의 제한 오류, 입력 보존, CSharp 원본과의 정확한 좌표 일치, 기본 1,000회 반복, 중복 행, 오류 입력, CSharp 단독 의존성, Accord/CSharp/Hybrid 전환의 DataTable·KNN·export 연결, 공통 엔진 설정의 서비스·파이프라인·직접 호출 전파 및 기존 Accord 회귀를 확인한다. 검증 코드는 별도 프로젝트에 있으며 실제 클래스 라이브러리는 계속 `Tsne.cs` 하나만 컴파일한다.
 
 Visual Studio의 솔루션 빌드도 Debug와 Release에서 확인한다. 일반 MSBuild 실행만으로는 Visual Studio가 프로젝트 구성을 인식하는지 검증할 수 없다. 클래스 라이브러리와 검증 프로젝트의 `Debug|AnyCPU`, `Release|AnyCPU` 조건부 PropertyGroup을 유지해야 한다. 검증 실행 파일의 실제 프로세스 대상은 x64다.
 

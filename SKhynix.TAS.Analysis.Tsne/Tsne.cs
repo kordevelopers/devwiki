@@ -41,6 +41,7 @@ namespace SKhynix.TAS.Analysis.Tsne
                 LearningRate = 200;
                 RandomSeed = 42;
                 MaximumCSharpRows = 2000;
+                FallbackToHybridForLargeInputs = true;
             }
 
             public Engine Engine { get; set; }
@@ -52,17 +53,21 @@ namespace SKhynix.TAS.Analysis.Tsne
             public int RandomSeed { get; set; }
             /// <summary>Bounds the dense C# engine's quadratic allocations; increase explicitly if needed.</summary>
             public int MaximumCSharpRows { get; set; }
+            /// <summary>Use Hybrid for all rows when CSharp exceeds its limit. False preserves strict comparison behavior.</summary>
+            public bool FallbackToHybridForLargeInputs { get; set; }
         }
 
         public sealed class Result
         {
             private readonly double[][] coordinates;
 
-            internal Result(double[][] coordinates, Engine engine, int perplexity,
+            internal Result(double[][] coordinates, Engine engine, Engine requestedEngine, string engineSelectionReason, int perplexity,
                 int iterations, double learningRate, int randomSeed, double elapsed)
             {
                 this.coordinates = Clone(coordinates);
                 Engine = engine;
+                RequestedEngine = requestedEngine;
+                EngineSelectionReason = engineSelectionReason;
                 EffectivePerplexity = perplexity;
                 Iterations = iterations;
                 LearningRate = learningRate;
@@ -72,6 +77,8 @@ namespace SKhynix.TAS.Analysis.Tsne
 
             public double[][] Coordinates { get { return Clone(coordinates); } }
             public Engine Engine { get; private set; }
+            public Engine RequestedEngine { get; private set; }
+            public string EngineSelectionReason { get; private set; }
             public string EngineName
             {
                 get { return Engine == Tsne.Engine.Hybrid ? "Hybrid_t-SNE (auto: Barnes-Hut / FFT)" : "tsne-csharp (exact)"; }
@@ -93,10 +100,14 @@ namespace SKhynix.TAS.Analysis.Tsne
             Options settings = options ?? new Options();
             // Snapshot caller settings before dispatching to an upstream engine.
             Engine engine = settings.Engine;
+            Engine requestedEngine = engine;
+            string engineSelectionReason = string.Empty;
             int iterations = settings.Iterations;
             double requestedPerplexity = settings.Perplexity;
-            double learningRate = engine == Engine.CSharp ? 500 : settings.LearningRate;
-            int seed = engine == Engine.CSharp ? 1 : settings.RandomSeed;
+            double requestedLearningRate = settings.LearningRate;
+            int requestedSeed = settings.RandomSeed;
+            int maximumCSharpRows = settings.MaximumCSharpRows;
+            bool fallbackToHybrid = settings.FallbackToHybridForLargeInputs;
             ValidateMatrix(standardizedMatrix);
             if (engine != Engine.Hybrid && engine != Engine.CSharp)
                 throw new ArgumentOutOfRangeException("options", "Unknown t-SNE engine.");
@@ -104,21 +115,31 @@ namespace SKhynix.TAS.Analysis.Tsne
                 throw new ArgumentOutOfRangeException("options", "Perplexity must be finite and at least 1.");
             if (iterations < 1)
                 throw new ArgumentOutOfRangeException("options", "Iterations must be positive.");
-            if (!Finite(learningRate) || learningRate <= 0)
-                throw new ArgumentOutOfRangeException("options", "Learning rate must be finite and positive.");
             int count = standardizedMatrix.Length;
-            if (engine == Engine.Hybrid && count < 4)
-                throw new ArgumentException("Hybrid_t-SNE requires at least four rows.", "standardizedMatrix");
-            if (engine == Engine.CSharp && settings.MaximumCSharpRows < 3)
+            if (engine == Engine.CSharp && maximumCSharpRows < 3)
                 throw new ArgumentOutOfRangeException("options", "MaximumCSharpRows must be at least 3.");
-            if (engine == Engine.CSharp && count > settings.MaximumCSharpRows)
+            if (engine == Engine.CSharp && count > maximumCSharpRows && fallbackToHybrid)
+            {
+                engine = Engine.Hybrid;
+                engineSelectionReason = string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "CSharp requested for {0} rows; MaximumCSharpRows={1}. Hybrid processed all rows.",
+                    count, maximumCSharpRows);
+            }
+            if (engine == Engine.CSharp && count > maximumCSharpRows)
                 throw new ArgumentException(string.Format(System.Globalization.CultureInfo.InvariantCulture,
                     "tsne-csharp input has {0} rows, exceeding MaximumCSharpRows={1}. " +
                     "Its dense matrices require quadratic memory and computation. " +
                     "Set Tsne.DefaultEngine = Tsne.Engine.Hybrid before creating analysis options, " +
                     "and remove any explicit CSharp selection. For a deliberate CSharp test, " +
                     "reduce the sample count or explicitly increase Options.MaximumCSharpRows.",
-                    count, settings.MaximumCSharpRows), "standardizedMatrix");
+                    count, maximumCSharpRows), "standardizedMatrix");
+
+            double learningRate = engine == Engine.CSharp ? 500 : requestedLearningRate;
+            int seed = engine == Engine.CSharp ? 1 : requestedSeed;
+            if (!Finite(learningRate) || learningRate <= 0)
+                throw new ArgumentOutOfRangeException("options", "Learning rate must be finite and positive.");
+            if (engine == Engine.Hybrid && count < 4)
+                throw new ArgumentException("Hybrid_t-SNE requires at least four rows.", "standardizedMatrix");
 
             // An integer perplexity is shared across both engines. Hybrid needs
             // 3*p <= N-1; the C# upstream accepts integers only. Report the cap.
@@ -137,7 +158,7 @@ namespace SKhynix.TAS.Analysis.Tsne
                 coordinates = RunCSharp(input, iterations, perplexity);
             }
             ValidateCoordinates(coordinates, count);
-            return new Result(coordinates, engine, perplexity, iterations, learningRate, seed, watch.Elapsed.TotalMilliseconds);
+            return new Result(coordinates, engine, requestedEngine, engineSelectionReason, perplexity, iterations, learningRate, seed, watch.Elapsed.TotalMilliseconds);
         }
 
         // Keep dependency loading local to the chosen engine. CSharp can run
