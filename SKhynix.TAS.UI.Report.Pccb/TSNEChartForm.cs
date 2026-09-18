@@ -8,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using SKhynix.TAS.UI.Report.Pccb.ReportMaker.Control.Chart.TSNEChart;
@@ -22,6 +23,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
         private readonly TSNEExadataService exadataService;
         private readonly ConvExperimentRepository exadataRepository;
         private readonly ITSNEScatterPopupDataProvider popupDataProvider;
+        private CancellationTokenSource oracleLoadCancellation;
 
         private TSNEAnalysisResult analysisResult;
         private TSNEExadataAnalysisResult exadataAnalysis;
@@ -92,7 +94,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             ApplyProjectionUiText();
             lastFeatureAuditLogPath = GetFeatureSelectionAuditLogPath();
             summaryLabel.Text = popupDataProvider is OracleTsneDataProvider
-                ? "Oracle 조회로 데이터를 가져온 뒤 Draw Chart를 누르세요. 접속 설정: python_tsne/.env"
+                ? "Oracle 조회로 데이터를 가져온 뒤 Draw Chart를 누르세요. 접속 설정: EXE 옆 oracle.env"
                 : "데이터를 준비한 뒤 Draw Chart를 누르세요.";
             ApplyOptionalUiVisibility();
             parameterChangeEnabled = true;
@@ -541,6 +543,11 @@ namespace SKhynix.TAS.UI.Report.Pccb
         {
             if (popupDataProvider is OracleTsneDataProvider)
             {
+                if (oracleLoadCancellation != null)
+                {
+                    RequestOracleCancellation();
+                    return;
+                }
                 try { await LoadOracleDataAsync(); }
                 catch (Exception error) { ShowOperationError(error, "Oracle 조회 실패"); }
                 return;
@@ -556,7 +563,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
             SetToolbarEnabled(false);
             try
             {
-                DataTable table = await popupDataProvider.LoadAllAsync();
+                DataTable table = await QueryOracleWithProgressAsync();
                 if (IsDisposed || Disposing) return;
                 // Re-enable before handing the result to the existing DataTable flow.
                 SetToolbarEnabled(true);
@@ -566,6 +573,52 @@ namespace SKhynix.TAS.UI.Report.Pccb
                     "Oracle 조회 완료: {0:N0}행. 아래 원본 데이터를 확인하고 Draw Chart를 누르세요.", table.Rows.Count);
             }
             finally { if (!IsDisposed && !Disposing) SetToolbarEnabled(true); }
+        }
+
+        private async Task<DataTable> QueryOracleWithProgressAsync()
+        {
+            using (var cancellation = new CancellationTokenSource())
+            {
+                oracleLoadCancellation = cancellation;
+                refreshAllButton.Text = "조회 취소";
+                refreshAllButton.Enabled = true;
+                var progress = new Progress<OracleLoadProgress>(state =>
+                {
+                    if (IsDisposed || Disposing || oracleLoadCancellation != cancellation) return;
+                    summaryLabel.Text = string.Format(CultureInfo.InvariantCulture,
+                        "{0} · {1:N0}행 수신 · {2}초", state.Stage, state.Rows, state.ElapsedSeconds);
+                });
+                try { return await ((OracleTsneDataProvider)popupDataProvider).LoadAllAsync(cancellation.Token, progress); }
+                finally
+                {
+                    oracleLoadCancellation = null;
+                    if (!IsDisposed && !Disposing)
+                    {
+                        refreshAllButton.Text = "&Oracle 조회";
+                        refreshAllButton.Enabled = !analysisInProgress && showRefreshAllButton;
+                    }
+                }
+            }
+        }
+
+        private void RequestOracleCancellation()
+        {
+            var cancellation = oracleLoadCancellation;
+            if (cancellation == null) return;
+            refreshAllButton.Enabled = false;
+            summaryLabel.Text = "취소 요청 중 · Oracle 응답을 기다립니다...";
+            // Cancel can perform network I/O in this driver; never call it on the UI thread.
+            Task.Run(() =>
+            {
+                try { cancellation.Cancel(); }
+                catch (ObjectDisposedException) { }
+            });
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            RequestOracleCancellation();
+            base.OnFormClosed(e);
         }
 
         private void AnalysisLogButton_Click(object sender, EventArgs e)
@@ -688,7 +741,8 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
             summaryLabel.Text = popupDataProvider.SourceDescription + " 데이터를 조회하는 중입니다...";
             UpdateBusyMessage(summaryLabel.Text);
-            DataTable sourceTable = await popupDataProvider.LoadAllAsync();
+            DataTable sourceTable = popupDataProvider is OracleTsneDataProvider
+                ? await QueryOracleWithProgressAsync() : await popupDataProvider.LoadAllAsync();
             UpdateBusyMessage("조회 결과를 준비하는 중입니다...");
             pendingSourceTable = sourceTable;
             exadataRepository.SetSourceTable(sourceTable);
@@ -1562,6 +1616,12 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
         private void ShowOperationError(Exception exception, string title)
         {
+            if (IsDisposed || Disposing) return;
+            if (exception is OperationCanceledException)
+            {
+                summaryLabel.Text = "Oracle 조회를 취소했습니다. 기존 데이터는 유지됩니다.";
+                return;
+            }
             summaryLabel.Text = title;
             MessageBox.Show(
                 this,
@@ -1582,6 +1642,7 @@ namespace SKhynix.TAS.UI.Report.Pccb
 
         private void SetToolbarEnabled(bool enabled)
         {
+            if (IsDisposed || Disposing) return;
             analysisInProgress = !enabled;
             parameterChangeEnabled = enabled;
             if (engineComboBox != null)
@@ -2070,4 +2131,3 @@ namespace SKhynix.TAS.UI.Report.Pccb
         }
     }
 }
-

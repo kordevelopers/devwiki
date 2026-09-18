@@ -7,7 +7,7 @@
 1. 저장소 루트의 **`TsneDemo.slnx`**를 연다. 폼, 클래스 라이브러리, 검증 프로젝트만 포함한 솔루션이다. 기존 `hynixTas.slnx`에서도 사용할 수 있다.
 2. t-SNE 의존성은 저장소의 **`lib/Tsne`**에 포함되어 있어 바로 빌드할 수 있다. 처음 폼을 빌드할 때는 기존 Accord·LightningChart·Newtonsoft.Json 패키지만 NuGet으로 복원한다.
 3. **`SKhynix.TAS.UI.Report.Pccb`를 시작 프로젝트로 설정**하고 F5를 누른다. 호스트는 프로젝트 내부에서 x64로 설정되어 있다.
-4. Python과 공유하는 `python_tsne/.env`에 실제 Oracle 접속정보를 입력하고 **Oracle 조회**를 누른다. 하단 그리드에 원본 행을 표시한다.
+4. WinForms 프로젝트의 `oracle.env.example`을 `oracle.env`로 복사하고 실제 Oracle 접속정보를 입력한다. 빌드 후 **Oracle 조회**를 누르면 하단 그리드에 원본 행을 표시한다. Python 설정과는 독립적이다.
 5. RESPONSE/DEFECT를 선택하고 `Draw Chart`를 눌러 **Hybrid t-SNE**로 분석한다. `Library`에서 **tsne-csharp**를 선택해 비교할 수 있다. DB 없는 테스트에는 `Virtual Data` 버튼을 사용한다.
 
 실제 프로젝트에 코드를 옮기지 않고 단독 실행할 수 있다. Oracle 설정·기본 SQL·DLL 배치는 [Oracle WinForms 실행 안내](../docs/TSNE_Oracle_WinForms.md)를 참고한다. Oracle 드라이버는 로컬 DLL 수동 참조를 우선하고, 없으면 첫 빌드에서 공식 패키지로부터 자동 준비한다.

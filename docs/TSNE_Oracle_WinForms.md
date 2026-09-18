@@ -1,48 +1,58 @@
 # WinForms에서 Oracle 직접 조회
 
-실제 프로젝트에 코드를 옮기기 전에 이 프로그램만 실행해서 Oracle 조회와 t-SNE를 시험할 수 있다. Python 실행은 필요하지 않다. `Program.cs`가 `OracleTsneDataProvider`를 폼에 연결한다. 기존 DataTable 호출과 t-SNE 클래스 라이브러리의 단일 `Tsne.cs` 구조는 유지한다.
+`TsneDemo.slnx`의 `SKhynix.TAS.UI.Report.Pccb`를 실행하면 Oracle 데이터를 조회하고 t-SNE를 시험할 수 있다. Python 실행이나 실제 업무 프로젝트로의 코드 이식은 필요하지 않다.
 
-## 실행 순서
+## 접속정보는 WinForms 한 곳에서 관리
 
-1. `TsneDemo.slnx`를 열고 `SKhynix.TAS.UI.Report.Pccb`를 시작 프로젝트로 설정한다.
-2. Python에서 사용하던 `python_tsne/.env`에 실제 접속정보를 입력한다. 이 파일이 없다면 같은 폴더의 `.env.example`을 복사한다. `test_user` / `test_password`는 실행용 계정이 아니다.
-3. F5로 실행하고 **Oracle 조회**를 누른다. 조회 중에는 버튼이 비활성화되고 진행 안내가 표시된다.
-4. 하단 그리드에서 조회된 원본 행과 `CONV_EXPER_CTN`을 확인한다.
-5. RESPONSE 또는 DEFECT를 선택하고 **Draw Chart**를 누른다. 다시 DB에서 조회하려면 **Oracle 조회**를 누른다. 엔진만 바꾸어 다시 그릴 때는 이미 조회한 데이터를 사용한다.
+1. WinForms 프로젝트의 `oracle.env.example`을 같은 폴더의 `oracle.env`로 복사한다.
+2. `ORACLE_HOST`, `ORACLE_PORT`, `ORACLE_SERVICE_NAME`, `ORACLE_USERNAME`, `ORACLE_PASSWORD`를 입력한다. 기존 Python의 `TSNE_DB_DATABASE` 값이 서비스 이름에 해당한다. `test_user` / `test_password`는 예제이며 실제 접속용 계정이 아니다.
+3. 프로젝트를 빌드하면 이 파일이 EXE 옆으로 복사된다. F5로 실행하고 **Oracle 조회**를 누른다.
+4. 조회가 끝나면 하단 그리드에서 원본 행을 확인하고 RESPONSE 또는 DEFECT를 선택한 뒤 **Draw Chart**를 누른다.
 
-실행 폴더를 별도로 옮기는 경우에는 `bin/Release` 전체와 `x64`·`licenses` 하위 폴더를 함께 복사한다. EXE 옆의 `.env.example`을 `.env`로 복사해 접속정보를 입력한 뒤 `SKhynix.TAS.UI.Report.Pccb.exe`를 실행한다. 실제 `.env`와 비밀번호는 Git 또는 배포 예제에 포함하지 않는다.
+별도 배포 폴더에서는 EXE 옆의 `oracle.env.example`을 `oracle.env`로 복사해 수정한다. 런타임은 **EXE 옆 oracle.env만** 읽는다. Python `.env`, 상위 폴더, 작업 폴더, `TSNE_*` 및 기타 환경변수에서 접속정보를 찾지 않는다. 각 조회마다 파일을 다시 읽으므로 실행 중 EXE 옆 파일을 수정했다면 재시작 없이 조회할 수 있다. 소스 프로젝트의 파일을 수정한 경우에는 다시 빌드한다. 프로젝트 파일과 EXE 옆 파일을 번갈아 수정하지 말고 실행 방식에 맞는 한 곳에서 관리한다.
 
-## Python과 공유하는 설정
+실제 `oracle.env`는 Git 제외 대상이다. 공개 예제와 배포 ZIP에는 실제 비밀번호를 넣지 않는다. Python 설정을 바꿔도 WinForms 설정은 바뀌지 않는다.
 
-| 설정 | 용도 |
+| 설정 | 용도 / 기본값 |
 |---|---|
-| `TSNE_DB_HOST` | Oracle 호스트 |
-| `TSNE_DB_PORT` | 포트, 기본 1521 |
-| `TSNE_DB_DATABASE` | 서비스 이름 (`host:port/service`의 service) |
-| `TSNE_DB_USERNAME` | 조회 계정 |
-| `TSNE_DB_PASSWORD` | 비밀번호 |
-| `TSNE_SQL_FILE` | 선택 SQL 파일 |
-| `TSNE_SQL` | SQL 파일이 없을 때 사용할 직접 SQL |
-| `TSNE_ENV_FILE` | WinForms에서 설정 파일 경로를 명시할 때 사용하는 환경변수 |
+| `ORACLE_HOST` | Oracle 호스트 |
+| `ORACLE_PORT` | 포트 / 1521 |
+| `ORACLE_SERVICE_NAME` | Oracle 서비스 이름 |
+| `ORACLE_USERNAME` | 조회 계정 |
+| `ORACLE_PASSWORD` | 비밀번호; 공백이나 `#` 등이 있으면 작은따옴표로 감싼다 |
+| `SQL_FILE` | 선택 SQL 파일; oracle.env 폴더 기준 상대 경로 또는 절대 경로 |
+| `SQL` | SQL_FILE이 비어 있을 때 사용할 SQL; 생략하면 기본 쿼리 |
+| `QUERY_TIMEOUT_SECONDS` | 연결·실행·행/CLOB 수신 전체의 취소 요청 시점 / 180초 |
+| `FETCH_SIZE_BYTES` | Oracle 행 수신 버퍼 / 1,048,576바이트 |
+| `LOB_PREFETCH_CHARACTERS` | CLOB/NCLOB 미리 읽기 / 32,768자; 0이면 미리 읽기 해제 |
 
-프로세스 환경변수가 `.env`의 같은 키보다 우선한다. 설정 파일은 `TSNE_ENV_FILE` → 현재 작업 폴더의 `.env` → EXE 폴더의 `.env` → 상위 저장소의 `python_tsne/.env` 순으로 찾는다. 각 조회마다 다시 읽으므로 수정 후 프로그램을 재시작하지 않고 **Oracle 조회**를 다시 누르면 된다.
+설정값의 `${...}`는 환경변수로 치환하지 않고 그대로 사용한다. 큰따옴표로 감싼 `SQL`에는 여러 줄을 넣을 수 있다. 별도 SQL 파일은 배포 폴더에도 함께 복사해야 한다.
 
-`TSNE_SQL_FILE`은 현재 작업 폴더, `.env` 폴더, EXE 폴더를 기준으로 찾는다. Python의 `queries/exadata_tsne.sql` 같은 상대 경로도 저장소에서 사용할 수 있다. 단독 EXE에 상대 경로를 설정했다면 SQL 파일도 같은 상대 위치에 복사한다. SQL 파일이 없으면 Python `config.py`와 같은 기본 SQL을 사용한다.
+## Read에서 오래 기다릴 때
 
-Python의 `TSNE_DATA_TYPE` / `TSNE_PARAM_TYP` / `TSNE_TARGET_DRAFT_NO`는 이 폼의 초기 선택값으로 가져오지 않는다. WinForms에서는 Data Type과 Draft Number 컨트롤로 선택한다.
+`reader.Read()`는 다음 행을 받기 위한 동기 I/O이므로 DB 실행이나 네트워크 수신 때문에 기다릴 수 있다. WinForms에서는 이를 백그라운드에서 실행하고 **현재 단계 · 수신 완료 행 수 · 경과 초**를 1초 간격으로 표시한다. 행 수는 현재 CLOB까지 모두 읽은 행만 센다.
 
-## 조회 및 연결 방식
+- **SQL 실행 · 첫 결과 대기**: 쿼리 실행 결과를 기다리는 단계.
+- **행 수신 대기 (Read)**: 다음 묶음의 행을 기다리는 단계. 첫 행 전에도 발생할 수 있다.
+- **현재 행 CLOB/NCLOB 읽는 중**: JSON 원문을 가져오는 단계.
+- **조회 취소**: 조회 버튼이 취소 버튼으로 바뀐다. 누르면 Oracle에 취소 요청을 보낸다.
 
-기본 SQL은 `TASADM.PCCB_INFER_RSLT_INF`와 `TASADM.PCCB_JUDGE_RSLT_INF`를 DRAFT_NO·PARAM_TYP로 조인하고, 최근 10일 중 결과 라벨과 JSON이 있는 행을 조회한다. 행 수를 임의로 제한하지 않는다. 결과 컬럼은 `DRAFT_NO`, `PARAM_TYP`, `LABEL_Y`, `RSLT_CD`, `CONV_EXPER_CTN`이다. 라벨 컬럼은 `ENGR_RSLT_VAL`도 지원한다.
+쿼리와 수신을 합친 시간이 설정값을 넘으면 자동으로 취소를 요청한다. 실제 중단은 드라이버와 서버의 응답에 의존하므로 설정 시간이 지나자마자 연결이 반드시 닫히는 것은 아니다. 응답 대기 중에는 그 상태와 경과 시간을 계속 표시하고 중복 조회를 막는다. 취소 호출 자체도 UI 스레드 밖에서 실행한다. 연결을 여는 중에는 Open이 반환되어야 취소를 확인할 수 있다.
 
-Oracle 관리 드라이버가 백그라운드 스레드에서 직접 접속한다. 읽기 전용 트랜잭션에서 SELECT/WITH 쿼리를 실행한다. 연결 시간 제한은 15초, 쿼리 실행 시간 제한은 120초다. CLOB/NCLOB는 연결을 닫기 전에 전체 문자열로 읽는다. 조회 실패 시 기존 데이터를 유지하며, 오류 안내에 Oracle 오류 코드와 설정 확인 방법을 표시한다. 접속 문자열과 비밀번호는 출력하지 않는다.
+CLOB는 기본적으로 32,768자까지 미리 받아 추가 통신을 줄이도록 했다. 더 긴 값도 전체 문자열로 읽으며, 5,610행을 포함해 행 수를 임의로 줄이지 않는다. 이는 서버 쿼리 자체의 지연을 해결하는 설정은 아니다. 특정 단계에서 계속 기다린다면 같은 SQL의 실행 계획·조인/정렬 비용·네트워크 응답을 함께 확인해야 한다. 실패나 취소 때는 불완전한 결과를 분석에 넘기지 않고 기존 데이터를 유지한다.
 
-## 드라이버와 빌드
+설정 근거: Oracle의 [LOB 미리 읽기](https://docs.oracle.com/en/database/oracle/oracle-database/19/odpnt/CommandInitialLOBFetchSize.html), [FetchSize](https://docs.oracle.com/en/database/oracle/oracle-database/19/odpnt/DataReaderFetchSize.html), [취소 동작](https://docs.oracle.com/en/database/oracle/oracle-database/19/odpnt/CommandCancel.html).
 
-`lib/Oracle/Oracle.Runtime.targets`가 `lib/Oracle/Oracle.ManagedDataAccess.dll`의 수동 참조를 우선한다. 로컬 DLL이 없으면 공식 패키지에서 첫 빌드 시 자동으로 내려받고 해시를 검증한다. 기존 NuGet 복원 설정 및 PowerShell 스크립트에 의존하지 않는다. 최초 다운로드가 차단된 PC에서는 공식 패키지의 `lib/net40/Oracle.ManagedDataAccess.dll`을 해당 경로에 넣는다. 자세한 버전·출처·이용 조건은 [Oracle 드라이버 안내](../lib/Oracle/README.md)를 참고한다.
+## SQL과 분석
 
-## 확인한 범위
+기본 SQL은 `TASADM.PCCB_INFER_RSLT_INF`와 `TASADM.PCCB_JUDGE_RSLT_INF`를 DRAFT_NO·PARAM_TYP로 조인하고, 최근 10일 중 결과 라벨과 JSON이 있는 행을 조회한다. 이는 WinForms 코드가 소유하는 기본 SQL이며 Python 파일을 읽지 않는다. 결과 컬럼은 `DRAFT_NO`, `PARAM_TYP`, `LABEL_Y`, `RSLT_CD`, `CONV_EXPER_CTN`이다. 라벨 컬럼은 `ENGR_RSLT_VAL`, `AI_RSLT_VAL`도 지원한다.
 
-`TsneVerification`의 `--oracle`은 .env·SQL 읽기, 환경변수 우선순위, 긴 JSON과 null 보존, 기존 분석 저장소 연결을 확인한다. `--oracle-live`는 실제 설정으로 DB 조회를 실행하고 행·컬럼 수만 출력한다. 실제 서버 검증에는 유효한 접속정보와 서버에 접근 가능한 네트워크가 필요하다.
+읽기 전용 트랜잭션에서 SELECT/WITH 쿼리를 실행한다. 조회 후 엔진만 바꾸어 다시 그릴 때는 메모리의 데이터를 재사용한다. 다시 DB를 조회하려면 **Oracle 조회**를 누른다. 다른 폼에 적용할 때도 기존 DataTable 호출과 단일 `Tsne.cs` 라이브러리를 계속 사용할 수 있다.
 
-Oracle 데이터 조회와 차트 라이선스는 별개다. LightningChart 평가판이 만료된 머신에서는 DB 원본 그리드와 계산 검증을 확인할 수 있지만 차트 표시에는 유효한 차트 라이선스가 필요하다.
+## 빌드와 검증
+
+`lib/Oracle/Oracle.Runtime.targets`가 `lib/Oracle/Oracle.ManagedDataAccess.dll`의 수동 참조를 우선한다. DLL이 없으면 첫 빌드 시 공식 패키지에서 내려받고 해시를 검증한다. PowerShell 스크립트는 필요하지 않다. 자세한 버전·출처는 [Oracle 드라이버 안내](../lib/Oracle/README.md)를 참고한다.
+
+`TsneVerification --oracle`은 설정 분리, SQL 읽기, 100,000자를 넘는 JSON, null, 5,610행/순서 보존, 취소, 진행 상태 및 모의 대기 시간 초과를 검증한다. `--oracle-live`는 검증 EXE 옆의 `oracle.env`로 실제 DB를 조회한다. 모의 검증은 실제 Oracle 서버에서의 수신·CLOB·취소 검증을 대신하지 않는다.
+
+배포할 때는 EXE와 DLL뿐 아니라 `x64`, `licenses` 폴더도 함께 복사한다. LightningChart 라이선스와 Oracle 조회는 별개이며 차트 표시에는 유효한 차트 라이선스가 필요하다.

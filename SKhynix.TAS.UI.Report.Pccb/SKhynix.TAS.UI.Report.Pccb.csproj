@@ -11,7 +11,8 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Compile Include="OracleTsneDataProvider.cs" />
-    <Content Include="..\python_tsne\.env.example"><Link>.env.example</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="oracle.env.example"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="oracle.env" Condition="Exists('oracle.env')"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
     <Content Include="..\lib\Oracle\info.txt"><Link>licenses\Oracle\info.txt</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
   </ItemGroup>
   <Import Project="..\lib\Tsne\Tsne.Runtime.targets" />
